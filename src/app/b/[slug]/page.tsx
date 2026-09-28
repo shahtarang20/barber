@@ -1,0 +1,260 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { format, addDays } from "date-fns";
+import { useParams } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+
+export default function BarberBookingPage() {
+  const { slug } = useParams();
+  
+  const [barber, setBarber] = useState<any>(null);
+  const [slots, setSlots] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  
+  // Booking state
+  const [selectedSlot, setSelectedSlot] = useState<any>(null);
+  const [bookingLoading, setBookingLoading] = useState(false);
+  const [bookingError, setBookingError] = useState("");
+  const [bookingSuccess, setBookingSuccess] = useState<any>(null);
+
+  useEffect(() => {
+    fetchBarber();
+  }, [slug]);
+
+  useEffect(() => {
+    if (barber) {
+      fetchSlots(selectedDate);
+    }
+  }, [selectedDate, barber]);
+
+  const fetchBarber = async () => {
+    try {
+      const res = await fetch(`/api/public/barbers/${slug}`);
+      const data = await res.json();
+      if (data.success) {
+        setBarber(data.data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch barber");
+    }
+  };
+
+  const fetchSlots = async (date: Date) => {
+    setLoading(true);
+    try {
+      const formattedDate = format(date, "yyyy-MM-dd");
+      const res = await fetch(`/api/public/barbers/${slug}/slots?date=${formattedDate}`);
+      const data = await res.json();
+      if (data.success) {
+        setSlots(data.data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch slots");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBookingSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setBookingLoading(true);
+    setBookingError("");
+
+    const formData = new FormData(e.currentTarget);
+    const name = formData.get("name") as string;
+    const phone = formData.get("phone") as string;
+
+    try {
+      const res = await fetch("/api/public/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          slotId: selectedSlot._id,
+          name, 
+          phone 
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        setBookingError(data.error?.message || "Booking failed");
+        setBookingLoading(false);
+        // Refresh slots in case it was double booked
+        fetchSlots(selectedDate);
+        return;
+      }
+
+      setBookingSuccess(data.data);
+      setBookingLoading(false);
+      
+    } catch (err) {
+      setBookingError("An unexpected error occurred.");
+      setBookingLoading(false);
+    }
+  };
+
+  if (!barber && !loading) {
+    return <div className="min-h-screen flex items-center justify-center">Barber not found.</div>;
+  }
+
+  if (bookingSuccess) {
+    return (
+      <div className="min-h-screen bg-zinc-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white p-8 rounded-2xl shadow-sm border border-zinc-200 text-center">
+          <div className="mx-auto w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-6">
+            <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-bold text-zinc-900 mb-2">Appointment Confirmed!</h1>
+          <p className="text-zinc-500 mb-8">Your appointment has been successfully booked with {barber?.name}.</p>
+          
+          <div className="bg-zinc-50 rounded-xl p-6 mb-8 text-left border border-zinc-100">
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="text-zinc-500">Booking ID</div>
+              <div className="font-medium text-right">{bookingSuccess.bookingNumber}</div>
+              
+              <div className="text-zinc-500">Date</div>
+              <div className="font-medium text-right">{format(new Date(bookingSuccess.date), "MMMM d, yyyy")}</div>
+              
+              <div className="text-zinc-500">Time</div>
+              <div className="font-medium text-right">{bookingSuccess.startTime}</div>
+              
+              <div className="text-zinc-500">Customer</div>
+              <div className="font-medium text-right">{bookingSuccess.customerName}</div>
+            </div>
+          </div>
+          
+          <Button className="w-full h-12" onClick={() => window.location.reload()}>Done</Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Generate simple next 7 days for selection
+  const upcomingDates = Array.from({ length: 7 }).map((_, i) => addDays(new Date(), i));
+
+  return (
+    <div className="min-h-screen bg-zinc-50 pb-20">
+      {/* Barber Header */}
+      <div className="bg-white border-b border-zinc-200 pt-12 pb-8 px-4 text-center">
+        <div className="w-20 h-20 bg-zinc-200 rounded-full mx-auto mb-4 overflow-hidden border-4 border-white shadow-sm flex items-center justify-center text-2xl font-bold text-zinc-400">
+          {barber?.name?.charAt(0)}
+        </div>
+        <h1 className="text-2xl font-bold text-zinc-900">{barber?.name || "Loading..."}</h1>
+        <p className="text-zinc-500 mt-2 max-w-md mx-auto">
+          {barber?.bio || "Professional Haircut & Grooming"}
+        </p>
+      </div>
+
+      <div className="max-w-2xl mx-auto px-4 mt-8">
+        {!selectedSlot ? (
+          <>
+            {/* Date Selection */}
+            <div className="mb-8">
+              <h2 className="text-lg font-semibold text-zinc-900 mb-4">Choose a date</h2>
+              <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide">
+                {upcomingDates.map((date, i) => {
+                  const isSelected = format(date, "yyyy-MM-dd") === format(selectedDate, "yyyy-MM-dd");
+                  return (
+                    <button
+                      key={i}
+                      onClick={() => setSelectedDate(date)}
+                      className={`flex-shrink-0 w-20 py-3 rounded-2xl border flex flex-col items-center justify-center transition-all ${
+                        isSelected 
+                          ? "bg-zinc-900 border-zinc-900 text-white shadow-md" 
+                          : "bg-white border-zinc-200 text-zinc-600 hover:border-zinc-300"
+                      }`}
+                    >
+                      <span className={`text-xs ${isSelected ? "text-zinc-300" : "text-zinc-500"}`}>{format(date, "MMM")}</span>
+                      <span className="text-xl font-bold mt-1">{format(date, "d")}</span>
+                      <span className={`text-xs mt-1 ${isSelected ? "text-zinc-300" : "text-zinc-500"}`}>{format(date, "EEE")}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Time Selection */}
+            <div>
+              <h2 className="text-lg font-semibold text-zinc-900 mb-4">Available Times</h2>
+              
+              {loading ? (
+                <div className="py-12 text-center text-zinc-500">Loading schedule...</div>
+              ) : slots.length === 0 ? (
+                <div className="bg-white p-8 rounded-2xl border border-zinc-200 text-center text-zinc-500">
+                  No slots available for this date.
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {slots.map((slot) => {
+                    const isAvailable = slot.status === "AVAILABLE";
+                    return (
+                      <button
+                        key={slot._id}
+                        disabled={!isAvailable}
+                        onClick={() => setSelectedSlot(slot)}
+                        className={`py-4 rounded-xl border font-medium text-sm transition-all ${
+                          isAvailable 
+                            ? "bg-white border-zinc-200 text-zinc-900 hover:border-zinc-900 hover:shadow-sm" 
+                            : "bg-zinc-50 border-zinc-100 text-zinc-400 cursor-not-allowed line-through"
+                        }`}
+                      >
+                        {slot.startTime}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </>
+        ) : (
+          /* Booking Confirmation Form */
+          <div className="bg-white p-6 sm:p-8 rounded-2xl border border-zinc-200 shadow-sm">
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-xl font-semibold text-zinc-900">Confirm Booking</h2>
+              <button onClick={() => setSelectedSlot(null)} className="text-sm text-zinc-500 hover:text-zinc-900">
+                Cancel
+              </button>
+            </div>
+
+            <div className="bg-zinc-50 p-4 rounded-xl mb-8 flex justify-between items-center border border-zinc-100">
+              <div>
+                <p className="text-sm text-zinc-500">Selected Time</p>
+                <p className="font-semibold text-zinc-900 mt-1">{format(selectedDate, "MMM d, yyyy")} at {selectedSlot.startTime}</p>
+              </div>
+              <button onClick={() => setSelectedSlot(null)} className="text-blue-600 text-sm font-medium">Change</button>
+            </div>
+
+            <form onSubmit={handleBookingSubmit} className="space-y-5">
+              {bookingError && (
+                <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm border border-red-100">
+                  {bookingError}
+                </div>
+              )}
+              
+              <div className="space-y-2">
+                <Label htmlFor="name">Full Name</Label>
+                <Input id="name" name="name" placeholder="Tarang" required className="h-12 text-base" />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="phone">Mobile Number</Label>
+                <Input id="phone" name="phone" type="tel" placeholder="98XXXXXXXX" required className="h-12 text-base" />
+              </div>
+
+              <Button type="submit" className="w-full h-12 text-base mt-4" disabled={bookingLoading}>
+                {bookingLoading ? "Confirming..." : "Confirm Appointment"}
+              </Button>
+            </form>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
