@@ -302,7 +302,6 @@ export default function BarberBookingPage() {
                       }
                     })
                     .map((slot) => {
-                    .map((slot) => {
                       const isAvailable = slot.status === "AVAILABLE" || (slot.capacity && slot.capacity > 1 && slot.bookingsCount < slot.capacity);
                       const isFull = !isAvailable && slot.status !== "BLOCKED";
                       const isBlocked = slot.status === "BLOCKED";
