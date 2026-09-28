@@ -51,6 +51,10 @@ export async function POST(req: Request) {
       if (!customer) {
         customer = new Customer({ name, phone });
         await customer.save();
+      } else if (customer.name !== name) {
+        // Update the name if they changed it
+        customer.name = name;
+        await customer.save();
       }
 
       // Generate human-readable booking number (e.g. RB-1042)
