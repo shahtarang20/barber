@@ -7,6 +7,48 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/toast";
 
+const formatTimeInput = (input: string, isEndTime: boolean): string => {
+  if (!input) return "";
+  const clean = input.trim().toLowerCase();
+  
+  const match = clean.match(/(\d+)(?::(\d+))?/);
+  if (!match) return input;
+
+  let hours = parseInt(match[1]);
+  let mins = match[2] ? parseInt(match[2]) : 0;
+  
+  let ampm = "";
+  if (clean.includes("a")) ampm = "AM";
+  else if (clean.includes("p")) ampm = "PM";
+
+  if (hours > 12 && hours < 24) {
+    hours -= 12;
+    ampm = "PM";
+  } else if (hours === 12 && ampm === "") {
+    ampm = "PM";
+  }
+  
+  if (ampm === "") {
+    if (isEndTime) {
+      if (hours >= 1 && hours <= 11) ampm = "PM";
+      else ampm = "AM"; 
+    } else {
+      if (hours >= 1 && hours <= 5) ampm = "PM";
+      else ampm = "AM";
+    }
+  }
+
+  if (hours === 0) {
+    hours = 12;
+    if (!ampm) ampm = "AM";
+  }
+
+  const hh = hours.toString().padStart(2, "0");
+  const mm = mins.toString().padStart(2, "0");
+  
+  return `${hh}:${mm} ${ampm}`;
+};
+
 export default function SettingsPage() {
   const [profile, setProfile] = useState<any>(null);
   const [bio, setBio] = useState("");
@@ -43,10 +85,17 @@ export default function SettingsPage() {
   const handleSave = async () => {
     setSaving(true);
     try {
+      const formattedWorkingHours = workingHours.map(wh => ({
+        ...wh,
+        startTime: wh.isClosed ? wh.startTime : formatTimeInput(wh.startTime, false),
+        endTime: wh.isClosed ? wh.endTime : formatTimeInput(wh.endTime, true)
+      }));
+      setWorkingHours(formattedWorkingHours);
+
       const res = await fetch("/api/barber/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bio, workingHours }),
+        body: JSON.stringify({ bio, workingHours: formattedWorkingHours }),
       });
       const data = await res.json();
       if (data.success) {

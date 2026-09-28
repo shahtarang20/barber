@@ -5,7 +5,7 @@ export default function Home() {
   return (
     <div className="min-h-screen overflow-x-hidden bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 font-[family-name:var(--font-geist-sans)]">
       {/* Header */}
-      <header className="px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-950/50 backdrop-blur-sm fixed top-0 w-full z-10">
+      <header className="px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-950/50 backdrop-blur-sm fixed top-0 w-full z-10">
         <div className="font-bold text-base min-[360px]:text-lg sm:text-xl tracking-tight whitespace-nowrap shrink-0">BarberSaaS</div>
         <nav className="flex gap-1 min-[360px]:gap-1.5 sm:gap-4 shrink-0">
           <Link href="/login">

@@ -79,12 +79,7 @@ export default function LoginPage() {
         </div>
         
         <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="password">Password</Label>
-            <span className="text-xs text-zinc-500 dark:text-zinc-400">
-              Forgot password? Contact your admin.
-            </span>
-          </div>
+          <Label htmlFor="password">Password</Label>
           <div className="relative">
             <Input 
               id="password" 
@@ -103,6 +98,9 @@ export default function LoginPage() {
               {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
             </button>
           </div>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            Forgot password? Contact your admin.
+          </p>
         </div>
 
         <Button type="submit" className="w-full h-11 mt-6" disabled={loading}>

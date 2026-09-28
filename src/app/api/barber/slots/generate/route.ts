@@ -110,6 +110,27 @@ export async function POST(req: Request) {
       currentSlotStart = currentSlotEnd;
     }
 
+    // CLEANUP: Remove any unbooked slots outside the new working hours
+    const allSlotsForDate = await Slot.find({ barberId: user._id, date: date });
+    const slotsToDelete = [];
+    
+    for (const s of allSlotsForDate) {
+      if (s.bookingsCount > 0) continue; // Never delete booked slots
+      
+      try {
+        const sStart = parseTime(s.startTime, dateObj);
+        if (sStart < startObj || sStart >= endObj) {
+          slotsToDelete.push(s._id);
+        }
+      } catch(e) {
+        // Ignore parsing errors for existing slots
+      }
+    }
+    
+    if (slotsToDelete.length > 0) {
+      await Slot.deleteMany({ _id: { $in: slotsToDelete } });
+    }
+
     if (newSlots.length > 0) {
       await Slot.insertMany(newSlots);
     }

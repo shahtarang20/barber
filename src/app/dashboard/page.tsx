@@ -29,7 +29,14 @@ export default function DashboardPage() {
   const [selectedDate, setSelectedDate] = useState<Date>(() => {
     if (typeof window !== "undefined") {
       const stored = sessionStorage.getItem("dashboardSelectedDate");
-      if (stored) return new Date(stored);
+      if (stored) {
+        const storedDate = new Date(stored);
+        const todayStr = format(new Date(), "yyyy-MM-dd");
+        const storedStr = format(storedDate, "yyyy-MM-dd");
+        // If stored date is in the past (before today), reset to today.
+        // String comparison works perfectly for yyyy-MM-dd
+        if (storedStr >= todayStr) return storedDate;
+      }
     }
     return new Date();
   });
@@ -258,20 +265,28 @@ export default function DashboardPage() {
         <div className="p-4 sm:p-6 border-b border-zinc-200 dark:border-zinc-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-start">
             <h2 className="text-base sm:text-lg font-semibold text-zinc-900 dark:text-zinc-50 flex items-center gap-2 sm:gap-3">
-              <button onClick={() => setSelectedDate(subDays(selectedDate, 1))} className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-md">←</button>
+              {format(selectedDate, "yyyy-MM-dd") !== format(new Date(), "yyyy-MM-dd") && (
+                <button onClick={() => setSelectedDate(subDays(selectedDate, 1))} className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-md">←</button>
+              )}
               <span className="whitespace-nowrap">{format(selectedDate, "EEE, MMM d, yyyy")}</span>
               <button onClick={() => setSelectedDate(addDays(selectedDate, 1))} className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-md">→</button>
             </h2>
           </div>
           <div className="flex items-center gap-3 sm:gap-4 w-full md:w-auto justify-between md:justify-end">
-            <div className="flex items-center gap-2">
-              <label className="text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 hidden sm:block">{t('bookingsPerSlot')}</label>
-              <label className="text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 sm:hidden">Cap:</label>
-              <input type="number" min="1" max="50" value={capacity || ""} onChange={(e) => setCapacity(e.target.value === "" ? 0 : Number(e.target.value))} className="w-14 sm:w-16 h-9 rounded-md border border-zinc-200 px-2 sm:px-3 py-1 text-sm dark:border-zinc-800 dark:bg-zinc-950" />
+            <div className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-800/50 p-1 rounded-lg border border-zinc-200 dark:border-zinc-800">
+              <label className="text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 hidden sm:block pl-2">Capacity:</label>
+              <input type="number" min="1" max="50" value={capacity || ""} onChange={(e) => setCapacity(e.target.value === "" ? 0 : Number(e.target.value))} className="w-14 h-8 rounded-md border border-zinc-300 px-2 text-sm dark:border-zinc-700 dark:bg-zinc-900" />
+              {slots.length > 0 && (
+                 <Button variant="default" size="sm" className="h-8 text-xs px-3" onClick={generateSlots} disabled={generating}>
+                   {generating ? "..." : "Apply"}
+                 </Button>
+              )}
             </div>
-            <Button variant="outline" size="sm" className="sm:size-default" onClick={generateSlots} disabled={generating}>
-              {generating ? t('loading') : t('generateSlots')}
-            </Button>
+            {slots.length === 0 && (
+              <Button variant="outline" size="sm" className="sm:size-default" onClick={generateSlots} disabled={generating}>
+                {generating ? t('loading') : t('generateSlots')}
+              </Button>
+            )}
           </div>
         </div>
 

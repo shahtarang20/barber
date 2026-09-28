@@ -40,10 +40,15 @@ export function useRealtimeRefresh(onUpdate: () => void, fallbackIntervalMs = 30
 
     const pusherKey = process.env.NEXT_PUBLIC_PUSHER_KEY;
     const pusherCluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER;
+    const channelName = `private-${barberId}`;
 
     if (pusherKey && pusherCluster) {
       pusher = new PusherClient(pusherKey, {
         cluster: pusherCluster,
+        channelAuthorization: {
+          endpoint: "/api/pusher/auth",
+          transport: "ajax",
+        },
       });
 
       pusher.connection.bind("connected", () => {
@@ -58,9 +63,12 @@ export function useRealtimeRefresh(onUpdate: () => void, fallbackIntervalMs = 30
         startFallback();
       });
 
-      const channel = pusher.subscribe(barberId);
+      const channel = pusher.subscribe(channelName);
       channel.bind("update", () => {
         onUpdateRef.current();
+      });
+      channel.bind("pusher:subscription_error", () => {
+        startFallback();
       });
     } else {
       startFallback();
@@ -69,7 +77,7 @@ export function useRealtimeRefresh(onUpdate: () => void, fallbackIntervalMs = 30
     return () => {
       stopFallback();
       if (pusher) {
-        pusher.unsubscribe(barberId);
+        pusher.unsubscribe(channelName);
         pusher.disconnect();
       }
     };

@@ -18,6 +18,15 @@ if (
   });
 }
 
+export function getPusherServer(): Pusher | null {
+  return pusher;
+}
+
+/** A barber's channel is private — only that barber can subscribe (see /api/pusher/auth). */
+export function barberChannel(barberId: string): string {
+  return `private-${barberId}`;
+}
+
 /**
  * Notify every connected dashboard tab for this barber that their data
  * changed, so the client re-fetches.
@@ -27,10 +36,9 @@ export async function notifyBarber(barberId: string, type: string) {
     console.warn("Pusher is not configured. Realtime updates disabled.");
     return;
   }
-  
+
   try {
-    // We use the barberId as the channel name
-    await pusher.trigger(barberId, "update", { type });
+    await pusher.trigger(barberChannel(barberId), "update", { type });
   } catch (error) {
     console.error("Failed to trigger Pusher event:", error);
   }
