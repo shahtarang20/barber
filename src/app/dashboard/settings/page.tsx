@@ -82,6 +82,21 @@ export default function SettingsPage() {
         </div>
 
         <div className="space-y-2">
+          <Label>Premium Subscription</Label>
+          <div className="flex items-center gap-3">
+            <Input disabled value={`₹${profile?.premiumAmount || 0} / month`} className="bg-zinc-50 text-zinc-800 font-semibold dark:bg-zinc-950 dark:text-zinc-200 w-48" />
+            <span className="text-sm font-medium bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full">
+              {profile?.premiumAmount > 0 ? "Premium Active" : "Free Tier"}
+            </span>
+          </div>
+          <p className="text-xs text-zinc-500">
+            {profile?.premiumAmount > 0 
+              ? `Your premium is due on the ${profile?.premiumDueDay || 28}th of every month.` 
+              : `This is set by the admin.`}
+          </p>
+        </div>
+
+        <div className="space-y-2">
           <Label>Bio / Description</Label>
           <Textarea 
             value={bio} 

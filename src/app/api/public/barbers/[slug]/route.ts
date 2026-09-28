@@ -11,7 +11,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
     
     // Find barber by slug, only return safe public fields
     const barber = await User.findOne({ slug, role: "BARBER" })
-      .select("name profileImage bio workingHours settings");
+      .select("name profileImage bio workingHours settings isActive");
     
     if (!barber) {
       return NextResponse.json({ success: false, error: { message: "Barber not found" } }, { status: 404 });

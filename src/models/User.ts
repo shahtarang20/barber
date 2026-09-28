@@ -22,6 +22,9 @@ export interface IUser extends Document {
   timezone: string;
   workingHours: IWorkingHours[];
   settings?: Record<string, any>;
+  premiumAmount: number;
+  premiumDueDay: number;
+  isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -53,6 +56,9 @@ const UserSchema: Schema = new Schema(
     timezone: { type: String, default: "Asia/Kolkata" },
     workingHours: [WorkingHoursSchema],
     settings: { type: Schema.Types.Mixed },
+    premiumAmount: { type: Number, default: 0 },
+    premiumDueDay: { type: Number, default: 28 }, // default 28th of month
+    isActive: { type: Boolean, default: true },
   },
   { timestamps: true }
 );

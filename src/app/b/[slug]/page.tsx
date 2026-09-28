@@ -138,11 +138,25 @@ export default function BarberBookingPage() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-zinc-50">
         <div className="text-4xl mb-4">✂️</div>
-        <h2 className="text-xl font-bold text-zinc-900 mb-2">{t('barberNotFound')}</h2>
-        <p className="text-zinc-500">{t('checkUrl')}</p>
+        <h1 className="text-2xl font-bold text-zinc-800">{t('barberNotFound' as any)}</h1>
+        <p className="text-zinc-500 mt-2">{t('checkUrl' as any)}</p>
       </div>
     );
   }
+
+  if (barber && barber.isActive === false) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-zinc-50">
+        <div className="text-6xl mb-6">🚫</div>
+        <h1 className="text-3xl font-bold text-zinc-800 text-center px-4">Service Suspended</h1>
+        <p className="text-zinc-500 mt-3 text-center px-6 max-w-md">
+          This store's booking system is currently suspended. Please contact the barber directly.
+        </p>
+      </div>
+    );
+  }
+
+
 
   if (loading && !barber) {
     return (

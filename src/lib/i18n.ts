@@ -70,7 +70,10 @@ const translations = {
     warningBookedDesc: "There are {count} customer(s) currently booked in this slot. Blocking it will instantly cancel their appointments.",
     goBack: "Go Back",
     cancelAllAndBlock: "Cancel All & Block",
-    whatsappNotice: "A WhatsApp message in your selected language will be automatically prepared for the first customer."
+    whatsappNotice: "A WhatsApp message in your selected language will be automatically prepared for the first customer.",
+    premiumDueTitle: "Premium Due",
+    premiumDueDesc: "It is the end of the month! Your premium payment of ₹{amount} is due. Please pay to continue uninterrupted service.",
+    payNow: "Pay Now"
   },
   hi: {
     loading: "लोड हो रहा है...",
@@ -116,7 +119,10 @@ const translations = {
     warningBookedDesc: "इस स्लॉट में वर्तमान में {count} ग्राहक बुक हैं। इसे ब्लॉक करने से उनकी अपॉइंटमेंट तुरंत रद्द हो जाएगी।",
     goBack: "वापस जाएं",
     cancelAllAndBlock: "सभी रद्द करें और ब्लॉक करें",
-    whatsappNotice: "पहले ग्राहक के लिए आपकी चुनी हुई भाषा में एक व्हाट्सएप संदेश स्वचालित रूप से तैयार किया जाएगा।"
+    whatsappNotice: "पहले ग्राहक के लिए आपकी चुनी हुई भाषा में एक व्हाट्सएप संदेश स्वचालित रूप से तैयार किया जाएगा।",
+    premiumDueTitle: "प्रीमियम देय",
+    premiumDueDesc: "यह महीने का अंत है! आपका ₹{amount} का प्रीमियम भुगतान देय है। कृपया निर्बाध सेवा जारी रखने के लिए भुगतान करें।",
+    payNow: "अभी भुगतान करें"
   },
   gu: {
     loading: "લોડ થઈ રહ્યું છે...",
@@ -162,7 +168,10 @@ const translations = {
     warningBookedDesc: "આ સ્લોટમાં હાલમાં {count} ગ્રાહક(ઓ) બુક થયેલ છે. તેને બ્લોક કરવાથી તેમની એપોઇન્ટમેન્ટ તરત જ રદ થઈ જશે.",
     goBack: "પાછા જાવ",
     cancelAllAndBlock: "બધા રદ કરો અને બ્લોક કરો",
-    whatsappNotice: "તમારી પસંદ કરેલી ભાષામાં પ્રથમ ગ્રાહક માટે આપમેળે વૉટ્સએપ મેસેજ તૈયાર કરવામાં આવશે."
+    whatsappNotice: "તમારી પસંદ કરેલી ભાષામાં પ્રથમ ગ્રાહક માટે આપમેળે વૉટ્સએપ મેસેજ તૈયાર કરવામાં આવશે.",
+    premiumDueTitle: "પ્રિમિયમ બાકી",
+    premiumDueDesc: "આ મહિનાનો અંત છે! તમારી ₹{amount} ની પ્રીમિયમ ચુકવણી બાકી છે. કૃપા કરીને અવિરત સેવા ચાલુ રાખવા માટે ચૂકવણી કરો.",
+    payNow: "હવે ચૂકવણી કરો"
   },
   mr: {
     loading: "लोड होत आहे...",
@@ -208,7 +217,10 @@ const translations = {
     warningBookedDesc: "या स्लॉटमध्ये सध्या {count} ग्राहक बुक आहेत. हे ब्लॉक केल्याने त्यांच्या अपॉइंटमेंट त्वरित रद्द होतील.",
     goBack: "मागे जा",
     cancelAllAndBlock: "सर्व रद्द करा आणि ब्लॉक करा",
-    whatsappNotice: "तुमच्या निवडलेल्या भाषेत पहिल्या ग्राहकासाठी एक व्हाट्सएप संदेश स्वयंचलितपणे तयार केला जाईल."
+    whatsappNotice: "तुमच्या निवडलेल्या भाषेत पहिल्या ग्राहकासाठी एक व्हाट्सएप संदेश स्वयंचलितपणे तयार केला जाईल.",
+    premiumDueTitle: "प्रीमियम देय",
+    premiumDueDesc: "हा महिन्याचा शेवट आहे! तुमचे ₹{amount} चे प्रीमियम पेमेंट देय आहे. कृपया विनाव्यत्यय सेवा सुरू ठेवण्यासाठी पैसे द्या.",
+    payNow: "आता भरा"
   }
 };
 
