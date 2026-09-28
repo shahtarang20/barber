@@ -38,12 +38,12 @@ export async function POST(req: Request) {
     
     // Default working hours
     const defaultWorkingHours = [
-      { day: "Monday", startTime: "10:00", endTime: "20:00", isClosed: false },
-      { day: "Tuesday", startTime: "10:00", endTime: "20:00", isClosed: false },
-      { day: "Wednesday", startTime: "10:00", endTime: "20:00", isClosed: false },
-      { day: "Thursday", startTime: "10:00", endTime: "20:00", isClosed: false },
-      { day: "Friday", startTime: "10:00", endTime: "20:00", isClosed: false },
-      { day: "Saturday", startTime: "10:00", endTime: "20:00", isClosed: false },
+      { day: "Monday", startTime: "10:00 AM", endTime: "8:00 PM", isClosed: false },
+      { day: "Tuesday", startTime: "10:00 AM", endTime: "8:00 PM", isClosed: false },
+      { day: "Wednesday", startTime: "10:00 AM", endTime: "8:00 PM", isClosed: false },
+      { day: "Thursday", startTime: "10:00 AM", endTime: "8:00 PM", isClosed: false },
+      { day: "Friday", startTime: "10:00 AM", endTime: "8:00 PM", isClosed: false },
+      { day: "Saturday", startTime: "10:00 AM", endTime: "8:00 PM", isClosed: false },
       { day: "Sunday", isClosed: true },
     ];
     

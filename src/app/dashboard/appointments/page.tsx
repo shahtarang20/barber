@@ -176,33 +176,32 @@ export default function AppointmentsPage() {
               </tbody>
             </table>
           </div>
-          
-          {pagination && (
-            <div className="flex items-center justify-between p-4 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50">
-              <p className="text-sm text-zinc-500">
-                Showing page {pagination.page} of {pagination.pages}
-              </p>
-              <div className="flex items-center gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                >
-                  Previous
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => setPage(p => Math.min(pagination.pages, p + 1))}
-                  disabled={page === pagination.pages}
-                >
-                  Next
-                </Button>
-              </div>
+        )}
+        
+        {pagination && (
+          <div className="flex items-center justify-between p-4 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50">
+            <p className="text-sm text-zinc-500">
+              Showing page {pagination.page} of {pagination.pages}
+            </p>
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+              >
+                Previous
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setPage(p => Math.min(pagination.pages, p + 1))}
+                disabled={page === pagination.pages || pagination.pages === 0}
+              >
+                Next
+              </Button>
             </div>
-          )}
-        </>
+          </div>
         )}
       </div>
 
