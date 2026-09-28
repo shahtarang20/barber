@@ -3,6 +3,8 @@ import connectToDatabase from "@/lib/mongodb";
 import { User } from "@/models/User";
 import { Slot } from "@/models/Slot";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: Request, { params }: { params: Promise<{ slug: string }> }) {
   try {
     await connectToDatabase();

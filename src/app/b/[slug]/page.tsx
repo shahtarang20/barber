@@ -23,6 +23,13 @@ export default function BarberBookingPage() {
 
   useEffect(() => {
     fetchBarber();
+    
+    // Register PWA service worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(err => {
+        console.error('Service Worker registration failed:', err);
+      });
+    }
   }, [slug]);
 
   useEffect(() => {

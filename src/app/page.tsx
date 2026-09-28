@@ -23,8 +23,8 @@ export default function Home() {
           Stop managing barber appointments on <span className="text-green-500">WhatsApp.</span>
         </h1>
         <p className="text-xl text-zinc-600 dark:text-zinc-400 max-w-2xl mx-auto mb-10 leading-relaxed">
-          Create your slots. Share your booking link. Let customers book instantly. 
-          The simplest booking system designed exclusively for independent barbers.
+          Create your slots. Share your unique booking link. Let customers book instantly. 
+          The simplest white-labeled booking system designed exclusively for independent barbers.
         </p>
         
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -40,21 +40,11 @@ export default function Home() {
 
         {/* Feature Preview */}
         <div className="mt-20 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xl overflow-hidden p-2">
-          <div className="bg-zinc-100 dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800 h-[400px] flex items-center justify-center">
-            {/* Abstract UI representation */}
-            <div className="w-full max-w-md bg-white dark:bg-zinc-900 rounded-lg shadow-sm border border-zinc-200 dark:border-zinc-800 overflow-hidden">
-              <div className="border-b border-zinc-100 dark:border-zinc-800 p-4">
-                <div className="h-4 w-32 bg-zinc-200 dark:bg-zinc-800 rounded animate-pulse"></div>
-              </div>
-              <div className="p-4 space-y-3">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex justify-between items-center p-3 rounded-md border border-zinc-100 dark:border-zinc-800">
-                    <div className="h-4 w-16 bg-zinc-200 dark:bg-zinc-800 rounded"></div>
-                    <div className="h-6 w-20 bg-green-100 dark:bg-green-900/30 rounded-full"></div>
-                  </div>
-                ))}
-              </div>
-            </div>
+          <div className="bg-zinc-100 dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800 h-[400px] flex flex-col items-center justify-center p-8 text-center">
+            <h2 className="text-2xl font-bold text-zinc-800 dark:text-zinc-200 mb-4">Your Own Unique PWA App</h2>
+            <p className="text-zinc-500 dark:text-zinc-400 max-w-md">
+              Every barber gets their own unique installable web app link. Send it to your clients, and they can install it directly to their home screen to book slots instantly.
+            </p>
           </div>
         </div>
       </main>
