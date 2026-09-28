@@ -18,6 +18,8 @@ import {
 } from "@/components/ui/dialog";
 
 export default function AppointmentsPage() {
+  const [page, setPage] = useState(1);
+  const [limit] = useState(20); // 20 per page for bookings
   const [filter, setFilter] = useState("ALL");
   const { t } = useTranslation();
 
@@ -30,12 +32,13 @@ export default function AppointmentsPage() {
   } | null>(null);
 
   const { data: bookingsData, isLoading: loading, mutate: mutateBookings } = useSWR(
-    `/api/barber/bookings`,
+    `/api/barber/bookings?page=${page}&limit=${limit}`,
     fetcher,
     { refreshInterval: 3000 }
   );
 
   const bookings = bookingsData?.success ? bookingsData.data : [];
+  const pagination = bookingsData?.success ? bookingsData.pagination : null;
 
   const handleAction = async (id: string, action: "cancel" | "complete" | "no-show") => {
     if (action === "cancel") {
@@ -173,6 +176,33 @@ export default function AppointmentsPage() {
               </tbody>
             </table>
           </div>
+          
+          {pagination && pagination.pages > 1 && (
+            <div className="flex items-center justify-between p-4 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50">
+              <p className="text-sm text-zinc-500">
+                Showing page {pagination.page} of {pagination.pages}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                >
+                  Previous
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setPage(p => Math.min(pagination.pages, p + 1))}
+                  disabled={page === pagination.pages}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
         )}
       </div>
 
