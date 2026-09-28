@@ -9,17 +9,20 @@ import useSWR from "swr";
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function CustomersPage() {
+  const [page, setPage] = useState(1);
+  const [limit] = useState(50);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [noteInputs, setNoteInputs] = useState<Record<string, string>>({});
   const [savingId, setSavingId] = useState<string | null>(null);
 
   const { data: customersData, isLoading: loading } = useSWR(
-    "/api/barber/customers",
+    `/api/barber/customers?page=${page}&limit=${limit}`,
     fetcher,
     { refreshInterval: 3000 }
   );
 
   const customers = customersData?.success ? customersData.data : [];
+  const pagination = customersData?.success ? customersData.pagination : null;
 
   useEffect(() => {
     if (customers.length > 0) {
@@ -141,6 +144,32 @@ export default function CustomersPage() {
               );
             })}
           </div>
+
+          {pagination && pagination.pages > 1 && (
+            <div className="flex items-center justify-between p-4 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50">
+              <p className="text-sm text-zinc-500">
+                Showing page {pagination.page} of {pagination.pages}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                >
+                  Previous
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setPage(p => Math.min(pagination.pages, p + 1))}
+                  disabled={page === pagination.pages}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

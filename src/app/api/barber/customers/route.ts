@@ -7,6 +7,11 @@ import mongoose from "mongoose";
 
 export async function GET(req: Request) {
   try {
+    const { searchParams } = new URL(req.url);
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "50");
+    const skip = (page - 1) * limit;
+
     const cookieStore = await cookies();
     const token = cookieStore.get("auth_token")?.value;
 
@@ -57,11 +62,21 @@ export async function GET(req: Request) {
           }
         }
       },
-      { $sort: { lastVisit: -1 } }
+      { $sort: { lastVisit: -1 } },
+      {
+        $facet: {
+          metadata: [{ $count: "total" }],
+          data: [{ $skip: skip }, { $limit: limit }]
+        }
+      }
     ]);
 
+    const result = customers[0];
+    const total = result.metadata[0]?.total || 0;
+    const paginatedData = result.data;
+
     // Format the response
-    const formattedCustomers = customers.map(c => ({
+    const formattedCustomers = paginatedData.map((c: any) => ({
       _id: c._id,
       name: c.name,
       phone: c.phone,
@@ -70,7 +85,16 @@ export async function GET(req: Request) {
       note: c.barberNotes && c.barberNotes.length > 0 ? c.barberNotes[0].note : ""
     }));
 
-    return NextResponse.json({ success: true, data: formattedCustomers });
+    return NextResponse.json({ 
+      success: true, 
+      data: formattedCustomers,
+      pagination: {
+        total,
+        page,
+        limit,
+        pages: Math.ceil(total / limit)
+      }
+    });
   } catch (error) {
     console.error("Fetch customers error:", error);
     return NextResponse.json({ success: false, error: { message: "Internal server error" } }, { status: 500 });
