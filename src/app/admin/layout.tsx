@@ -1,6 +1,16 @@
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { verifyToken } from "@/lib/auth";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  const token = (await cookies()).get("auth_token")?.value;
+  const payload = token ? verifyToken(token) : null;
+
+  if (!payload || payload.role !== "ADMIN") {
+    redirect("/login");
+  }
+
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-zinc-50 dark:bg-zinc-900">
       <AdminSidebar />
