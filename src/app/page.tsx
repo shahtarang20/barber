@@ -5,34 +5,34 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 font-[family-name:var(--font-geist-sans)]">
       {/* Header */}
-      <header className="px-6 lg:px-8 h-16 flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-950/50 backdrop-blur-sm fixed top-0 w-full z-10">
-        <div className="font-bold text-xl tracking-tight">BarberSaaS</div>
-        <nav className="flex gap-4">
+      <header className="px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-950/50 backdrop-blur-sm fixed top-0 w-full z-10">
+        <div className="font-bold text-lg sm:text-xl tracking-tight">BarberSaaS</div>
+        <nav className="flex gap-2 sm:gap-4">
           <Link href="/login">
-            <Button variant="ghost" className="font-medium">Log in</Button>
+            <Button variant="ghost" size="sm" className="font-medium sm:text-base">Log in</Button>
           </Link>
           <Link href="/register">
-            <Button className="font-medium">Get Started Free</Button>
+            <Button size="sm" className="font-medium sm:text-base">Get Started Free</Button>
           </Link>
         </nav>
       </header>
 
       {/* Hero Section */}
-      <main className="pt-32 pb-16 px-6 lg:px-8 max-w-5xl mx-auto text-center">
-        <h1 className="text-5xl sm:text-6xl font-bold tracking-tight mb-6">
+      <main className="pt-28 sm:pt-32 pb-16 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto text-center">
+        <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight mb-4 sm:mb-6 leading-tight">
           Stop managing barber appointments on <span className="text-green-500">WhatsApp.</span>
         </h1>
-        <p className="text-xl text-zinc-600 dark:text-zinc-400 max-w-2xl mx-auto mb-10 leading-relaxed">
+        <p className="text-lg sm:text-xl text-zinc-600 dark:text-zinc-400 max-w-2xl mx-auto mb-8 sm:mb-10 leading-relaxed px-2">
           Create your slots. Share your unique booking link. Let customers book instantly. 
           The simplest white-labeled booking system designed exclusively for independent barbers.
         </p>
         
-        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-          <Link href="/register">
-            <Button size="lg" className="h-14 px-8 text-lg rounded-full">Get Started Free</Button>
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center px-4">
+          <Link href="/register" className="w-full sm:w-auto">
+            <Button size="lg" className="h-12 sm:h-14 w-full px-8 text-base sm:text-lg rounded-full">Get Started Free</Button>
           </Link>
-          <Link href="#how-it-works">
-            <Button size="lg" variant="outline" className="h-14 px-8 text-lg rounded-full bg-white dark:bg-zinc-900">
+          <Link href="#how-it-works" className="w-full sm:w-auto">
+            <Button size="lg" variant="outline" className="h-12 sm:h-14 w-full px-8 text-base sm:text-lg rounded-full bg-white dark:bg-zinc-900">
               See How It Works
             </Button>
           </Link>

@@ -45,8 +45,22 @@ export async function POST(req: Request) {
     }
 
     // Generate slots
-    const startObj = parse(dayConfig.startTime, "HH:mm", dateObj);
-    const endObj = parse(dayConfig.endTime, "HH:mm", dateObj);
+    const parseTime = (timeStr: string, date: Date) => {
+      const cleanStr = timeStr.trim().toLowerCase();
+      if (cleanStr.includes("am") || cleanStr.includes("pm")) {
+        // Try h:mm a format (with space) or h:mma (without space)
+        try {
+          const strWithSpace = cleanStr.replace(/([0-9])(am|pm)/, "$1 $2");
+          return parse(strWithSpace, "h:mm a", date);
+        } catch(e) {
+          return parse(timeStr, "HH:mm", date); // fallback
+        }
+      }
+      return parse(timeStr, "HH:mm", date);
+    };
+
+    const startObj = parseTime(dayConfig.startTime, dateObj);
+    const endObj = parseTime(dayConfig.endTime, dateObj);
     
     let currentSlotStart = startObj;
     const newSlots = [];
@@ -77,6 +91,18 @@ export async function POST(req: Request) {
           capacity: Number(capacity),
           bookingsCount: 0,
         });
+      } else if (!existingSlot.isCustomCapacity) {
+        // Feature Fix: If barber generates again with a new capacity, update existing slots
+        const newCap = Number(capacity);
+        if (newCap >= (existingSlot.bookingsCount || 0)) {
+          existingSlot.capacity = newCap;
+          if (existingSlot.status === "BOOKED" && newCap > (existingSlot.bookingsCount || 0)) {
+            existingSlot.status = "AVAILABLE";
+          } else if (existingSlot.status === "AVAILABLE" && newCap === existingSlot.bookingsCount) {
+            existingSlot.status = "BOOKED";
+          }
+          await existingSlot.save();
+        }
       }
 
       currentSlotStart = currentSlotEnd;
@@ -88,7 +114,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ 
       success: true, 
-      data: { message: `Successfully generated ${newSlots.length} slots for ${date}.` } 
+      data: { message: `Successfully generated and updated schedule for ${date}.` } 
     });
 
   } catch (error) {

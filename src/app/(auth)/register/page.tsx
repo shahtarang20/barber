@@ -52,7 +52,7 @@ export default function RegisterPage() {
 
   if (successCode) {
     return (
-      <div className="bg-white dark:bg-zinc-900 p-8 rounded-2xl shadow-sm border border-zinc-200 dark:border-zinc-800 text-center">
+      <div className="bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl shadow-sm border border-zinc-200 dark:border-zinc-800 text-center">
         <div className="mb-6 flex justify-center">
           <div className="h-16 w-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
             <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -78,7 +78,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="bg-white dark:bg-zinc-900 p-8 rounded-2xl shadow-sm border border-zinc-200 dark:border-zinc-800">
+    <div className="bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl shadow-sm border border-zinc-200 dark:border-zinc-800">
       <div className="mb-8 text-center">
         <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">Create an account</h1>
         <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-2">

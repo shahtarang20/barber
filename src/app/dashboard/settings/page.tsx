@@ -120,14 +120,16 @@ export default function SettingsPage() {
                 ) : (
                   <>
                     <Input 
-                      type="time" 
+                      type="text" 
+                      placeholder="e.g. 10:00 AM"
                       value={wh.startTime} 
                       onChange={(e) => handleWorkingHourChange(index, "startTime", e.target.value)}
                       className="w-full sm:w-32"
                     />
                     <span className="text-zinc-500 text-sm">to</span>
                     <Input 
-                      type="time" 
+                      type="text" 
+                      placeholder="e.g. 08:00 PM"
                       value={wh.endTime} 
                       onChange={(e) => handleWorkingHourChange(index, "endTime", e.target.value)}
                       className="w-full sm:w-32"

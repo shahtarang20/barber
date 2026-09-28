@@ -14,6 +14,13 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   };
 }
 
+import { InstallPrompt } from "@/components/InstallPrompt";
+
 export default function BarberLayout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>;
+  return (
+    <>
+      {children}
+      <InstallPrompt isCustomer={true} />
+    </>
+  );
 }

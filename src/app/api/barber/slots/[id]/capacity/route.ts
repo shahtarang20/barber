@@ -38,6 +38,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     }
 
     slot.capacity = capacity;
+    slot.isCustomCapacity = true;
     
     // If the new capacity is greater than current bookings, and the slot was BOOKED, we should open it up to AVAILABLE
     if (slot.capacity > slot.bookingsCount && slot.status === "BOOKED") {
