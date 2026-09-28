@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/lib/i18n";
 import { toast } from "@/components/ui/toast";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 import useSWR from "swr";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
@@ -29,7 +30,7 @@ import {
 
 export default function AppointmentsPage() {
   const [page, setPage] = useState(1);
-  const [limit] = useState(20); // 20 per page for bookings
+  const [limit, setLimit] = useState(10);
   const [filter, setFilter] = useState("ALL");
   const { t } = useTranslation();
 
@@ -188,31 +189,11 @@ export default function AppointmentsPage() {
           </div>
         )}
         
-        {pagination && (
-          <div className="flex items-center justify-between p-4 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50">
-            <p className="text-sm text-zinc-500">
-              Showing page {pagination.page} of {pagination.pages}
-            </p>
-            <div className="flex items-center gap-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                disabled={page === 1}
-              >
-                Previous
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => setPage(p => Math.min(pagination.pages, p + 1))}
-                disabled={page === pagination.pages || pagination.pages === 0}
-              >
-                Next
-              </Button>
-            </div>
-          </div>
-        )}
+        <PaginationControls
+          pagination={pagination}
+          onPageChange={setPage}
+          onLimitChange={(l) => { setLimit(l); setPage(1); }}
+        />
       </div>
 
       <Dialog open={!!cancelBookingId} onOpenChange={(open) => !open && setCancelBookingId(null)}>

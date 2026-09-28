@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { toast } from "@/components/ui/toast";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 import useSWR from "swr";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
@@ -90,29 +91,13 @@ export default function CustomersPage() {
         </p>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by name or phone..."
-          className="w-full sm:w-72 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-4 py-2 text-sm focus:ring-2 focus:ring-zinc-900 outline-none"
-        />
-        <div className="flex items-center gap-2 text-sm text-zinc-500">
-          <label htmlFor="pageSize">Show</label>
-          <select
-            id="pageSize"
-            value={limit}
-            onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); }}
-            className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-2 py-1.5 text-sm"
-          >
-            <option value={5}>5</option>
-            <option value={10}>10</option>
-            <option value={15}>15</option>
-          </select>
-          <span>per page</span>
-        </div>
-      </div>
+      <input
+        type="text"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Search by name or phone..."
+        className="w-full sm:w-72 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-4 py-2 text-sm focus:ring-2 focus:ring-zinc-900 outline-none"
+      />
 
       {loading ? (
         <div className="text-zinc-500 py-12 text-center">Loading customers...</div>
@@ -192,31 +177,11 @@ export default function CustomersPage() {
             })}
           </div>
 
-          {pagination && pagination.pages > 1 && (
-            <div className="flex items-center justify-between p-4 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50">
-              <p className="text-sm text-zinc-500">
-                Showing page {pagination.page} of {pagination.pages}
-              </p>
-              <div className="flex items-center gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                >
-                  Previous
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => setPage(p => Math.min(pagination.pages, p + 1))}
-                  disabled={page === pagination.pages}
-                >
-                  Next
-                </Button>
-              </div>
-            </div>
-          )}
+          <PaginationControls
+            pagination={pagination}
+            onPageChange={setPage}
+            onLimitChange={(l) => { setLimit(l); setPage(1); }}
+          />
         </div>
       )}
     </div>

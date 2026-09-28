@@ -4,28 +4,35 @@ import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState<any>(null);
   const [barbers, setBarbers] = useState<any[]>([]);
+  const [pagination, setPagination] = useState<{ total: number; page: number; limit: number; pages: number } | null>(null);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [page, limit]);
 
   const fetchData = async () => {
     setLoading(true);
     try {
       const [statsRes, barbersRes] = await Promise.all([
         fetch("/api/admin/stats"),
-        fetch("/api/admin/barbers")
+        fetch(`/api/admin/barbers?page=${page}&limit=${limit}`)
       ]);
       const statsData = await statsRes.json();
       const barbersData = await barbersRes.json();
-      
+
       if (statsData.success) setStats(statsData.data);
-      if (barbersData.success) setBarbers(barbersData.data);
+      if (barbersData.success) {
+        setBarbers(barbersData.data);
+        setPagination(barbersData.pagination || null);
+      }
     } catch (error) {
       console.error("Failed to fetch admin data", error);
     } finally {
@@ -157,6 +164,11 @@ export default function AdminDashboard() {
                 </tbody>
               </table>
             </div>
+            <PaginationControls
+              pagination={pagination}
+              onPageChange={setPage}
+              onLimitChange={(l) => { setLimit(l); setPage(1); }}
+            />
           </div>
         </>
       )}

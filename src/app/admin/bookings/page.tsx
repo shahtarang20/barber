@@ -2,20 +2,28 @@
 
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 
 export default function AdminBookingsPage() {
   const [bookings, setBookings] = useState<any[]>([]);
+  const [pagination, setPagination] = useState<{ total: number; page: number; limit: number; pages: number } | null>(null);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchBookings();
-  }, []);
+  }, [page, limit]);
 
   const fetchBookings = async () => {
+    setLoading(true);
     try {
-      const res = await fetch("/api/admin/bookings");
+      const res = await fetch(`/api/admin/bookings?page=${page}&limit=${limit}`);
       const data = await res.json();
-      if (data.success) setBookings(data.data);
+      if (data.success) {
+        setBookings(data.data);
+        setPagination(data.pagination || null);
+      }
     } catch (error) {
       console.error("Failed to fetch bookings", error);
     } finally {
@@ -27,7 +35,7 @@ export default function AdminBookingsPage() {
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">Global Bookings</h1>
-        <p className="text-zinc-500 dark:text-zinc-400 mt-2">View the most recent 100 bookings across all stores on the platform.</p>
+        <p className="text-zinc-500 dark:text-zinc-400 mt-2">View all bookings across all stores on the platform.</p>
       </div>
 
       <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
@@ -74,6 +82,11 @@ export default function AdminBookingsPage() {
             </table>
           </div>
         )}
+        <PaginationControls
+          pagination={pagination}
+          onPageChange={setPage}
+          onLimitChange={(l) => { setLimit(l); setPage(1); }}
+        />
       </div>
     </div>
   );

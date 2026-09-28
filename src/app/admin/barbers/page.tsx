@@ -4,20 +4,28 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 
 export default function AdminBarbersPage() {
   const [barbers, setBarbers] = useState<any[]>([]);
+  const [pagination, setPagination] = useState<{ total: number; page: number; limit: number; pages: number } | null>(null);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchBarbers();
-  }, []);
+  }, [page, limit]);
 
   const fetchBarbers = async () => {
+    setLoading(true);
     try {
-      const res = await fetch("/api/admin/barbers");
+      const res = await fetch(`/api/admin/barbers?page=${page}&limit=${limit}`);
       const data = await res.json();
-      if (data.success) setBarbers(data.data);
+      if (data.success) {
+        setBarbers(data.data);
+        setPagination(data.pagination || null);
+      }
     } catch (error) {
       console.error("Failed to fetch barbers", error);
     } finally {
@@ -136,6 +144,11 @@ export default function AdminBarbersPage() {
             </table>
           </div>
         )}
+        <PaginationControls
+          pagination={pagination}
+          onPageChange={setPage}
+          onLimitChange={(l) => { setLimit(l); setPage(1); }}
+        />
       </div>
     </div>
   );
