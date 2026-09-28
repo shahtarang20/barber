@@ -105,7 +105,8 @@ export default function BarberBookingPage() {
     const phone = formData.get("phone") as string;
 
     try {
-      const res = await fetch("/api/public/bookings", {
+      const endpoint = selectedSlot.isWaitlist ? "/api/public/waitlist" : "/api/public/bookings";
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
@@ -118,14 +119,15 @@ export default function BarberBookingPage() {
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        setBookingError(data.error?.message || "Booking failed");
+        setBookingError(data.error?.message || "Operation failed");
         setBookingLoading(false);
         // Refresh slots in case it was double booked
         fetchSlots(selectedDate);
         return;
       }
 
-      setBookingSuccess(data.data);
+      // Hack to pass waitlist status to success screen
+      setBookingSuccess({ ...data.data, isWaitlist: selectedSlot.isWaitlist });
       setBookingLoading(false);
       
     } catch (err) {
@@ -171,27 +173,43 @@ export default function BarberBookingPage() {
     return (
       <div className="min-h-screen bg-zinc-50 flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-white p-8 rounded-2xl shadow-sm border border-zinc-200 text-center">
-          <div className="mx-auto w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-6">
-            <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
+          <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-6 ${bookingSuccess.isWaitlist ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'}`}>
+            {bookingSuccess.isWaitlist ? (
+              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            ) : (
+              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            )}
           </div>
-          <h1 className="text-2xl font-bold text-zinc-900 mb-2">{t('appointmentConfirmed')}</h1>
-          <p className="text-zinc-500 mb-8">{t('bookingSuccess')} {barber?.name}.</p>
+          <h1 className="text-2xl font-bold text-zinc-900 mb-2">
+            {bookingSuccess.isWaitlist ? (t('waitlistConfirmed' as any) || "Waitlist Confirmed") : t('appointmentConfirmed')}
+          </h1>
+          <p className="text-zinc-500 mb-8">
+            {bookingSuccess.isWaitlist 
+              ? (t('waitlistSuccess' as any) || "You will be notified via WhatsApp if a spot opens up!") 
+              : `${t('bookingSuccess')} ${barber?.name}.`}
+          </p>
           
           <div className="bg-zinc-50 rounded-xl p-6 mb-8 text-left border border-zinc-100">
             <div className="grid grid-cols-2 gap-4 text-sm">
-              <div className="text-zinc-500">{t('bookingId')}</div>
-              <div className="font-medium text-right">{bookingSuccess.bookingNumber}</div>
+              {!bookingSuccess.isWaitlist && (
+                <>
+                  <div className="text-zinc-500">{t('bookingId')}</div>
+                  <div className="font-medium text-right">{bookingSuccess.bookingNumber}</div>
+                </>
+              )}
               
               <div className="text-zinc-500">{t('date')}</div>
-              <div className="font-medium text-right">{format(new Date(bookingSuccess.date), "MMMM d, yyyy")}</div>
+              <div className="font-medium text-right">{format(new Date(bookingSuccess.date || selectedDate), "MMMM d, yyyy")}</div>
               
               <div className="text-zinc-500">{t('time')}</div>
-              <div className="font-medium text-right">{bookingSuccess.startTime}</div>
+              <div className="font-medium text-right">{bookingSuccess.startTime || selectedSlot?.startTime}</div>
               
               <div className="text-zinc-500">{t('customer')}</div>
-              <div className="font-medium text-right">{bookingSuccess.customerName}</div>
+              <div className="font-medium text-right">{bookingSuccess.customerName || bookingSuccess.name}</div>
             </div>
           </div>
           
@@ -284,19 +302,29 @@ export default function BarberBookingPage() {
                       }
                     })
                     .map((slot) => {
+                    .map((slot) => {
                       const isAvailable = slot.status === "AVAILABLE" || (slot.capacity && slot.capacity > 1 && slot.bookingsCount < slot.capacity);
+                      const isFull = !isAvailable && slot.status !== "BLOCKED";
+                      const isBlocked = slot.status === "BLOCKED";
+                      
+                      let btnStyle = "bg-white border-zinc-200 text-zinc-900 hover:border-zinc-900 hover:shadow-sm";
+                      if (isFull) {
+                        btnStyle = "bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100";
+                      } else if (isBlocked) {
+                        btnStyle = "bg-zinc-50 border-zinc-100 text-zinc-400 cursor-not-allowed line-through";
+                      }
+                      
                       return (
                         <button
                           key={slot._id}
-                          disabled={!isAvailable}
-                          onClick={() => setSelectedSlot(slot)}
-                          className={`py-4 rounded-xl border font-medium text-sm transition-all ${
-                            isAvailable 
-                              ? "bg-white border-zinc-200 text-zinc-900 hover:border-zinc-900 hover:shadow-sm" 
-                              : "bg-zinc-50 border-zinc-100 text-zinc-400 cursor-not-allowed line-through"
-                          }`}
+                          disabled={isBlocked}
+                          onClick={() => {
+                            setSelectedSlot({ ...slot, isWaitlist: isFull });
+                          }}
+                          className={`py-4 rounded-xl border font-medium text-sm transition-all flex flex-col items-center justify-center ${btnStyle}`}
                         >
-                          {slot.startTime}
+                          <span>{slot.startTime}</span>
+                          {isFull && <span className="text-[10px] uppercase font-bold mt-1 tracking-wider opacity-80">{t('waitlist' as any) || "Waitlist"}</span>}
                         </button>
                       );
                     })}
@@ -308,7 +336,9 @@ export default function BarberBookingPage() {
           /* Booking Confirmation Form */
           <div className="bg-white p-6 sm:p-8 rounded-2xl border border-zinc-200 shadow-sm">
             <div className="flex items-center justify-between mb-8">
-              <h2 className="text-xl font-semibold text-zinc-900">{t('confirmBooking')}</h2>
+              <h2 className="text-xl font-semibold text-zinc-900">
+                {selectedSlot.isWaitlist ? (t('joinWaitlist' as any) || "Join Waitlist") : t('confirmBooking')}
+              </h2>
               <button onClick={() => setSelectedSlot(null)} className="text-sm text-zinc-500 hover:text-zinc-900">
                 {t('cancel')}
               </button>

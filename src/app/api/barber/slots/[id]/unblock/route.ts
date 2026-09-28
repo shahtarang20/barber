@@ -40,9 +40,19 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     }
 
     slot.status = "AVAILABLE";
+    
+    let waitlistCustomer = null;
+    if (slot.waitlist && slot.waitlist.length > 0) {
+      // Pull the first person off the waitlist
+      waitlistCustomer = slot.waitlist.shift();
+      // Wait, do we want to auto-book them or just notify them?
+      // "automatically prepares a WhatsApp message to notify them that a spot just opened up"
+      // Let's just pull them from the waitlist and notify them. They can book it themselves.
+    }
+    
     await slot.save();
 
-    return NextResponse.json({ success: true, data: slot });
+    return NextResponse.json({ success: true, data: slot, waitlistCustomer });
   } catch (error) {
     console.error("Unblock slot error:", error);
     return NextResponse.json({ success: false, error: { message: "Internal server error" } }, { status: 500 });

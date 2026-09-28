@@ -8,6 +8,11 @@ export interface ISlot extends Document {
   status: "AVAILABLE" | "BOOKED" | "BLOCKED";
   capacity: number;
   bookingsCount: number;
+  waitlist: {
+    name: string;
+    phone: string;
+    joinedAt: Date;
+  }[];
   isCustomCapacity?: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -22,6 +27,13 @@ const SlotSchema: Schema = new Schema(
     status: { type: String, enum: ["AVAILABLE", "BOOKED", "BLOCKED"], default: "AVAILABLE", index: true },
     capacity: { type: Number, default: 1 },
     bookingsCount: { type: Number, default: 0 },
+    waitlist: [
+      {
+        name: { type: String, required: true },
+        phone: { type: String, required: true },
+        joinedAt: { type: Date, default: Date.now },
+      },
+    ],
     isCustomCapacity: { type: Boolean, default: false },
   },
   { timestamps: true }

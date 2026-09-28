@@ -73,7 +73,12 @@ const translations = {
     whatsappNotice: "A WhatsApp message in your selected language will be automatically prepared for the first customer.",
     premiumDueTitle: "Premium Due",
     premiumDueDesc: "It is the end of the month! Your premium payment of ₹{amount} is due. Please pay to continue uninterrupted service.",
-    payNow: "Pay Now"
+    payNow: "Pay Now",
+    waitlist: "Waitlist",
+    joinWaitlist: "Join Waitlist",
+    waitlistConfirmed: "Waitlist Confirmed",
+    waitlistSuccess: "You will be notified via WhatsApp if a spot opens up!",
+    waitlistNotifyMessage: "Hi {name}, a spot just opened up at {time}! Book it now before someone else takes it: {link}"
   },
   hi: {
     loading: "लोड हो रहा है...",
@@ -122,7 +127,12 @@ const translations = {
     whatsappNotice: "पहले ग्राहक के लिए आपकी चुनी हुई भाषा में एक व्हाट्सएप संदेश स्वचालित रूप से तैयार किया जाएगा।",
     premiumDueTitle: "प्रीमियम देय",
     premiumDueDesc: "यह महीने का अंत है! आपका ₹{amount} का प्रीमियम भुगतान देय है। कृपया निर्बाध सेवा जारी रखने के लिए भुगतान करें।",
-    payNow: "अभी भुगतान करें"
+    payNow: "अभी भुगतान करें",
+    waitlist: "प्रतीक्षा सूची",
+    joinWaitlist: "प्रतीक्षा सूची में शामिल हों",
+    waitlistConfirmed: "प्रतीक्षा सूची की पुष्टि हुई",
+    waitlistSuccess: "जगह खाली होने पर आपको व्हाट्सएप के माध्यम से सूचित किया जाएगा!",
+    waitlistNotifyMessage: "नमस्ते {name}, {time} पर अभी एक जगह खाली हुई है! इसे अभी बुक करें: {link}"
   },
   gu: {
     loading: "લોડ થઈ રહ્યું છે...",
@@ -171,7 +181,12 @@ const translations = {
     whatsappNotice: "તમારી પસંદ કરેલી ભાષામાં પ્રથમ ગ્રાહક માટે આપમેળે વૉટ્સએપ મેસેજ તૈયાર કરવામાં આવશે.",
     premiumDueTitle: "પ્રિમિયમ બાકી",
     premiumDueDesc: "આ મહિનાનો અંત છે! તમારી ₹{amount} ની પ્રીમિયમ ચુકવણી બાકી છે. કૃપા કરીને અવિરત સેવા ચાલુ રાખવા માટે ચૂકવણી કરો.",
-    payNow: "હવે ચૂકવણી કરો"
+    payNow: "હવે ચૂકવણી કરો",
+    waitlist: "પ્રતીક્ષા સૂચિ",
+    joinWaitlist: "પ્રતીક્ષા સૂચિમાં જોડાઓ",
+    waitlistConfirmed: "પ્રતીક્ષા સૂચિની પુષ્ટિ થઈ",
+    waitlistSuccess: "જો કોઈ જગ્યા ખાલી થશે તો તમને વોટ્સએપ દ્વારા જાણ કરવામાં આવશે!",
+    waitlistNotifyMessage: "નમસ્તે {name}, {time} વાગ્યે એક જગ્યા ખાલી થઈ છે! અત્યારે જ બુક કરો: {link}"
   },
   mr: {
     loading: "लोड होत आहे...",
@@ -220,7 +235,12 @@ const translations = {
     whatsappNotice: "तुमच्या निवडलेल्या भाषेत पहिल्या ग्राहकासाठी एक व्हाट्सएप संदेश स्वयंचलितपणे तयार केला जाईल.",
     premiumDueTitle: "प्रीमियम देय",
     premiumDueDesc: "हा महिन्याचा शेवट आहे! तुमचे ₹{amount} चे प्रीमियम पेमेंट देय आहे. कृपया विनाव्यत्यय सेवा सुरू ठेवण्यासाठी पैसे द्या.",
-    payNow: "आता भरा"
+    payNow: "आता भरा",
+    waitlist: "प्रतीक्षा यादी",
+    joinWaitlist: "प्रतीक्षा यादीत सामील व्हा",
+    waitlistConfirmed: "प्रतीक्षा यादी निश्चित",
+    waitlistSuccess: "जागा मोकळी झाल्यास तुम्हाला व्हॉट्सअॅपद्वारे सूचित केले जाईल!",
+    waitlistNotifyMessage: "नमस्कार {name}, {time} वाजता एक जागा मोकळी झाली आहे! आता बुक करा: {link}"
   }
 };
 

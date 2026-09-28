@@ -136,6 +136,19 @@ export default function DashboardPage() {
       const data = await res.json();
       if (data.success) {
         fetchSlots(selectedDate);
+        if (data.waitlistCustomer) {
+           const cust = data.waitlistCustomer;
+           const cleanPhone = cust.phone.replace(/\D/g, "");
+           const slotTime = slots.find(s => s._id === id)?.startTime || "your slot";
+           const bookingLink = `${window.location.origin}/b/${profile?.slug}`;
+           
+           const msgStr = t('waitlistNotifyMessage' as any)
+             .replace('{name}', cust.name)
+             .replace('{time}', slotTime)
+             .replace('{link}', bookingLink);
+             
+           window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msgStr)}`, '_blank');
+        }
       } else {
         alert(data.error?.message || "Failed to unblock slot");
       }
