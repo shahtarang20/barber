@@ -35,8 +35,28 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       return NextResponse.json({ success: false, error: { message: "Forbidden" } }, { status: 403 });
     }
 
-    if (slot.status === "BOOKED") {
-      return NextResponse.json({ success: false, error: { message: "Cannot block an already booked slot" } }, { status: 400 });
+    if (slot.status === "BOOKED" || slot.bookingsCount > 0) {
+      // Find the bookings to tell the barber who is in the slot
+      const { Booking } = await import("@/models/Booking");
+      const { Customer } = await import("@/models/Customer");
+      
+      const activeBookings = await Booking.find({ 
+        slotId: slot._id,
+        status: "CONFIRMED"
+      });
+      
+      let customerNames = [];
+      for (const b of activeBookings) {
+        const customer = await Customer.findById(b.customerId);
+        if (customer) customerNames.push(customer.name);
+      }
+      
+      const namesStr = customerNames.length > 0 ? customerNames.join(", ") : "a customer";
+      
+      return NextResponse.json({ 
+        success: false, 
+        error: { message: `Sorry, you cannot block this slot because ${namesStr} has already booked it. Please cancel their appointment(s) first.` } 
+      }, { status: 400 });
     }
 
     slot.status = "BLOCKED";
