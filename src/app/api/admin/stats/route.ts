@@ -16,10 +16,8 @@ export async function GET(req: Request) {
     }
 
     const payload = verifyToken(token);
-    // Let ADMIN access it. For now, since we haven't seeded an admin, let's allow any role temporarily, or just check role === "ADMIN".
-    // I will let anyone who has valid token access it for demo purposes, or check ADMIN.
-    if (!payload || (payload.role !== "ADMIN" && payload.role !== "BARBER")) {
-      return NextResponse.json({ success: false, error: { message: "Unauthorized" } }, { status: 401 });
+    if (!payload || payload.role !== "ADMIN") {
+      return NextResponse.json({ success: false, error: { message: "Unauthorized: Admins only" } }, { status: 401 });
     }
 
     await connectToDatabase();

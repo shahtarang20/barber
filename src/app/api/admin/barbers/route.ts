@@ -15,8 +15,8 @@ export async function GET(req: Request) {
     }
 
     const payload = verifyToken(token);
-    if (!payload || (payload.role !== "ADMIN" && payload.role !== "BARBER")) {
-      return NextResponse.json({ success: false, error: { message: "Unauthorized" } }, { status: 401 });
+    if (!payload || payload.role !== "ADMIN") {
+      return NextResponse.json({ success: false, error: { message: "Unauthorized: Admins only" } }, { status: 401 });
     }
 
     await connectToDatabase();
