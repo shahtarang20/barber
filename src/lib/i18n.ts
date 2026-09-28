@@ -63,7 +63,9 @@ const translations = {
     time: "Time",
     customer: "Customer",
     barberNotFound: "Barber Not Found",
-    checkUrl: "Please check the URL and try again."
+    checkUrl: "Please check the URL and try again.",
+    cancelPrompt: "Booking cancelled! Would you like to send a WhatsApp message to {name} to let them know you are unavailable?",
+    cancelMessage: "Hi {name}, sorry but we had to cancel your appointment at {time}. We are unavailable right now. Please book another time!"
   },
   hi: {
     loading: "लोड हो रहा है...",
@@ -102,7 +104,9 @@ const translations = {
     time: "समय",
     customer: "ग्राहक",
     barberNotFound: "नाई नहीं मिला",
-    checkUrl: "कृपया URL जांचें और पुनः प्रयास करें।"
+    checkUrl: "कृपया URL जांचें और पुनः प्रयास करें।",
+    cancelPrompt: "बुकिंग रद्द हो गई! क्या आप {name} को व्हाट्सएप संदेश भेजना चाहेंगे कि आप अनुपलब्ध हैं?",
+    cancelMessage: "नमस्ते {name}, क्षमा करें लेकिन हमें {time} का आपका अपॉइंटमेंट रद्द करना पड़ा। हम अभी अनुपलब्ध हैं। कृपया दूसरी बार बुक करें!"
   },
   gu: {
     loading: "લોડ થઈ રહ્યું છે...",
@@ -141,7 +145,9 @@ const translations = {
     time: "સમય",
     customer: "ગ્રાહક",
     barberNotFound: "વાળંદ મળ્યો નથી",
-    checkUrl: "કૃપા કરીને URL તપાસો અને ફરી પ્રયાસ કરો."
+    checkUrl: "કૃપા કરીને URL તપાસો અને ફરી પ્રયાસ કરો.",
+    cancelPrompt: "બુકિંગ રદ થયું! શું તમે {name} ને વૉટ્સએપ મેસેજ મોકલવા માંગો છો કે તમે અનુપલબ્ધ છો?",
+    cancelMessage: "નમસ્તે {name}, માફ કરશો પરંતુ અમારે {time} ની તમારી એપોઇન્ટમેન્ટ રદ કરવી પડી. અમે અત્યારે અનુપલબ્ધ છીએ. કૃપા કરીને બીજી વાર બુક કરો!"
   },
   mr: {
     loading: "लोड होत आहे...",
@@ -180,7 +186,9 @@ const translations = {
     time: "वेळ",
     customer: "ग्राहक",
     barberNotFound: "न्हावी सापडला नाही",
-    checkUrl: "कृपया URL तपासा आणि पुन्हा प्रयत्न करा."
+    checkUrl: "कृपया URL तपासा आणि पुन्हा प्रयत्न करा.",
+    cancelPrompt: "बुकिंग रद्द केले! तुम्ही {name} ला व्हॉट्सॲप संदेश पाठवू इच्छिता की तुम्ही अनुपलब्ध आहात?",
+    cancelMessage: "नमस्कार {name}, क्षमस्व पण आम्हाला तुमची {time} ची अपॉइंटमेंट रद्द करावी लागली. आम्ही सध्या अनुपलब्ध आहोत. कृपया दुसऱ्या वेळी बुक करा!"
   }
 };
 

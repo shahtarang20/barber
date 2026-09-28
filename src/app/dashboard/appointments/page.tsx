@@ -3,11 +3,13 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "@/lib/i18n";
 
 export default function AppointmentsPage() {
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("ALL");
+  const { t } = useTranslation();
 
   useEffect(() => {
     fetchBookings();
@@ -41,10 +43,12 @@ export default function AppointmentsPage() {
           const { name, phone } = data.data.customer;
           const time = data.data.booking.startTime;
           
-          if (confirm(`Booking cancelled! Would you like to send a WhatsApp message to ${name} to let them know you are unavailable?`)) {
+          const prompt = t('cancelPrompt' as any).replace('{name}', name);
+          if (confirm(prompt)) {
             // Clean phone number (strip non-digits)
             const cleanPhone = phone.replace(/\D/g, "");
-            const msg = encodeURIComponent(`Hi ${name}, sorry but we had to cancel your appointment at ${time}. We are unavailable right now. Please book another time!`);
+            const msgStr = t('cancelMessage' as any).replace('{name}', name).replace('{time}', time);
+            const msg = encodeURIComponent(msgStr);
             window.open(`https://wa.me/${cleanPhone}?text=${msg}`, '_blank');
           }
         }
