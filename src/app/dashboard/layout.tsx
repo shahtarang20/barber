@@ -1,8 +1,22 @@
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { verifyToken } from "@/lib/auth";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { MobileNav } from "@/components/dashboard/MobileNav";
 import { InstallPrompt } from "@/components/InstallPrompt";
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const token = (await cookies()).get("auth_token")?.value;
+  const payload = token ? verifyToken(token) : null;
+
+  if (!payload) {
+    redirect("/login");
+  }
+
+  if (payload.role === "ADMIN") {
+    redirect("/admin");
+  }
+
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-zinc-50 dark:bg-zinc-900">
       <div className="hidden md:block">
