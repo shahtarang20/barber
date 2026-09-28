@@ -4,10 +4,12 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { CalendarDays, Settings, Users, Link as LinkIcon, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "@/lib/i18n";
 
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const { t } = useTranslation();
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -16,10 +18,10 @@ export function Sidebar() {
   };
 
   const navItems = [
-    { name: "Schedule", href: "/dashboard", icon: CalendarDays },
-    { name: "Appointments", href: "/dashboard/appointments", icon: Users },
-    { name: "Public Page", href: "/dashboard/link", icon: LinkIcon },
-    { name: "Settings", href: "/dashboard/settings", icon: Settings },
+    { key: "schedule" as const, href: "/dashboard", icon: CalendarDays },
+    { key: "appointments" as const, href: "/dashboard/appointments", icon: Users },
+    { key: "publicPage" as const, href: "/dashboard/link", icon: LinkIcon },
+    { key: "settings" as const, href: "/dashboard/settings", icon: Settings },
   ];
 
   return (
@@ -34,7 +36,7 @@ export function Sidebar() {
           const isActive = pathname === item.href;
           return (
             <Link
-              key={item.name}
+              key={item.key}
               href={item.href}
               className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                 isActive
@@ -43,7 +45,7 @@ export function Sidebar() {
               }`}
             >
               <Icon className="w-4 h-4" />
-              {item.name}
+              {t(item.key)}
             </Link>
           );
         })}
@@ -56,7 +58,7 @@ export function Sidebar() {
           onClick={handleLogout}
         >
           <LogOut className="w-4 h-4 mr-3" />
-          Logout
+          {t('logout')}
         </Button>
       </div>
     </div>

@@ -6,9 +6,12 @@ import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useTranslation } from "@/lib/i18n";
+import { LanguageSelector } from "@/components/LanguageSelector";
 
 export default function BarberBookingPage() {
   const { slug } = useParams();
+  const { t, language } = useTranslation();
   
   const [barber, setBarber] = useState<any>(null);
   const [slots, setSlots] = useState<any[]>([]);
@@ -135,8 +138,8 @@ export default function BarberBookingPage() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-zinc-50">
         <div className="text-4xl mb-4">✂️</div>
-        <h2 className="text-xl font-bold text-zinc-900 mb-2">Barber Not Found</h2>
-        <p className="text-zinc-500">Please check the URL and try again.</p>
+        <h2 className="text-xl font-bold text-zinc-900 mb-2">{t('barberNotFound')}</h2>
+        <p className="text-zinc-500">{t('checkUrl')}</p>
       </div>
     );
   }
@@ -145,7 +148,7 @@ export default function BarberBookingPage() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-zinc-50">
         <div className="w-12 h-12 border-4 border-zinc-200 border-t-zinc-900 rounded-full animate-spin mb-4"></div>
-        <p className="text-zinc-500 font-medium">Loading schedule...</p>
+        <p className="text-zinc-500 font-medium">{t('loading')}</p>
       </div>
     );
   }
@@ -159,26 +162,26 @@ export default function BarberBookingPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-zinc-900 mb-2">Appointment Confirmed!</h1>
-          <p className="text-zinc-500 mb-8">Your appointment has been successfully booked with {barber?.name}.</p>
+          <h1 className="text-2xl font-bold text-zinc-900 mb-2">{t('appointmentConfirmed')}</h1>
+          <p className="text-zinc-500 mb-8">{t('bookingSuccess')} {barber?.name}.</p>
           
           <div className="bg-zinc-50 rounded-xl p-6 mb-8 text-left border border-zinc-100">
             <div className="grid grid-cols-2 gap-4 text-sm">
-              <div className="text-zinc-500">Booking ID</div>
+              <div className="text-zinc-500">{t('bookingId')}</div>
               <div className="font-medium text-right">{bookingSuccess.bookingNumber}</div>
               
-              <div className="text-zinc-500">Date</div>
+              <div className="text-zinc-500">{t('date')}</div>
               <div className="font-medium text-right">{format(new Date(bookingSuccess.date), "MMMM d, yyyy")}</div>
               
-              <div className="text-zinc-500">Time</div>
+              <div className="text-zinc-500">{t('time')}</div>
               <div className="font-medium text-right">{bookingSuccess.startTime}</div>
               
-              <div className="text-zinc-500">Customer</div>
+              <div className="text-zinc-500">{t('customer')}</div>
               <div className="font-medium text-right">{bookingSuccess.customerName}</div>
             </div>
           </div>
           
-          <Button className="w-full h-12" onClick={() => window.location.reload()}>Done</Button>
+          <Button className="w-full h-12" onClick={() => window.location.reload()}>{t('done')}</Button>
         </div>
       </div>
     );
@@ -189,6 +192,11 @@ export default function BarberBookingPage() {
 
   return (
     <div className="min-h-screen bg-zinc-50 pb-20">
+      {/* Top Banner with Language Selector */}
+      <div className="absolute top-4 right-4 z-10">
+        <LanguageSelector />
+      </div>
+
       {/* Barber Header */}
       <div className="bg-white border-b border-zinc-200 pt-12 pb-8 px-4 text-center">
         <div className="w-20 h-20 bg-zinc-200 rounded-full mx-auto mb-4 overflow-hidden border-4 border-white shadow-sm flex items-center justify-center text-2xl font-bold text-zinc-400">
@@ -205,7 +213,7 @@ export default function BarberBookingPage() {
           <>
             {/* Date Selection */}
             <div className="mb-8">
-              <h2 className="text-lg font-semibold text-zinc-900 mb-4">Choose a date</h2>
+              <h2 className="text-lg font-semibold text-zinc-900 mb-4">{t('chooseDate')}</h2>
               <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide">
                 {upcomingDates.map((date, i) => {
                   const isSelected = format(date, "yyyy-MM-dd") === format(selectedDate, "yyyy-MM-dd");
@@ -230,13 +238,13 @@ export default function BarberBookingPage() {
 
             {/* Time Selection */}
             <div>
-              <h2 className="text-lg font-semibold text-zinc-900 mb-4">Available Times</h2>
+              <h2 className="text-lg font-semibold text-zinc-900 mb-4">{t('availableTimes')}</h2>
               
               {loading ? (
-                <div className="py-12 text-center text-zinc-500">Loading schedule...</div>
+                <div className="py-12 text-center text-zinc-500">{t('loading')}</div>
               ) : slots.length === 0 ? (
                 <div className="bg-white p-8 rounded-2xl border border-zinc-200 text-center text-zinc-500">
-                  No slots available for this date.
+                  {t('noSlots')}
                 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -262,7 +270,7 @@ export default function BarberBookingPage() {
                       }
                     })
                     .map((slot) => {
-                      const isAvailable = slot.status === "AVAILABLE";
+                      const isAvailable = slot.status === "AVAILABLE" || (slot.capacity && slot.capacity > 1 && slot.bookingsCount < slot.capacity);
                       return (
                         <button
                           key={slot._id}
@@ -286,18 +294,18 @@ export default function BarberBookingPage() {
           /* Booking Confirmation Form */
           <div className="bg-white p-6 sm:p-8 rounded-2xl border border-zinc-200 shadow-sm">
             <div className="flex items-center justify-between mb-8">
-              <h2 className="text-xl font-semibold text-zinc-900">Confirm Booking</h2>
+              <h2 className="text-xl font-semibold text-zinc-900">{t('confirmBooking')}</h2>
               <button onClick={() => setSelectedSlot(null)} className="text-sm text-zinc-500 hover:text-zinc-900">
-                Cancel
+                {t('cancel')}
               </button>
             </div>
 
             <div className="bg-zinc-50 p-4 rounded-xl mb-8 flex justify-between items-center border border-zinc-100">
               <div>
-                <p className="text-sm text-zinc-500">Selected Time</p>
+                <p className="text-sm text-zinc-500">{t('time')}</p>
                 <p className="font-semibold text-zinc-900 mt-1">{format(selectedDate, "MMM d, yyyy")} at {selectedSlot.startTime}</p>
               </div>
-              <button onClick={() => setSelectedSlot(null)} className="text-blue-600 text-sm font-medium">Change</button>
+              <button onClick={() => setSelectedSlot(null)} className="text-blue-600 text-sm font-medium">{t('cancel')}</button>
             </div>
 
             <form onSubmit={handleBookingSubmit} className="space-y-5">
@@ -308,17 +316,17 @@ export default function BarberBookingPage() {
               )}
               
               <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
+                <Label htmlFor="name">{t('yourName')}</Label>
                 <Input id="name" name="name" placeholder="Tarang" required className="h-12 text-base" />
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="phone">Mobile Number</Label>
+                <Label htmlFor="phone">{t('yourPhone')}</Label>
                 <Input id="phone" name="phone" type="tel" placeholder="98XXXXXXXX" required className="h-12 text-base" />
               </div>
 
               <Button type="submit" className="w-full h-12 text-base mt-4" disabled={bookingLoading}>
-                {bookingLoading ? "Confirming..." : "Confirm Appointment"}
+                {bookingLoading ? t('loading') : t('confirmBooking')}
               </Button>
             </form>
           </div>

@@ -4,7 +4,11 @@ import { useState, useEffect } from "react";
 import { format, addDays, subDays, parse, isAfter } from "date-fns";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { useTranslation } from "@/lib/i18n";
+import { LanguageSelector } from "@/components/LanguageSelector";
+
 export default function DashboardPage() {
+  const { t } = useTranslation();
   const [profile, setProfile] = useState<any>(null);
   const [slots, setSlots] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -121,26 +125,29 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">
-          Good morning, {profile?.name.split(" ")[0] || "Barber"} 👋
-        </h1>
-        <p className="text-zinc-500 dark:text-zinc-400 mt-2">
-          Here is your schedule for today.
-        </p>
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">
+            Good morning, {profile?.name.split(" ")[0] || "Barber"} 👋
+          </h1>
+          <p className="text-zinc-500 dark:text-zinc-400 mt-2">
+            Here is your schedule for today.
+          </p>
+        </div>
+        <LanguageSelector />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
         <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
-          <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Total Appointments</p>
+          <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">{t('appointments')}</p>
           <p className="text-2xl sm:text-3xl font-bold mt-2 text-zinc-900 dark:text-zinc-50">{slots.length}</p>
         </div>
         <div className="bg-green-50 dark:bg-green-950/20 p-4 sm:p-6 rounded-2xl border border-green-100 dark:border-green-900/30 shadow-sm">
-          <p className="text-sm font-medium text-green-600 dark:text-green-500">Available</p>
+          <p className="text-sm font-medium text-green-600 dark:text-green-500">{t('available')}</p>
           <p className="text-2xl sm:text-3xl font-bold mt-2 text-green-700 dark:text-green-400">{availableSlots}</p>
         </div>
         <div className="bg-red-50 dark:bg-red-950/20 p-4 sm:p-6 rounded-2xl border border-red-100 dark:border-red-900/30 shadow-sm sm:col-span-2 md:col-span-1">
-          <p className="text-sm font-medium text-red-600 dark:text-red-500">Booked</p>
+          <p className="text-sm font-medium text-red-600 dark:text-red-500">{t('booked')}</p>
           <p className="text-2xl sm:text-3xl font-bold mt-2 text-red-700 dark:text-red-400">{bookedSlots}</p>
         </div>
       </div>
@@ -156,19 +163,19 @@ export default function DashboardPage() {
           </div>
           <div className="flex items-center gap-3 sm:gap-4 w-full md:w-auto justify-between md:justify-end">
             <div className="flex items-center gap-2">
-              <label className="text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 hidden sm:block">Bookings per slot:</label>
+              <label className="text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 hidden sm:block">{t('bookingsPerSlot')}</label>
               <label className="text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 sm:hidden">Cap:</label>
               <input type="number" min="1" max="50" value={capacity || ""} onChange={(e) => setCapacity(e.target.value === "" ? 0 : Number(e.target.value))} className="w-14 sm:w-16 h-9 rounded-md border border-zinc-200 px-2 sm:px-3 py-1 text-sm dark:border-zinc-800 dark:bg-zinc-950" />
             </div>
             <Button variant="outline" size="sm" className="sm:size-default" onClick={generateSlots} disabled={generating}>
-              {generating ? "Generating..." : "Generate Slots"}
+              {generating ? t('loading') : t('generateSlots')}
             </Button>
           </div>
         </div>
 
         <div className="divide-y divide-zinc-200 dark:divide-zinc-800">
           {loading ? (
-            <div className="p-8 text-center text-zinc-500">Loading schedule...</div>
+            <div className="p-8 text-center text-zinc-500">{t('loading')}</div>
           ) : slots.length === 0 ? (
             <div className="p-12 text-center flex flex-col items-center justify-center">
               <div className="h-16 w-16 bg-zinc-100 dark:bg-zinc-800 rounded-full flex items-center justify-center mb-4">
@@ -176,17 +183,17 @@ export default function DashboardPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
               </div>
-              <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">No schedule created</h3>
+              <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">{t('noSchedule')}</h3>
               <p className="text-zinc-500 dark:text-zinc-400 mt-1 max-w-sm">
-                You haven&apos;t generated any slots for this date yet. Generate your daily schedule to start accepting bookings.
+                {t('noScheduleDesc')}
               </p>
               <div className="mt-6 flex flex-col items-center gap-4">
                 <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Bookings per slot:</label>
+                  <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{t('bookingsPerSlot')}</label>
                   <input type="number" min="1" max="50" value={capacity || ""} onChange={(e) => setCapacity(e.target.value === "" ? 0 : Number(e.target.value))} className="w-20 rounded-md border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-800 dark:bg-zinc-950" />
                 </div>
                 <Button onClick={generateSlots} disabled={generating}>
-                  {generating ? "Generating..." : "Generate Today's Slots"}
+                  {generating ? t('loading') : t('generateSlots')}
                 </Button>
               </div>
             </div>
@@ -218,12 +225,12 @@ export default function DashboardPage() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
                     </div>
-                    <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">You're all done for today! 🎉</h3>
+                    <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">{t('allDone')}</h3>
                     <p className="text-zinc-500 dark:text-zinc-400 mt-1 max-w-sm">
-                      All your appointments for today have been completed and safely stored in the database.
+                      {t('allDoneDesc')}
                     </p>
                     <Button className="mt-6" onClick={() => setSelectedDate(addDays(selectedDate, 1))}>
-                      Focus on Tomorrow
+                      {t('focusTomorrow')}
                     </Button>
                   </div>
                 );
@@ -238,17 +245,17 @@ export default function DashboardPage() {
                     
                     {slot.status === "AVAILABLE" && (
                       <span className="px-2 sm:px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                        Available ({slot.bookingsCount || 0}/{slot.capacity || 1})
+                        {t('available')} ({slot.bookingsCount || 0}/{slot.capacity || 1})
                       </span>
                     )}
                     {slot.status === "BOOKED" && (
                       <span className="px-2 sm:px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
-                        Booked
+                        {t('booked')}
                       </span>
                     )}
                     {slot.status === "BLOCKED" && (
                       <span className="px-2 sm:px-3 py-1 rounded-full text-xs font-medium bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">
-                        Blocked
+                        {t('blocked')}
                       </span>
                     )}
                   </div>
@@ -261,13 +268,13 @@ export default function DashboardPage() {
                       />
                     </div>
                     <div className="flex items-center gap-2">
-                      {slot.status === "AVAILABLE" && <Button variant="outline" size="sm" className="font-medium shadow-sm hover:bg-zinc-50 text-xs sm:text-sm h-7 sm:h-8" onClick={() => handleBlockSlot(slot._id)}>Block Slot</Button>}
+                      {slot.status === "AVAILABLE" && <Button variant="outline" size="sm" className="font-medium shadow-sm hover:bg-zinc-50 text-xs sm:text-sm h-7 sm:h-8" onClick={() => handleBlockSlot(slot._id)}>{t('blockSlot')}</Button>}
                       {(slot.status === "BOOKED" || slot.bookingsCount > 0) && (
                         <Link href="/dashboard/appointments" className="inline-block">
-                          <Button variant="secondary" size="sm" className="font-medium shadow-sm text-xs sm:text-sm h-7 sm:h-8">View Details</Button>
+                          <Button variant="secondary" size="sm" className="font-medium shadow-sm text-xs sm:text-sm h-7 sm:h-8">{t('viewDetails')}</Button>
                         </Link>
                       )}
-                      {slot.status === "BLOCKED" && <Button variant="outline" size="sm" className="font-medium shadow-sm hover:bg-zinc-50 text-xs sm:text-sm h-7 sm:h-8" onClick={() => handleUnblockSlot(slot._id)}>Unblock</Button>}
+                      {slot.status === "BLOCKED" && <Button variant="outline" size="sm" className="font-medium shadow-sm hover:bg-zinc-50 text-xs sm:text-sm h-7 sm:h-8" onClick={() => handleUnblockSlot(slot._id)}>{t('unblock')}</Button>}
                     </div>
                   </div>
                 </div>
