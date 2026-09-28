@@ -3,23 +3,23 @@ import { Button } from "@/components/ui/button";
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 font-[family-name:var(--font-geist-sans)]">
+    <div className="min-h-screen overflow-x-hidden bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 font-[family-name:var(--font-geist-sans)]">
       {/* Header */}
-      <header className="px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-950/50 backdrop-blur-sm fixed top-0 w-full z-10">
-        <div className="font-bold text-lg sm:text-xl tracking-tight">BarberSaaS</div>
-        <nav className="flex gap-1.5 sm:gap-4">
+      <header className="px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-950/50 backdrop-blur-sm fixed top-0 w-full z-10">
+        <div className="font-bold text-base min-[360px]:text-lg sm:text-xl tracking-tight whitespace-nowrap shrink-0">BarberSaaS</div>
+        <nav className="flex gap-1 min-[360px]:gap-1.5 sm:gap-4 shrink-0">
           <Link href="/login">
-            <Button variant="ghost" size="sm" className="font-medium text-sm sm:text-base px-2 sm:px-4">Log in</Button>
+            <Button variant="ghost" size="sm" className="font-medium text-xs min-[360px]:text-sm sm:text-base px-1.5 min-[360px]:px-2 sm:px-4 whitespace-nowrap">Log in</Button>
           </Link>
           <Link href="/register">
-            <Button size="sm" className="font-medium text-sm sm:text-base px-3 sm:px-4">Get Started</Button>
+            <Button size="sm" className="font-medium text-xs min-[360px]:text-sm sm:text-base px-2.5 min-[360px]:px-3 sm:px-4 whitespace-nowrap">Get Started</Button>
           </Link>
         </nav>
       </header>
 
       {/* Hero Section */}
       <main className="pt-24 sm:pt-32 pb-16 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto text-center">
-        <h1 className="text-3xl min-[400px]:text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight mb-4 sm:mb-6 leading-[1.1] sm:leading-tight">
+        <h1 className="text-balance text-3xl min-[400px]:text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight mb-4 sm:mb-6 leading-[1.1] sm:leading-tight">
           Stop managing barber appointments on <span className="text-green-500 block sm:inline mt-1 sm:mt-0">WhatsApp.</span>
         </h1>
         <p className="text-base sm:text-xl text-zinc-600 dark:text-zinc-400 max-w-2xl mx-auto mb-8 sm:mb-10 leading-relaxed sm:leading-relaxed px-1 sm:px-2">

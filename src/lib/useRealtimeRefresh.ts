@@ -1,22 +1,25 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import PusherClient from "pusher-js";
+import useSWR from "swr";
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 /**
- * Opens a WebSocket to /ws (same origin, same auth cookie) and calls
- * `onUpdate` whenever the server says this barber's data changed —
- * replacing fixed-interval polling with a push-driven refresh.
- * Falls back to a slow interval if the socket can't connect, so the
- * dashboard still updates (just less instantly) if WS is blocked.
+ * Opens a Pusher connection and calls `onUpdate` whenever the server 
+ * triggers an event on the barber's channel.
  */
 export function useRealtimeRefresh(onUpdate: () => void, fallbackIntervalMs = 30000) {
   const onUpdateRef = useRef(onUpdate);
   onUpdateRef.current = onUpdate;
 
+  const { data: profileRes } = useSWR("/api/barber/profile", fetcher);
+  const barberId = profileRes?.success ? profileRes.data._id : null;
+
   useEffect(() => {
-    let socket: WebSocket | null = null;
     let fallbackTimer: ReturnType<typeof setInterval> | null = null;
-    let closedByUs = false;
+    let pusher: PusherClient | null = null;
 
     const startFallback = () => {
       if (fallbackTimer) return;
@@ -30,27 +33,45 @@ export function useRealtimeRefresh(onUpdate: () => void, fallbackIntervalMs = 30
       }
     };
 
-    const connect = () => {
-      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      socket = new WebSocket(`${protocol}//${window.location.host}/ws`);
+    if (!barberId) {
+      startFallback();
+      return () => stopFallback();
+    }
 
-      socket.onopen = () => stopFallback();
-      socket.onmessage = () => onUpdateRef.current();
-      socket.onerror = () => startFallback();
-      socket.onclose = () => {
+    const pusherKey = process.env.NEXT_PUBLIC_PUSHER_KEY;
+    const pusherCluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER;
+
+    if (pusherKey && pusherCluster) {
+      pusher = new PusherClient(pusherKey, {
+        cluster: pusherCluster,
+      });
+
+      pusher.connection.bind("connected", () => {
+        stopFallback();
+      });
+
+      pusher.connection.bind("disconnected", () => {
         startFallback();
-        if (!closedByUs) {
-          setTimeout(connect, 5000);
-        }
-      };
-    };
+      });
 
-    connect();
+      pusher.connection.bind("error", () => {
+        startFallback();
+      });
+
+      const channel = pusher.subscribe(barberId);
+      channel.bind("update", () => {
+        onUpdateRef.current();
+      });
+    } else {
+      startFallback();
+    }
 
     return () => {
-      closedByUs = true;
       stopFallback();
-      socket?.close();
+      if (pusher) {
+        pusher.unsubscribe(barberId);
+        pusher.disconnect();
+      }
     };
-  }, [fallbackIntervalMs]);
+  }, [barberId, fallbackIntervalMs]);
 }

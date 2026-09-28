@@ -1,45 +1,37 @@
-import type { WebSocket, WebSocketServer } from "ws";
+import Pusher from "pusher";
 
-// Survives Next.js dev hot-reload the same way the Mongoose connection cache does.
-const globalForWs = global as unknown as {
-  wss?: WebSocketServer;
-  wsRooms?: Map<string, Set<WebSocket>>;
-};
+// Initialize Pusher only if env vars are present
+let pusher: Pusher | null = null;
 
-export function getRooms(): Map<string, Set<WebSocket>> {
-  if (!globalForWs.wsRooms) {
-    globalForWs.wsRooms = new Map();
-  }
-  return globalForWs.wsRooms;
-}
-
-export function setWss(wss: WebSocketServer) {
-  globalForWs.wss = wss;
-}
-
-export function joinRoom(barberId: string, socket: WebSocket) {
-  const rooms = getRooms();
-  if (!rooms.has(barberId)) rooms.set(barberId, new Set());
-  rooms.get(barberId)!.add(socket);
-}
-
-export function leaveRoom(barberId: string, socket: WebSocket) {
-  const rooms = getRooms();
-  rooms.get(barberId)?.delete(socket);
-  if (rooms.get(barberId)?.size === 0) rooms.delete(barberId);
+if (
+  process.env.PUSHER_APP_ID &&
+  process.env.PUSHER_KEY &&
+  process.env.PUSHER_SECRET &&
+  process.env.NEXT_PUBLIC_PUSHER_CLUSTER
+) {
+  pusher = new Pusher({
+    appId: process.env.PUSHER_APP_ID,
+    key: process.env.PUSHER_KEY,
+    secret: process.env.PUSHER_SECRET,
+    cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER,
+    useTLS: true,
+  });
 }
 
 /**
  * Notify every connected dashboard tab for this barber that their data
- * changed, so the client re-fetches instead of polling on a timer.
+ * changed, so the client re-fetches.
  */
-export function notifyBarber(barberId: string, type: string) {
-  const sockets = getRooms().get(barberId);
-  if (!sockets) return;
-  const payload = JSON.stringify({ type });
-  for (const socket of sockets) {
-    if (socket.readyState === socket.OPEN) {
-      socket.send(payload);
-    }
+export async function notifyBarber(barberId: string, type: string) {
+  if (!pusher) {
+    console.warn("Pusher is not configured. Realtime updates disabled.");
+    return;
+  }
+  
+  try {
+    // We use the barberId as the channel name
+    await pusher.trigger(barberId, "update", { type });
+  } catch (error) {
+    console.error("Failed to trigger Pusher event:", error);
   }
 }
