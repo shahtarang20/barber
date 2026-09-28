@@ -177,7 +177,7 @@ export default function AppointmentsPage() {
             </table>
           </div>
           
-          {pagination && pagination.pages > 1 && (
+          {pagination && (
             <div className="flex items-center justify-between p-4 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50">
               <p className="text-sm text-zinc-500">
                 Showing page {pagination.page} of {pagination.pages}
