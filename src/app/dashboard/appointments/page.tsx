@@ -4,12 +4,29 @@ import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/lib/i18n";
+import { toast } from "@/components/ui/toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export default function AppointmentsPage() {
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("ALL");
   const { t } = useTranslation();
+
+  const [cancelBookingId, setCancelBookingId] = useState<string | null>(null);
+  const [whatsappPromptData, setWhatsappPromptData] = useState<{
+    phone: string;
+    name: string;
+    time: string;
+    prompt: string;
+  } | null>(null);
 
   useEffect(() => {
     fetchBookings();
@@ -31,8 +48,14 @@ export default function AppointmentsPage() {
   };
 
   const handleAction = async (id: string, action: "cancel" | "complete" | "no-show") => {
-    if (action === "cancel" && !confirm("Are you sure you want to cancel this booking?")) return;
-    
+    if (action === "cancel") {
+      setCancelBookingId(id);
+      return;
+    }
+    await processAction(id, action);
+  };
+
+  const processAction = async (id: string, action: "cancel" | "complete" | "no-show") => {
     try {
       const res = await fetch(`/api/bookings/${id}/${action}`, { method: "POST" });
       const data = await res.json();
@@ -44,20 +67,31 @@ export default function AppointmentsPage() {
           const time = data.data.booking.startTime;
           
           const prompt = t('cancelPrompt' as any).replace('{name}', name);
-          if (confirm(prompt)) {
-            // Clean phone number (strip non-digits)
-            const cleanPhone = phone.replace(/\D/g, "");
-            const msgStr = t('cancelMessage' as any).replace('{name}', name).replace('{time}', time);
-            const msg = encodeURIComponent(msgStr);
-            window.open(`https://wa.me/${cleanPhone}?text=${msg}`, '_blank');
-          }
+          setWhatsappPromptData({ phone, name, time, prompt });
         }
       } else {
-        alert(data.error?.message || `Failed to ${action} booking`);
+        toast.add({ title: "Error", description: data.error?.message || `Failed to ${action} booking`, type: "error" });
       }
     } catch (error) {
-      alert(`Error updating booking`);
+      toast.add({ title: "Error", description: `Error updating booking`, type: "error" });
     }
+  };
+
+  const executeCancel = async () => {
+    if (!cancelBookingId) return;
+    const id = cancelBookingId;
+    setCancelBookingId(null);
+    await processAction(id, "cancel");
+  };
+
+  const handleSendWhatsApp = () => {
+    if (!whatsappPromptData) return;
+    const { phone, name, time } = whatsappPromptData;
+    const cleanPhone = phone.replace(/\D/g, "");
+    const msgStr = t('cancelMessage' as any).replace('{name}', name).replace('{time}', time);
+    const msg = encodeURIComponent(msgStr);
+    window.open(`https://wa.me/${cleanPhone}?text=${msg}`, '_blank');
+    setWhatsappPromptData(null);
   };
 
   const filteredBookings = bookings.filter(b => {
@@ -151,6 +185,44 @@ export default function AppointmentsPage() {
           </div>
         )}
       </div>
+
+      <Dialog open={!!cancelBookingId} onOpenChange={(open) => !open && setCancelBookingId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancel Booking</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to cancel this booking? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setCancelBookingId(null)}>
+              No, keep it
+            </Button>
+            <Button variant="default" className="bg-red-600 hover:bg-red-700 text-white" onClick={executeCancel}>
+              Yes, cancel booking
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!whatsappPromptData} onOpenChange={(open) => !open && setWhatsappPromptData(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Send WhatsApp Message</DialogTitle>
+            <DialogDescription>
+              {whatsappPromptData?.prompt}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setWhatsappPromptData(null)}>
+              Cancel
+            </Button>
+            <Button variant="default" onClick={handleSendWhatsApp}>
+              Send Message
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

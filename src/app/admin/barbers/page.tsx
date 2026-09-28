@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/components/ui/toast";
 
 export default function AdminBarbersPage() {
   const [barbers, setBarbers] = useState<any[]>([]);
@@ -34,11 +35,12 @@ export default function AdminBarbersPage() {
       const data = await res.json();
       if (data.success) {
         setBarbers(barbers.map(b => b._id === id ? { ...b, ...updates } : b));
+        toast.add({ title: "Success", description: "Store updated", type: "success" });
       } else {
-        alert(data.error?.message || "Failed to update barber");
+        toast.add({ title: "Error", description: data.error?.message || "Failed to update barber", type: "error" });
       }
     } catch (error) {
-      alert("Error updating barber");
+      toast.add({ title: "Error", description: "Error updating barber", type: "error" });
     }
   };
 

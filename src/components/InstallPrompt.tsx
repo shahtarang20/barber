@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/components/ui/toast";
 
 export function InstallPrompt({ isCustomer = false }: { isCustomer?: boolean }) {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -58,9 +59,9 @@ export function InstallPrompt({ isCustomer = false }: { isCustomer?: boolean }) 
       // Fallback for iOS or when native prompt isn't ready
       const isIOS = /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
       if (isIOS) {
-        alert("To install: Tap the Share button at the bottom of your screen, then select 'Add to Home Screen'.");
+        toast.add({ title: "Install Instructions", description: "Tap the Share button at the bottom of your screen, then select 'Add to Home Screen'.", type: "info" });
       } else {
-        alert("To install: Tap the 3-dot menu in your browser and select 'Install app' or 'Add to Home screen'.");
+        toast.add({ title: "Install Instructions", description: "Tap the 3-dot menu in your browser and select 'Install app' or 'Add to Home screen'.", type: "info" });
       }
     }
   };

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { toast } from "@/components/ui/toast";
 
 export default function SettingsPage() {
   const [profile, setProfile] = useState<any>(null);
@@ -49,12 +50,12 @@ export default function SettingsPage() {
       });
       const data = await res.json();
       if (data.success) {
-        alert("Settings saved successfully!");
+        toast.add({ title: "Success", description: "Settings saved successfully!", type: "success" });
       } else {
-        alert(data.error?.message || "Failed to save settings");
+        toast.add({ title: "Error", description: data.error?.message || "Failed to save settings", type: "error" });
       }
     } catch (error) {
-      alert("Error saving settings");
+      toast.add({ title: "Error", description: "Error saving settings", type: "error" });
     } finally {
       setSaving(false);
     }

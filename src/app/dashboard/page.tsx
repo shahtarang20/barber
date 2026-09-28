@@ -5,6 +5,7 @@ import { format, addDays, subDays, parse, isAfter } from "date-fns";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useTranslation } from "@/lib/i18n";
+import { toast } from "@/components/ui/toast";
 import { LanguageSelector } from "@/components/LanguageSelector";
 
 export default function DashboardPage() {
@@ -14,7 +15,13 @@ export default function DashboardPage() {
   const [slots, setSlots] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date>(() => {
+    if (typeof window !== "undefined") {
+      const stored = sessionStorage.getItem("dashboardSelectedDate");
+      if (stored) return new Date(stored);
+    }
+    return new Date();
+  });
   const [capacity, setCapacity] = useState(1);
 
   useEffect(() => {
@@ -22,6 +29,7 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
+    sessionStorage.setItem("dashboardSelectedDate", selectedDate.toISOString());
     fetchSlots(selectedDate);
   }, [selectedDate]);
 
@@ -88,10 +96,10 @@ export default function DashboardPage() {
       if (data.success) {
         fetchSlots(selectedDate);
       } else {
-        alert(data.error?.message || "Failed to generate slots");
+        toast.add({ title: "Error", description: data.error?.message || "Failed to generate slots", type: "error" });
       }
     } catch (error) {
-      alert("An unexpected error occurred");
+      toast.add({ title: "Error", description: "An unexpected error occurred", type: "error" });
     } finally {
       setGenerating(false);
     }
@@ -116,17 +124,17 @@ export default function DashboardPage() {
              window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msgStr)}`, '_blank');
              
              if (data.cancelledCustomers.length > 1) {
-               alert(`Note: Only the first customer (${cust.name}) was messaged via WhatsApp automatically to prevent browser pop-up blocking. Please message the others manually.`);
+               toast.add({ title: "Notice", description: `Note: Only the first customer (${cust.name}) was messaged via WhatsApp automatically to prevent browser pop-up blocking. Please message the others manually.`, type: "info" });
              }
            }
         }
       } else if (data.requiresConfirmation) {
         setShowBlockModal({ slotId: id, customers: data.customers });
       } else {
-        alert(data.error?.message || "Failed to block slot");
+        toast.add({ title: "Error", description: data.error?.message || "Failed to block slot", type: "error" });
       }
     } catch (error) {
-      alert("Error blocking slot");
+      toast.add({ title: "Error", description: "Error blocking slot", type: "error" });
     }
   };
 
@@ -150,10 +158,10 @@ export default function DashboardPage() {
            window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msgStr)}`, '_blank');
         }
       } else {
-        alert(data.error?.message || "Failed to unblock slot");
+        toast.add({ title: "Error", description: data.error?.message || "Failed to unblock slot", type: "error" });
       }
     } catch (error) {
-      alert("Error unblocking slot");
+      toast.add({ title: "Error", description: "Error unblocking slot", type: "error" });
     }
   };
 
@@ -168,10 +176,10 @@ export default function DashboardPage() {
       if (data.success) {
         fetchSlots(selectedDate);
       } else {
-        alert(data.error?.message || "Failed to update capacity");
+        toast.add({ title: "Error", description: data.error?.message || "Failed to update capacity", type: "error" });
       }
     } catch (error) {
-      alert("Error updating capacity");
+      toast.add({ title: "Error", description: "Error updating capacity", type: "error" });
     }
   };
 

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
+import { toast } from "@/components/ui/toast";
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<any[]>([]);
@@ -44,11 +45,13 @@ export default function CustomersPage() {
         body: JSON.stringify({ note })
       });
       const data = await res.json();
-      if (!data.success) {
-        alert("Failed to save note");
+      if (data.success) {
+        toast.add({ title: "Success", description: "Note saved successfully", type: "success" });
+      } else {
+        toast.add({ title: "Error", description: "Failed to save note", type: "error" });
       }
     } catch (error) {
-      alert("Error saving note");
+      toast.add({ title: "Error", description: "Error saving note", type: "error" });
     } finally {
       setSavingId(null);
     }
