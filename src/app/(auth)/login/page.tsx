@@ -6,11 +6,13 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -83,15 +85,24 @@ export default function LoginPage() {
               Forgot password?
             </Link>
           </div>
-          <Input 
-            id="password" 
-            name="password" 
-            type="password" 
-            placeholder="••••••••" 
-            required 
-            autoComplete="current-password"
-            className="h-11"
-          />
+          <div className="relative">
+            <Input 
+              id="password" 
+              name="password" 
+              type={showPassword ? "text" : "password"} 
+              placeholder="••••••••" 
+              required 
+              autoComplete="current-password"
+              className="h-11 pr-10"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 focus:outline-none"
+            >
+              {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+            </button>
+          </div>
         </div>
 
         <Button type="submit" className="w-full h-11 mt-6" disabled={loading}>
