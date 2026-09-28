@@ -8,92 +8,46 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useTranslation } from "@/lib/i18n";
 import { LanguageSelector } from "@/components/LanguageSelector";
+import useSWR from "swr";
+
+const fetcher = (url: string) => fetch(url).then(res => res.json());
 
 export default function BarberBookingPage() {
   const { slug } = useParams();
   const { t, language } = useTranslation();
   
-  const [barber, setBarber] = useState<any>(null);
-  const [slots, setSlots] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const formattedDate = format(selectedDate, "yyyy-MM-dd");
   
+  const { data: barberData, isLoading: barberLoading, error: barberLoadError } = useSWR(
+    slug ? `/api/public/barbers/${slug}` : null, 
+    fetcher
+  );
+
+  const { data: slotsData, isLoading: slotsLoading, mutate: mutateSlots } = useSWR(
+    slug ? `/api/public/barbers/${slug}/slots?date=${formattedDate}` : null, 
+    fetcher,
+    { refreshInterval: 3000 }
+  );
+
+  const barber = barberData?.success ? barberData.data : null;
+  const barberError = barberLoadError || (barberData && !barberData.success);
+  const slots = slotsData?.success ? slotsData.data : [];
+  const loading = barberLoading || (slotsLoading && !slotsData);
+
   // Booking state
   const [selectedSlot, setSelectedSlot] = useState<any>(null);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingError, setBookingError] = useState("");
   const [bookingSuccess, setBookingSuccess] = useState<any>(null);
 
-  const [barberError, setBarberError] = useState(false);
-
   useEffect(() => {
-    const fetchInitialData = async () => {
-      setLoading(true);
-      try {
-        const formattedDate = format(selectedDate, "yyyy-MM-dd");
-        
-        // Fetch both barber profile and today's slots in parallel! 
-        // This cuts the loading time literally in half (removes the waterfall effect)
-        const [barberRes, slotsRes] = await Promise.all([
-          fetch(`/api/public/barbers/${slug}`),
-          fetch(`/api/public/barbers/${slug}/slots?date=${formattedDate}`)
-        ]);
-
-        const barberData = await barberRes.json();
-        const slotsData = await slotsRes.json();
-
-        if (barberData.success) {
-          setBarber(barberData.data);
-        } else {
-          setBarberError(true);
-        }
-
-        if (slotsData.success) {
-          setSlots(slotsData.data);
-        }
-      } catch (error) {
-        console.error("Failed to fetch initial data");
-        setBarberError(true);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchInitialData();
-    
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(err => {
         console.error('Service Worker registration failed:', err);
       });
     }
-  }, [slug]);
-
-  const fetchSlots = async (date: Date) => {
-    try {
-      const formattedDate = format(date, "yyyy-MM-dd");
-      const res = await fetch(`/api/public/barbers/${slug}/slots?date=${formattedDate}`);
-      const data = await res.json();
-      if (data.success) {
-        setSlots(data.data);
-      }
-    } catch (error) {
-      console.error("Failed to fetch slots");
-    }
-  };
-
-  // Handle subsequent date changes
-  useEffect(() => {
-    // Skip the very first render since it's handled by the initial load
-    if (!barber) return;
-    
-    const fetchSlotsOnly = async () => {
-      setLoading(true);
-      await fetchSlots(selectedDate);
-      setLoading(false);
-    };
-
-    fetchSlotsOnly();
-  }, [selectedDate, slug]);
+  }, []);
 
   const handleBookingSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -122,7 +76,7 @@ export default function BarberBookingPage() {
         setBookingError(data.error?.message || "Operation failed");
         setBookingLoading(false);
         // Refresh slots in case it was double booked
-        fetchSlots(selectedDate);
+        mutateSlots();
         return;
       }
 

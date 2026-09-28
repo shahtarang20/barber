@@ -5,6 +5,9 @@ import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/lib/i18n";
 import { toast } from "@/components/ui/toast";
+import useSWR from "swr";
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 import {
   Dialog,
   DialogContent,
@@ -15,8 +18,6 @@ import {
 } from "@/components/ui/dialog";
 
 export default function AppointmentsPage() {
-  const [bookings, setBookings] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("ALL");
   const { t } = useTranslation();
 
@@ -28,24 +29,13 @@ export default function AppointmentsPage() {
     prompt: string;
   } | null>(null);
 
-  useEffect(() => {
-    fetchBookings();
-  }, []);
+  const { data: bookingsData, isLoading: loading, mutate: mutateBookings } = useSWR(
+    `/api/barber/bookings`,
+    fetcher,
+    { refreshInterval: 3000 }
+  );
 
-  const fetchBookings = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/barber/bookings`);
-      const data = await res.json();
-      if (data.success) {
-        setBookings(data.data);
-      }
-    } catch (error) {
-      console.error("Failed to fetch bookings");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const bookings = bookingsData?.success ? bookingsData.data : [];
 
   const handleAction = async (id: string, action: "cancel" | "complete" | "no-show") => {
     if (action === "cancel") {
@@ -60,7 +50,7 @@ export default function AppointmentsPage() {
       const res = await fetch(`/api/bookings/${id}/${action}`, { method: "POST" });
       const data = await res.json();
       if (data.success) {
-        fetchBookings();
+        mutateBookings();
         
         if (action === "cancel" && data.data?.customer?.phone) {
           const { name, phone } = data.data.customer;

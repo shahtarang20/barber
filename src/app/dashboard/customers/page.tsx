@@ -4,36 +4,38 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { toast } from "@/components/ui/toast";
+import useSWR from "swr";
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function CustomersPage() {
-  const [customers, setCustomers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [noteInputs, setNoteInputs] = useState<Record<string, string>>({});
   const [savingId, setSavingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchCustomers();
-  }, []);
+  const { data: customersData, isLoading: loading } = useSWR(
+    "/api/barber/customers",
+    fetcher,
+    { refreshInterval: 3000 }
+  );
 
-  const fetchCustomers = async () => {
-    try {
-      const res = await fetch("/api/barber/customers");
-      const data = await res.json();
-      if (data.success) {
-        setCustomers(data.data);
-        const initialNotes: Record<string, string> = {};
-        data.data.forEach((c: any) => {
-          initialNotes[c._id] = c.note || "";
+  const customers = customersData?.success ? customersData.data : [];
+
+  useEffect(() => {
+    if (customers.length > 0) {
+      setNoteInputs(prev => {
+        const next = { ...prev };
+        let changed = false;
+        customers.forEach((c: any) => {
+          if (!(c._id in next)) {
+            next[c._id] = c.note || "";
+            changed = true;
+          }
         });
-        setNoteInputs(initialNotes);
-      }
-    } catch (error) {
-      console.error("Failed to fetch customers");
-    } finally {
-      setLoading(false);
+        return changed ? next : prev;
+      });
     }
-  };
+  }, [customers]);
 
   const handleSaveNote = async (customerId: string) => {
     setSavingId(customerId);

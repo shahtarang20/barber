@@ -7,13 +7,14 @@ import Link from "next/link";
 import { useTranslation } from "@/lib/i18n";
 import { toast } from "@/components/ui/toast";
 import { LanguageSelector } from "@/components/LanguageSelector";
+import useSWR from "swr";
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function DashboardPage() {
   const { t } = useTranslation();
   const [profile, setProfile] = useState<any>(null);
   const [showPremiumPopup, setShowPremiumPopup] = useState(false);
-  const [slots, setSlots] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(() => {
     if (typeof window !== "undefined") {
@@ -23,6 +24,15 @@ export default function DashboardPage() {
     return new Date();
   });
   const [capacity, setCapacity] = useState(1);
+  const formattedDate = format(selectedDate, "yyyy-MM-dd");
+
+  const { data: slotsData, isLoading: loading, mutate: mutateSlots } = useSWR(
+    `/api/barber/slots?date=${formattedDate}`,
+    fetcher,
+    { refreshInterval: 3000 }
+  );
+
+  const slots = slotsData?.success ? slotsData.data : [];
 
   useEffect(() => {
     fetchProfile();
@@ -30,7 +40,6 @@ export default function DashboardPage() {
 
   useEffect(() => {
     sessionStorage.setItem("dashboardSelectedDate", selectedDate.toISOString());
-    fetchSlots(selectedDate);
   }, [selectedDate]);
 
   const fetchProfile = async () => {
@@ -67,21 +76,6 @@ export default function DashboardPage() {
     }
   };
 
-  const fetchSlots = async (date: Date) => {
-    setLoading(true);
-    try {
-      const formattedDate = format(date, "yyyy-MM-dd");
-      const res = await fetch(`/api/barber/slots?date=${formattedDate}`);
-      const data = await res.json();
-      if (data.success) {
-        setSlots(data.data);
-      }
-    } catch (error) {
-      console.error("Failed to fetch slots");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const generateSlots = async () => {
     setGenerating(true);
@@ -94,7 +88,7 @@ export default function DashboardPage() {
       });
       const data = await res.json();
       if (data.success) {
-        fetchSlots(selectedDate);
+        mutateSlots();
       } else {
         toast.add({ title: "Error", description: data.error?.message || "Failed to generate slots", type: "error" });
       }
@@ -113,7 +107,7 @@ export default function DashboardPage() {
       const res = await fetch(url, { method: "POST" });
       const data = await res.json();
       if (data.success) {
-        fetchSlots(selectedDate);
+        mutateSlots();
         if (force && data.cancelledCustomers) {
            setShowBlockModal(null);
            if (data.cancelledCustomers.length > 0) {
@@ -143,7 +137,7 @@ export default function DashboardPage() {
       const res = await fetch(`/api/barber/slots/${id}/unblock`, { method: "POST" });
       const data = await res.json();
       if (data.success) {
-        fetchSlots(selectedDate);
+        mutateSlots();
         if (data.waitlistCustomer) {
            const cust = data.waitlistCustomer;
            const cleanPhone = cust.phone.replace(/\D/g, "");
@@ -174,7 +168,7 @@ export default function DashboardPage() {
       });
       const data = await res.json();
       if (data.success) {
-        fetchSlots(selectedDate);
+        mutateSlots();
       } else {
         toast.add({ title: "Error", description: data.error?.message || "Failed to update capacity", type: "error" });
       }
