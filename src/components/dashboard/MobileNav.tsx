@@ -9,8 +9,8 @@ export function MobileNav() {
 
   const navItems = [
     { name: "Schedule", href: "/dashboard", icon: CalendarDays },
-    { name: "Appointments", href: "/dashboard/appointments", icon: Users },
-    { name: "Link", href: "/dashboard/link", icon: LinkIcon },
+    { name: "Appointments", href: "/dashboard/appointments", icon: CalendarDays },
+    { name: "Customers", href: "/dashboard/customers", icon: Users },
     { name: "Settings", href: "/dashboard/settings", icon: Settings },
   ];
 

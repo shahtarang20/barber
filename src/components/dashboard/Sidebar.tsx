@@ -19,7 +19,8 @@ export function Sidebar() {
 
   const navItems = [
     { key: "schedule" as const, href: "/dashboard", icon: CalendarDays },
-    { key: "appointments" as const, href: "/dashboard/appointments", icon: Users },
+    { key: "appointments" as const, href: "/dashboard/appointments", icon: CalendarDays },
+    { key: "customers" as const, href: "/dashboard/customers", icon: Users },
     { key: "publicPage" as const, href: "/dashboard/link", icon: LinkIcon },
     { key: "settings" as const, href: "/dashboard/settings", icon: Settings },
   ];
