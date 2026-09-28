@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/lib/i18n";
 import { toast } from "@/components/ui/toast";
 import { PaginationControls } from "@/components/ui/pagination-controls";
+import { useRealtimeRefresh } from "@/lib/useRealtimeRefresh";
 import useSWR from "swr";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
@@ -44,9 +45,10 @@ export default function AppointmentsPage() {
 
   const { data: bookingsData, isLoading: loading, mutate: mutateBookings } = useSWR(
     `/api/barber/bookings?page=${page}&limit=${limit}`,
-    fetcher,
-    { refreshInterval: 3000 }
+    fetcher
   );
+
+  useRealtimeRefresh(() => mutateBookings());
 
   const bookings: BookingView[] = bookingsData?.success ? bookingsData.data : [];
   const pagination = bookingsData?.success ? bookingsData.pagination : null;

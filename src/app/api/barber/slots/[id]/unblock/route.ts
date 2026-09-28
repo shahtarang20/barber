@@ -5,6 +5,7 @@ import { Slot } from "@/models/Slot";
 import { Customer } from "@/models/Customer";
 import { Booking } from "@/models/Booking";
 import { Counter } from "@/models/Counter";
+import { notifyBarber } from "@/lib/realtime";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -80,6 +81,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     }
 
     await slot.save();
+
+    notifyBarber(payload.userId, autoBooking ? "BOOKINGS_UPDATED" : "SLOTS_UPDATED");
 
     return NextResponse.json({ success: true, data: slot, waitlistCustomer, autoBooking });
   } catch (error) {

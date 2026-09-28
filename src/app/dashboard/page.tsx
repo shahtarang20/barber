@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useTranslation } from "@/lib/i18n";
 import { toast } from "@/components/ui/toast";
 import { LanguageSelector } from "@/components/LanguageSelector";
+import { useRealtimeRefresh } from "@/lib/useRealtimeRefresh";
 import useSWR from "swr";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
@@ -37,9 +38,10 @@ export default function DashboardPage() {
 
   const { data: slotsData, isLoading: loading, mutate: mutateSlots } = useSWR(
     `/api/barber/slots?date=${formattedDate}`,
-    fetcher,
-    { refreshInterval: 3000 }
+    fetcher
   );
+
+  useRealtimeRefresh(() => mutateSlots());
 
   const slots: SlotView[] = slotsData?.success ? slotsData.data : [];
 

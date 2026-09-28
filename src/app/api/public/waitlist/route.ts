@@ -3,6 +3,7 @@ import connectToDatabase from "@/lib/mongodb";
 import { Slot } from "@/models/Slot";
 import { z } from "zod";
 import { rateLimit, getClientIp } from "@/lib/rateLimit";
+import { notifyBarber } from "@/lib/realtime";
 
 const waitlistSchema = z.object({
   slotId: z.string().min(1, "Slot is required"),
@@ -46,14 +47,16 @@ export async function POST(req: Request) {
       }, { status: 400 });
     }
 
-    return NextResponse.json({ 
-      success: true, 
-      data: { 
+    notifyBarber(slot.barberId.toString(), "SLOTS_UPDATED");
+
+    return NextResponse.json({
+      success: true,
+      data: {
         date: slot.date,
         startTime: slot.startTime,
         customerName: name,
         isWaitlist: true
-      } 
+      }
     }, { status: 201 });
     
   } catch (error) {

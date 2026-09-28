@@ -4,6 +4,7 @@ import connectToDatabase from "@/lib/mongodb";
 import { Slot } from "@/models/Slot";
 import { User } from "@/models/User";
 import { addMinutes, format, parse, isValid } from "date-fns";
+import { notifyBarber } from "@/lib/realtime";
 
 export async function POST(req: Request) {
   try {
@@ -113,7 +114,9 @@ export async function POST(req: Request) {
       await Slot.insertMany(newSlots);
     }
 
-    return NextResponse.json({ 
+    notifyBarber(payload.userId, "SLOTS_UPDATED");
+
+    return NextResponse.json({
       success: true, 
       data: { message: `Successfully generated and updated schedule for ${date}.` } 
     });

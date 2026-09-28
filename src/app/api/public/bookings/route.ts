@@ -6,6 +6,7 @@ import { Booking } from "@/models/Booking";
 import { Counter } from "@/models/Counter";
 import { z } from "zod";
 import { rateLimit, getClientIp } from "@/lib/rateLimit";
+import { notifyBarber } from "@/lib/realtime";
 
 const bookingSchema = z.object({
   slotId: z.string().min(1, "Slot is required"),
@@ -91,7 +92,9 @@ export async function POST(req: Request) {
       // slot.bookingId is no longer used since a slot can have multiple bookings
       // The relation is maintained by Booking.slotId
 
-      return NextResponse.json({ 
+      notifyBarber(slot.barberId.toString(), "BOOKINGS_UPDATED");
+
+      return NextResponse.json({
         success: true, 
         data: { 
           bookingNumber: newBooking.bookingNumber,

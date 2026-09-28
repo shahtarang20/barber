@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import { Booking } from "@/models/Booking";
+import { notifyBarber } from "@/lib/realtime";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -32,6 +33,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     // Update booking status
     booking.status = "COMPLETED";
     await booking.save();
+
+    notifyBarber(booking.barberId.toString(), "BOOKINGS_UPDATED");
 
     return NextResponse.json({ success: true, data: { message: "Booking marked as completed", booking } });
   } catch (error) {

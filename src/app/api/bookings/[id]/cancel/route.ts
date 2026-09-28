@@ -3,6 +3,7 @@ import { requireAuth } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import { Booking } from "@/models/Booking";
 import { Slot } from "@/models/Slot";
+import { notifyBarber } from "@/lib/realtime";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -48,7 +49,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const { Customer } = await import("@/models/Customer");
     const customer = await Customer.findById(booking.customerId);
 
-    return NextResponse.json({ 
+    notifyBarber(booking.barberId.toString(), "BOOKINGS_UPDATED");
+
+    return NextResponse.json({
       success: true, 
       data: { 
         message: "Booking cancelled successfully", 

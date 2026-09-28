@@ -4,6 +4,7 @@ import connectToDatabase from "@/lib/mongodb";
 import { Customer } from "@/models/Customer";
 import mongoose from "mongoose";
 import { z } from "zod";
+import { notifyBarber } from "@/lib/realtime";
 
 const noteSchema = z.object({
   note: z.string().max(1000, "Note must be 1000 characters or fewer"),
@@ -54,6 +55,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     }
 
     await customer.save();
+
+    notifyBarber(payload.userId, "CUSTOMERS_UPDATED");
 
     return NextResponse.json({ success: true, data: { note } });
   } catch (error) {

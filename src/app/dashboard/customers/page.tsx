@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { toast } from "@/components/ui/toast";
 import { PaginationControls } from "@/components/ui/pagination-controls";
+import { useRealtimeRefresh } from "@/lib/useRealtimeRefresh";
 import useSWR from "swr";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
@@ -35,11 +36,12 @@ export default function CustomersPage() {
     return () => clearTimeout(timeout);
   }, [search]);
 
-  const { data: customersData, isLoading: loading } = useSWR(
+  const { data: customersData, isLoading: loading, mutate: mutateCustomers } = useSWR(
     `/api/barber/customers?page=${page}&limit=${limit}&search=${encodeURIComponent(debouncedSearch)}`,
-    fetcher,
-    { refreshInterval: 3000 }
+    fetcher
   );
+
+  useRealtimeRefresh(() => mutateCustomers());
 
   const customers: CustomerView[] = customersData?.success ? customersData.data : [];
   const pagination = customersData?.success ? customersData.pagination : null;

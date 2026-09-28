@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import { Slot } from "@/models/Slot";
+import { notifyBarber } from "@/lib/realtime";
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -42,6 +43,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     }
 
     await slot.save();
+
+    notifyBarber(payload.userId, "SLOTS_UPDATED");
 
     return NextResponse.json({ success: true, data: slot });
   } catch (error) {
