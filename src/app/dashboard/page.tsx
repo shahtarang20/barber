@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { format, addDays, subDays } from "date-fns";
+import { format, addDays, subDays, parse, isAfter } from "date-fns";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 export default function DashboardPage() {
@@ -158,7 +158,7 @@ export default function DashboardPage() {
             <div className="flex items-center gap-2">
               <label className="text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 hidden sm:block">Bookings per slot:</label>
               <label className="text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 sm:hidden">Cap:</label>
-              <input type="number" min="1" max="50" value={capacity} onChange={(e) => setCapacity(Number(e.target.value))} className="w-14 sm:w-16 h-9 rounded-md border border-zinc-200 px-2 sm:px-3 py-1 text-sm dark:border-zinc-800 dark:bg-zinc-950" />
+              <input type="number" min="1" max="50" value={capacity || ""} onChange={(e) => setCapacity(e.target.value === "" ? 0 : Number(e.target.value))} className="w-14 sm:w-16 h-9 rounded-md border border-zinc-200 px-2 sm:px-3 py-1 text-sm dark:border-zinc-800 dark:bg-zinc-950" />
             </div>
             <Button variant="outline" size="sm" className="sm:size-default" onClick={generateSlots} disabled={generating}>
               {generating ? "Generating..." : "Generate Slots"}
@@ -183,7 +183,7 @@ export default function DashboardPage() {
               <div className="mt-6 flex flex-col items-center gap-4">
                 <div className="flex items-center gap-2">
                   <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Bookings per slot:</label>
-                  <input type="number" min="1" max="50" value={capacity} onChange={(e) => setCapacity(Number(e.target.value))} className="w-20 rounded-md border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-800 dark:bg-zinc-950" />
+                  <input type="number" min="1" max="50" value={capacity || ""} onChange={(e) => setCapacity(e.target.value === "" ? 0 : Number(e.target.value))} className="w-20 rounded-md border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-800 dark:bg-zinc-950" />
                 </div>
                 <Button onClick={generateSlots} disabled={generating}>
                   {generating ? "Generating..." : "Generate Today's Slots"}
@@ -191,49 +191,88 @@ export default function DashboardPage() {
               </div>
             </div>
           ) : (
-            slots.map((slot) => (
-              <div key={slot._id} className="p-4 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors gap-4 sm:gap-0">
-                <div className="flex items-center gap-3 sm:gap-6 w-full sm:w-auto justify-between sm:justify-start">
-                  <div className="text-base sm:text-lg font-semibold w-20 sm:w-24 text-zinc-900 dark:text-zinc-50">
-                    {slot.startTime}
+            (() => {
+              const visibleSlots = slots.filter(slot => {
+                if (format(selectedDate, "yyyy-MM-dd") !== format(new Date(), "yyyy-MM-dd")) return true;
+                
+                try {
+                  let slotDate;
+                  const cleanStr = slot.startTime.trim().toLowerCase();
+                  if (cleanStr.includes("am") || cleanStr.includes("pm")) {
+                    const strWithSpace = cleanStr.replace(/([0-9])(am|pm)/, "$1 $2");
+                    slotDate = parse(strWithSpace, "h:mm a", new Date());
+                  } else {
+                    slotDate = parse(slot.startTime, "HH:mm", new Date());
+                  }
+                  return isAfter(slotDate, new Date());
+                } catch(e) {
+                  return true;
+                }
+              });
+
+              if (visibleSlots.length === 0 && format(selectedDate, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd")) {
+                return (
+                  <div className="p-12 text-center flex flex-col items-center justify-center">
+                    <div className="h-16 w-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-4 text-green-600 dark:text-green-400">
+                      <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">You're all done for today! 🎉</h3>
+                    <p className="text-zinc-500 dark:text-zinc-400 mt-1 max-w-sm">
+                      All your appointments for today have been completed and safely stored in the database.
+                    </p>
+                    <Button className="mt-6" onClick={() => setSelectedDate(addDays(selectedDate, 1))}>
+                      Focus on Tomorrow
+                    </Button>
+                  </div>
+                );
+              }
+
+              return visibleSlots.map((slot) => (
+                <div key={slot._id} className="p-4 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors gap-4 sm:gap-0">
+                  <div className="flex items-center gap-3 sm:gap-6 w-full sm:w-auto justify-between sm:justify-start">
+                    <div className="text-base sm:text-lg font-semibold w-20 sm:w-24 text-zinc-900 dark:text-zinc-50">
+                      {slot.startTime}
+                    </div>
+                    
+                    {slot.status === "AVAILABLE" && (
+                      <span className="px-2 sm:px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                        Available ({slot.bookingsCount || 0}/{slot.capacity || 1})
+                      </span>
+                    )}
+                    {slot.status === "BOOKED" && (
+                      <span className="px-2 sm:px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                        Booked
+                      </span>
+                    )}
+                    {slot.status === "BLOCKED" && (
+                      <span className="px-2 sm:px-3 py-1 rounded-full text-xs font-medium bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">
+                        Blocked
+                      </span>
+                    )}
                   </div>
                   
-                  {slot.status === "AVAILABLE" && (
-                    <span className="px-2 sm:px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                      Available ({slot.bookingsCount || 0}/{slot.capacity || 1})
-                    </span>
-                  )}
-                  {slot.status === "BOOKED" && (
-                    <span className="px-2 sm:px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
-                      Booked
-                    </span>
-                  )}
-                  {slot.status === "BLOCKED" && (
-                    <span className="px-2 sm:px-3 py-1 rounded-full text-xs font-medium bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">
-                      Blocked
-                    </span>
-                  )}
-                </div>
-                
-                <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-end border-t border-zinc-100 dark:border-zinc-800/50 sm:border-0 pt-4 sm:pt-0">
-                  <div className="flex items-center gap-2 px-2 sm:px-3 py-1 sm:py-1.5 bg-zinc-100 dark:bg-zinc-800/60 hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors rounded-lg border border-zinc-200/80 dark:border-zinc-700/80 group" title="Maximum Capacity for this slot">
-                    <CapacityEditor 
-                      slot={slot} 
-                      onSave={(val) => handleInlineCapacityChange(slot._id, val)} 
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {slot.status === "AVAILABLE" && <Button variant="outline" size="sm" className="font-medium shadow-sm hover:bg-zinc-50 text-xs sm:text-sm h-7 sm:h-8" onClick={() => handleBlockSlot(slot._id)}>Block Slot</Button>}
-                    {(slot.status === "BOOKED" || slot.bookingsCount > 0) && (
-                      <Link href="/dashboard/appointments" className="inline-block">
-                        <Button variant="secondary" size="sm" className="font-medium shadow-sm text-xs sm:text-sm h-7 sm:h-8">View Details</Button>
-                      </Link>
-                    )}
-                    {slot.status === "BLOCKED" && <Button variant="outline" size="sm" className="font-medium shadow-sm hover:bg-zinc-50 text-xs sm:text-sm h-7 sm:h-8" onClick={() => handleUnblockSlot(slot._id)}>Unblock</Button>}
+                  <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-end border-t border-zinc-100 dark:border-zinc-800/50 sm:border-0 pt-4 sm:pt-0">
+                    <div className="flex items-center gap-2 px-2 sm:px-3 py-1 sm:py-1.5 bg-zinc-100 dark:bg-zinc-800/60 hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors rounded-lg border border-zinc-200/80 dark:border-zinc-700/80 group" title="Maximum Capacity for this slot">
+                      <CapacityEditor 
+                        slot={slot} 
+                        onSave={(val) => handleInlineCapacityChange(slot._id, val)} 
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {slot.status === "AVAILABLE" && <Button variant="outline" size="sm" className="font-medium shadow-sm hover:bg-zinc-50 text-xs sm:text-sm h-7 sm:h-8" onClick={() => handleBlockSlot(slot._id)}>Block Slot</Button>}
+                      {(slot.status === "BOOKED" || slot.bookingsCount > 0) && (
+                        <Link href="/dashboard/appointments" className="inline-block">
+                          <Button variant="secondary" size="sm" className="font-medium shadow-sm text-xs sm:text-sm h-7 sm:h-8">View Details</Button>
+                        </Link>
+                      )}
+                      {slot.status === "BLOCKED" && <Button variant="outline" size="sm" className="font-medium shadow-sm hover:bg-zinc-50 text-xs sm:text-sm h-7 sm:h-8" onClick={() => handleUnblockSlot(slot._id)}>Unblock</Button>}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))
+              ));
+            })()
           )}
         </div>
       </div>
@@ -242,13 +281,13 @@ export default function DashboardPage() {
 }
 
 function CapacityEditor({ slot, onSave }: { slot: any, onSave: (val: number) => void }) {
-  const [val, setVal] = useState(slot.capacity || 1);
+  const [val, setVal] = useState<number | string>(slot.capacity || 1);
 
   useEffect(() => {
     setVal(slot.capacity || 1);
   }, [slot.capacity]);
 
-  const isChanged = val !== (slot.capacity || 1);
+  const isChanged = val !== "" && Number(val) !== (slot.capacity || 1);
 
   return (
     <div className="flex items-center gap-1">
@@ -259,14 +298,24 @@ function CapacityEditor({ slot, onSave }: { slot: any, onSave: (val: number) => 
         type="number" 
         min={slot.bookingsCount > 0 ? slot.bookingsCount : 1} 
         value={val}
-        onChange={(e) => setVal(parseInt(e.target.value) || 1)}
+        onChange={(e) => {
+          if (e.target.value === "") {
+            setVal("");
+          } else {
+            setVal(parseInt(e.target.value) || 1);
+          }
+        }}
+        onBlur={() => {
+          if (val === "" || Number(val) < 1) setVal(slot.capacity || 1);
+        }}
         className="w-8 sm:w-10 h-5 sm:h-6 bg-transparent text-xs sm:text-sm font-bold text-zinc-700 dark:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-400/50 rounded text-center transition-all"
       />
       {isChanged && (
         <button 
           onClick={() => {
-            if (val >= (slot.bookingsCount || 0) && val > 0) {
-              onSave(val);
+            const numVal = Number(val);
+            if (numVal >= (slot.bookingsCount || 0) && numVal > 0) {
+              onSave(numVal);
             } else {
               setVal(slot.capacity || 1);
             }

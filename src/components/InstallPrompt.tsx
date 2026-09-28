@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 
 export function InstallPrompt({ isCustomer = false }: { isCustomer?: boolean }) {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [showIOSPrompt, setShowIOSPrompt] = useState(false);
-  const [isStandalone, setIsStandalone] = useState(true); // Default true so it doesn't flash before check
+  const [showPrompt, setShowPrompt] = useState(false);
+  const [isStandalone, setIsStandalone] = useState(true);
 
   useEffect(() => {
     // Check if app is already installed
@@ -17,28 +17,31 @@ export function InstallPrompt({ isCustomer = false }: { isCustomer?: boolean }) 
       return isStandaloneMedia || isIOSStandalone;
     };
 
-    setIsStandalone(checkStandalone());
+    const standalone = checkStandalone();
+    setIsStandalone(standalone);
 
-    if (checkStandalone()) return; // Don't setup prompts if already installed
+    if (standalone) return;
 
-    // Handle Android / Desktop Chrome 'beforeinstallprompt'
+    // Detect if mobile device
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    if (isMobile) {
+      // Small delay so it doesn't pop up too aggressively on first load
+      setTimeout(() => setShowPrompt(true), 3000);
+    }
+
     const handleBeforeInstallPrompt = (e: any) => {
-      // Prevent Chrome 67 and earlier from automatically showing the prompt
       e.preventDefault();
-      // Stash the event so it can be triggered later.
       setDeferredPrompt(e);
+      setShowPrompt(true);
     };
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
 
-    // Detect iOS for custom prompt
-    const isIOS = () => {
-      const userAgent = window.navigator.userAgent.toLowerCase();
-      return /iphone|ipad|ipod/.test(userAgent);
-    };
-
-    if (isIOS()) {
-      setShowIOSPrompt(true);
+    // Also check if it was caught globally
+    if ((window as any).deferredPrompt) {
+      setDeferredPrompt((window as any).deferredPrompt);
+      setShowPrompt(true);
     }
 
     return () => {
@@ -48,46 +51,48 @@ export function InstallPrompt({ isCustomer = false }: { isCustomer?: boolean }) 
 
   const handleInstallClick = async () => {
     if (deferredPrompt) {
-      // Show the install prompt
       deferredPrompt.prompt();
-      // Wait for the user to respond to the prompt
       const { outcome } = await deferredPrompt.userChoice;
       if (outcome === "accepted") {
-        console.log("User accepted the install prompt");
+        setShowPrompt(false);
       }
-      // We've used the prompt, and can't use it again, throw it away
       setDeferredPrompt(null);
+    } else {
+      // Fallback for iOS or when native prompt isn't ready
+      const isIOS = /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
+      if (isIOS) {
+        alert("To install: Tap the Share button at the bottom of your screen, then select 'Add to Home Screen'.");
+      } else {
+        alert("To install: Tap the 3-dot menu in your browser and select 'Install app' or 'Add to Home screen'.");
+      }
     }
   };
 
-  // If already installed, don't show anything
-  if (isStandalone) return null;
-
-  // If we have neither the native prompt event nor iOS, don't show the button
-  if (!deferredPrompt && !showIOSPrompt) return null;
+  if (isStandalone || !showPrompt) return null;
 
   return (
-    <div className={`fixed ${isCustomer ? "bottom-6" : "bottom-20 md:bottom-6"} left-0 right-0 z-50 flex justify-center px-4 pointer-events-none`}>
-      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xl rounded-2xl p-4 flex items-center justify-between gap-4 max-w-sm w-full pointer-events-auto">
+    <div className={`fixed ${isCustomer ? "bottom-6" : "bottom-20 md:bottom-6"} left-0 right-0 z-50 flex justify-center px-4 pointer-events-none animate-in slide-in-from-bottom-10 fade-in duration-500`}>
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl rounded-2xl p-4 flex items-center justify-between gap-4 max-w-sm w-full pointer-events-auto relative">
+        <button onClick={() => setShowPrompt(false)} className="absolute -top-2 -right-2 bg-zinc-100 dark:bg-zinc-800 rounded-full p-1 text-zinc-500 hover:text-zinc-900 border border-zinc-200 shadow-sm">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-zinc-100 dark:bg-zinc-800 rounded-xl flex items-center justify-center shrink-0">
-            <svg className="w-5 h-5 text-zinc-600 dark:text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
+          <div className="w-12 h-12 bg-black dark:bg-white rounded-xl flex items-center justify-center shrink-0">
+             <span className="text-white dark:text-black font-serif font-bold text-2xl">B</span>
           </div>
           <div>
-            <h4 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Install App</h4>
+            <h4 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Install BarberSaaS</h4>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-              {showIOSPrompt && !deferredPrompt ? "Tap Share → Add to Home Screen" : "Add to home screen for quick access"}
+              Add to home screen for faster booking
             </p>
           </div>
         </div>
         
-        {deferredPrompt && (
-          <Button onClick={handleInstallClick} size="sm" className="shrink-0 bg-zinc-900 text-white rounded-full">
-            Install
-          </Button>
-        )}
+        <Button onClick={handleInstallClick} size="sm" className="shrink-0 bg-zinc-900 text-white rounded-full px-4 font-semibold">
+          Install
+        </Button>
       </div>
     </div>
   );

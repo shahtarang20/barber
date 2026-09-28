@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { format, addDays } from "date-fns";
+import { format, addDays, parse, isAfter } from "date-fns";
 import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -199,23 +199,44 @@ export default function BarberBookingPage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {slots.map((slot) => {
-                    const isAvailable = slot.status === "AVAILABLE";
-                    return (
-                      <button
-                        key={slot._id}
-                        disabled={!isAvailable}
-                        onClick={() => setSelectedSlot(slot)}
-                        className={`py-4 rounded-xl border font-medium text-sm transition-all ${
-                          isAvailable 
-                            ? "bg-white border-zinc-200 text-zinc-900 hover:border-zinc-900 hover:shadow-sm" 
-                            : "bg-zinc-50 border-zinc-100 text-zinc-400 cursor-not-allowed line-through"
-                        }`}
-                      >
-                        {slot.startTime}
-                      </button>
-                    );
-                  })}
+                  {slots
+                    .filter(slot => {
+                      // If it's not today, show all slots
+                      if (format(selectedDate, "yyyy-MM-dd") !== format(new Date(), "yyyy-MM-dd")) return true;
+                      
+                      // If it is today, check if the slot is in the past
+                      try {
+                        // Support both "h:mm a" and "HH:mm" parsing
+                        let slotDate;
+                        const cleanStr = slot.startTime.trim().toLowerCase();
+                        if (cleanStr.includes("am") || cleanStr.includes("pm")) {
+                          const strWithSpace = cleanStr.replace(/([0-9])(am|pm)/, "$1 $2");
+                          slotDate = parse(strWithSpace, "h:mm a", new Date());
+                        } else {
+                          slotDate = parse(slot.startTime, "HH:mm", new Date());
+                        }
+                        return isAfter(slotDate, new Date());
+                      } catch(e) {
+                        return true; // If parsing fails, show it to be safe
+                      }
+                    })
+                    .map((slot) => {
+                      const isAvailable = slot.status === "AVAILABLE";
+                      return (
+                        <button
+                          key={slot._id}
+                          disabled={!isAvailable}
+                          onClick={() => setSelectedSlot(slot)}
+                          className={`py-4 rounded-xl border font-medium text-sm transition-all ${
+                            isAvailable 
+                              ? "bg-white border-zinc-200 text-zinc-900 hover:border-zinc-900 hover:shadow-sm" 
+                              : "bg-zinc-50 border-zinc-100 text-zinc-400 cursor-not-allowed line-through"
+                          }`}
+                        >
+                          {slot.startTime}
+                        </button>
+                      );
+                    })}
                 </div>
               )}
             </div>
