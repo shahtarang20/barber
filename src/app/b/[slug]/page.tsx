@@ -12,6 +12,25 @@ import useSWR from "swr";
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
+interface SlotView {
+  _id: string;
+  startTime: string;
+  endTime: string;
+  status: "AVAILABLE" | "BOOKED" | "BLOCKED";
+  capacity: number;
+  bookingsCount: number;
+  isWaitlist?: boolean;
+}
+
+interface BookingSuccessView {
+  bookingNumber: string;
+  date: string;
+  startTime: string;
+  customerName?: string;
+  name?: string;
+  isWaitlist?: boolean;
+}
+
 export default function BarberBookingPage() {
   const { slug } = useParams();
   const { t, language } = useTranslation();
@@ -32,14 +51,14 @@ export default function BarberBookingPage() {
 
   const barber = barberData?.success ? barberData.data : null;
   const barberError = barberLoadError || (barberData && !barberData.success);
-  const slots = slotsData?.success ? slotsData.data : [];
+  const slots: SlotView[] = slotsData?.success ? slotsData.data : [];
   const loading = barberLoading || (slotsLoading && !slotsData);
 
   // Booking state
-  const [selectedSlot, setSelectedSlot] = useState<any>(null);
+  const [selectedSlot, setSelectedSlot] = useState<SlotView | null>(null);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingError, setBookingError] = useState("");
-  const [bookingSuccess, setBookingSuccess] = useState<any>(null);
+  const [bookingSuccess, setBookingSuccess] = useState<BookingSuccessView | null>(null);
 
   useEffect(() => {
     if ('serviceWorker' in navigator) {
@@ -51,6 +70,7 @@ export default function BarberBookingPage() {
 
   const handleBookingSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!selectedSlot) return;
     setBookingLoading(true);
     setBookingError("");
 
@@ -235,7 +255,7 @@ export default function BarberBookingPage() {
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {slots
-                    .filter(slot => {
+                    .filter((slot: SlotView) => {
                       // If it's not today, show all slots
                       if (format(selectedDate, "yyyy-MM-dd") !== format(new Date(), "yyyy-MM-dd")) return true;
                       

@@ -8,6 +8,16 @@ import { toast } from "@/components/ui/toast";
 import useSWR from "swr";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
+interface BookingView {
+  _id: string;
+  bookingNumber: string;
+  date: string;
+  startTime: string;
+  status: string;
+  customerId?: { name?: string; phone?: string };
+}
+
 import {
   Dialog,
   DialogContent,
@@ -37,7 +47,7 @@ export default function AppointmentsPage() {
     { refreshInterval: 3000 }
   );
 
-  const bookings = bookingsData?.success ? bookingsData.data : [];
+  const bookings: BookingView[] = bookingsData?.success ? bookingsData.data : [];
   const pagination = bookingsData?.success ? bookingsData.pagination : null;
 
   const handleAction = async (id: string, action: "cancel" | "complete" | "no-show") => {
@@ -87,7 +97,7 @@ export default function AppointmentsPage() {
     setWhatsappPromptData(null);
   };
 
-  const filteredBookings = bookings.filter(b => {
+  const filteredBookings = bookings.filter((b: BookingView) => {
     if (filter === "ALL") return true;
     if (filter === "UPCOMING") return b.status === "CONFIRMED" && new Date(b.date) >= new Date(new Date().setHours(0,0,0,0));
     if (filter === "TODAY") return b.status === "CONFIRMED" && b.date === format(new Date(), "yyyy-MM-dd");

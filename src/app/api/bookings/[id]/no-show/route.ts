@@ -1,20 +1,12 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { verifyToken } from "@/lib/auth";
+import { requireAuth } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import { Booking } from "@/models/Booking";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get("auth_token")?.value;
-
-    if (!token) {
-      return NextResponse.json({ success: false, error: { message: "Unauthorized" } }, { status: 401 });
-    }
-
-    const payload = verifyToken(token);
-    if (!payload || payload.role !== "BARBER") {
+    const payload = await requireAuth(["BARBER"]);
+    if (!payload) {
       return NextResponse.json({ success: false, error: { message: "Unauthorized" } }, { status: 401 });
     }
 
@@ -50,14 +42,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       
       try {
         // Calculate slot end time to see if there's less than 15 mins left
-        // Parse "10:30 AM" or "14:00"
-        const cleanStr = slot.startTime.trim().toLowerCase();
-        let slotStartDate = new Date();
+        // Parse "10:30 AM" or "14:00" — use the slot's own stored endTime,
+        // since slotDuration is configurable per-barber and not always 30 mins.
+        const cleanStr = slot.endTime.trim().toLowerCase();
         const slotDateStr = new Date(slot.date).toISOString().split('T')[0];
-        
+
         let hours = 0;
         let minutes = 0;
-        
+
         if (cleanStr.includes("am") || cleanStr.includes("pm")) {
           const timeParts = cleanStr.match(/(\d+):(\d+)\s*(am|pm)/);
           if (timeParts) {
@@ -73,10 +65,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
             minutes = parseInt(timeParts[1]);
           }
         }
-        
-        const slotDateTime = new Date(`${slotDateStr}T${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00`);
-        const slotEndTime = new Date(slotDateTime.getTime() + 30 * 60000); // 30 min duration
-        
+
+        const slotEndTime = new Date(`${slotDateStr}T${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00`);
+
         const timeRemainingMins = (slotEndTime.getTime() - new Date().getTime()) / 60000;
         
         // If 15 minutes or less remaining, reduce capacity so it doesn't open up again

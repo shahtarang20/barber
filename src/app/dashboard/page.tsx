@@ -11,6 +11,15 @@ import useSWR from "swr";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
+interface SlotView {
+  _id: string;
+  startTime: string;
+  endTime: string;
+  status: "AVAILABLE" | "BOOKED" | "BLOCKED";
+  capacity: number;
+  bookingsCount: number;
+}
+
 export default function DashboardPage() {
   const { t } = useTranslation();
   const [profile, setProfile] = useState<any>(null);
@@ -32,7 +41,7 @@ export default function DashboardPage() {
     { refreshInterval: 3000 }
   );
 
-  const slots = slotsData?.success ? slotsData.data : [];
+  const slots: SlotView[] = slotsData?.success ? slotsData.data : [];
 
   useEffect(() => {
     fetchProfile();
@@ -113,7 +122,7 @@ export default function DashboardPage() {
            if (data.cancelledCustomers.length > 0) {
              const cust = data.cancelledCustomers[0];
              const cleanPhone = cust.phone.replace(/\D/g, "");
-             const slotTime = slots.find(s => s._id === id)?.startTime || "your slot";
+             const slotTime = slots.find((s: SlotView) => s._id === id)?.startTime || "your slot";
              const msgStr = t('cancelMessage' as any).replace('{name}', cust.name).replace('{time}', slotTime);
              window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msgStr)}`, '_blank');
              
@@ -141,7 +150,7 @@ export default function DashboardPage() {
         if (data.waitlistCustomer) {
            const cust = data.waitlistCustomer;
            const cleanPhone = cust.phone.replace(/\D/g, "");
-           const slotTime = slots.find(s => s._id === id)?.startTime || "your slot";
+           const slotTime = slots.find((s: SlotView) => s._id === id)?.startTime || "your slot";
            const bookingLink = `${window.location.origin}/b/${profile?.slug}`;
            
            const msgStr = t('waitlistNotifyMessage' as any)
@@ -177,8 +186,8 @@ export default function DashboardPage() {
     }
   };
 
-  const availableSlots = slots.filter((s) => s.status === "AVAILABLE").length;
-  const bookedSlots = slots.filter((s) => s.status === "BOOKED").length;
+  const availableSlots = slots.filter((s: SlotView) => s.status === "AVAILABLE").length;
+  const bookedSlots = slots.filter((s: SlotView) => s.status === "BOOKED").length;
 
   if (profile && profile.isActive === false) {
     return (
@@ -286,7 +295,7 @@ export default function DashboardPage() {
             </div>
           ) : (
             (() => {
-              const visibleSlots = slots.filter(slot => {
+              const visibleSlots = slots.filter((slot: SlotView) => {
                 if (format(selectedDate, "yyyy-MM-dd") !== format(new Date(), "yyyy-MM-dd")) return true;
                 
                 try {
@@ -416,7 +425,7 @@ export default function DashboardPage() {
   );
 }
 
-function CapacityEditor({ slot, onSave }: { slot: any, onSave: (val: number) => void }) {
+function CapacityEditor({ slot, onSave }: { slot: SlotView, onSave: (val: number) => void }) {
   const [val, setVal] = useState<number | string>(slot.capacity || 1);
 
   useEffect(() => {

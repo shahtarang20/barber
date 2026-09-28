@@ -19,7 +19,7 @@ export async function POST(req: Request) {
     const result = registerSchema.safeParse(body);
     
     if (!result.success) {
-      return NextResponse.json({ success: false, error: { message: (result.error as any).errors[0].message } }, { status: 400 });
+      return NextResponse.json({ success: false, error: { message: result.error.issues[0].message } }, { status: 400 });
     }
     
     const { name, email, password, slug } = result.data;

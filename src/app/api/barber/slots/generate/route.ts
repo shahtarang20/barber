@@ -1,22 +1,14 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { verifyToken } from "@/lib/auth";
+import { requireAuth } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import { Slot } from "@/models/Slot";
 import { User } from "@/models/User";
-import { addMinutes, format, parse } from "date-fns";
+import { addMinutes, format, parse, isValid } from "date-fns";
 
 export async function POST(req: Request) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get("auth_token")?.value;
-
-    if (!token) {
-      return NextResponse.json({ success: false, error: { message: "Unauthorized" } }, { status: 401 });
-    }
-
-    const payload = verifyToken(token);
-    if (!payload || payload.role !== "BARBER") {
+    const payload = await requireAuth(["BARBER"]);
+    if (!payload) {
       return NextResponse.json({ success: false, error: { message: "Unauthorized" } }, { status: 401 });
     }
 
@@ -44,23 +36,32 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: { message: `You are closed on ${dayOfWeek}s.` } }, { status: 400 });
     }
 
-    // Generate slots
+    // Generate slots. date-fns' `parse` never throws on a bad format — it
+    // silently returns an Invalid Date — so fallbacks must be checked with
+    // `isValid`, not try/catch, and must convert the string before retrying.
     const parseTime = (timeStr: string, date: Date) => {
       const cleanStr = timeStr.trim().toLowerCase();
       if (cleanStr.includes("am") || cleanStr.includes("pm")) {
-        // Try h:mm a format (with space) or h:mma (without space)
-        try {
-          const strWithSpace = cleanStr.replace(/([0-9])(am|pm)/, "$1 $2");
-          return parse(strWithSpace, "h:mm a", date);
-        } catch(e) {
-          return parse(timeStr, "HH:mm", date); // fallback
-        }
+        // Try "h:mm a" (with space); if that fails, normalize and retry.
+        const strWithSpace = cleanStr.replace(/([0-9])(am|pm)/, "$1 $2");
+        const parsed = parse(strWithSpace, "h:mm a", date);
+        if (isValid(parsed)) return parsed;
       }
-      return parse(timeStr, "HH:mm", date);
+
+      const parsed24h = parse(cleanStr, "HH:mm", date);
+      if (isValid(parsed24h)) return parsed24h;
+
+      throw new Error(`Unable to parse time value: "${timeStr}"`);
     };
 
-    const startObj = parseTime(dayConfig.startTime, dateObj);
-    const endObj = parseTime(dayConfig.endTime, dateObj);
+    let startObj: Date;
+    let endObj: Date;
+    try {
+      startObj = parseTime(dayConfig.startTime, dateObj);
+      endObj = parseTime(dayConfig.endTime, dateObj);
+    } catch (e) {
+      return NextResponse.json({ success: false, error: { message: `Invalid working hours configured for ${dayOfWeek}. Please re-save your working hours.` } }, { status: 400 });
+    }
     
     let currentSlotStart = startObj;
     const newSlots = [];

@@ -1,19 +1,11 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { verifyToken } from "@/lib/auth";
+import { requireAuth } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import { User } from "@/models/User";
 
 export async function GET() {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get("auth_token")?.value;
-
-    if (!token) {
-      return NextResponse.json({ success: false, error: { message: "Unauthorized" } }, { status: 401 });
-    }
-
-    const payload = verifyToken(token);
+    const payload = await requireAuth();
     if (!payload) {
       return NextResponse.json({ success: false, error: { message: "Invalid token" } }, { status: 401 });
     }

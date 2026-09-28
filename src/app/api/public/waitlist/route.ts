@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import { Slot } from "@/models/Slot";
 import { z } from "zod";
+import { rateLimit, getClientIp } from "@/lib/rateLimit";
 
 const waitlistSchema = z.object({
   slotId: z.string().min(1, "Slot is required"),
@@ -11,13 +12,18 @@ const waitlistSchema = z.object({
 
 export async function POST(req: Request) {
   try {
+    const ip = getClientIp(req);
+    if (!rateLimit(`public-waitlist:${ip}`, 10, 60_000)) {
+      return NextResponse.json({ success: false, error: { message: "Too many requests. Please try again shortly." } }, { status: 429 });
+    }
+
     await connectToDatabase();
     
     const body = await req.json();
     const result = waitlistSchema.safeParse(body);
     
     if (!result.success) {
-      return NextResponse.json({ success: false, error: { message: (result.error as any).errors[0].message } }, { status: 400 });
+      return NextResponse.json({ success: false, error: { message: result.error.issues[0].message } }, { status: 400 });
     }
     
     const { slotId, name, phone } = result.data;

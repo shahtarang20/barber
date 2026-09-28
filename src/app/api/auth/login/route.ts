@@ -5,6 +5,7 @@ import { User } from "@/models/User";
 import { z } from "zod";
 import { signToken } from "@/lib/auth";
 import { cookies } from "next/headers";
+import { rateLimit, getClientIp } from "@/lib/rateLimit";
 
 const loginSchema = z.object({
   barberCode: z.string().min(1, "Barber Code is required"),
@@ -13,13 +14,18 @@ const loginSchema = z.object({
 
 export async function POST(req: Request) {
   try {
+    const ip = getClientIp(req);
+    if (!rateLimit(`login:${ip}`, 10, 60_000)) {
+      return NextResponse.json({ success: false, error: { message: "Too many login attempts. Please try again in a minute." } }, { status: 429 });
+    }
+
     await connectToDatabase();
-    
+
     const body = await req.json();
     const result = loginSchema.safeParse(body);
     
     if (!result.success) {
-      return NextResponse.json({ success: false, error: { message: (result.error as any).errors[0].message } }, { status: 400 });
+      return NextResponse.json({ success: false, error: { message: result.error.issues[0].message } }, { status: 400 });
     }
     
     const { barberCode, password } = result.data;

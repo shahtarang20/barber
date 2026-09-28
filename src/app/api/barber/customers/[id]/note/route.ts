@@ -1,34 +1,35 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { verifyToken } from "@/lib/auth";
+import { requireAuth } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import { Customer } from "@/models/Customer";
 import mongoose from "mongoose";
+import { z } from "zod";
+
+const noteSchema = z.object({
+  note: z.string().max(1000, "Note must be 1000 characters or fewer"),
+});
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get("auth_token")?.value;
-
-    if (!token) {
-      return NextResponse.json({ success: false, error: { message: "Unauthorized" } }, { status: 401 });
-    }
-
-    const payload = verifyToken(token);
-    if (!payload || payload.role !== "BARBER") {
+    const payload = await requireAuth(["BARBER"]);
+    if (!payload) {
       return NextResponse.json({ success: false, error: { message: "Unauthorized" } }, { status: 401 });
     }
 
     await connectToDatabase();
-    
+
     // Resolve params for Next.js 15+
     const resolvedParams = await params;
     const customerId = resolvedParams.id;
     const barberId = new mongoose.Types.ObjectId(payload.userId);
-    
+
     const body = await req.json();
-    const { note } = body;
-    
+    const result = noteSchema.safeParse(body);
+    if (!result.success) {
+      return NextResponse.json({ success: false, error: { message: result.error.issues[0].message } }, { status: 400 });
+    }
+    const { note } = result.data;
+
     const customer = await Customer.findById(customerId);
     if (!customer) {
       return NextResponse.json({ success: false, error: { message: "Customer not found" } }, { status: 404 });

@@ -5,23 +5,29 @@ import { Customer } from "@/models/Customer";
 import { Booking } from "@/models/Booking";
 import { Counter } from "@/models/Counter";
 import { z } from "zod";
+import { rateLimit, getClientIp } from "@/lib/rateLimit";
 
 const bookingSchema = z.object({
   slotId: z.string().min(1, "Slot is required"),
   name: z.string().min(2, "Name must be at least 2 characters"),
   phone: z.string().min(10, "Valid phone number is required"),
-  notes: z.string().optional(),
+  notes: z.string().max(500, "Notes must be 500 characters or fewer").optional(),
 });
 
 export async function POST(req: Request) {
   try {
+    const ip = getClientIp(req);
+    if (!rateLimit(`public-booking:${ip}`, 10, 60_000)) {
+      return NextResponse.json({ success: false, error: { message: "Too many requests. Please try again shortly." } }, { status: 429 });
+    }
+
     await connectToDatabase();
     
     const body = await req.json();
     const result = bookingSchema.safeParse(body);
     
     if (!result.success) {
-      return NextResponse.json({ success: false, error: { message: (result.error as any).errors[0].message } }, { status: 400 });
+      return NextResponse.json({ success: false, error: { message: result.error.issues[0].message } }, { status: 400 });
     }
     
     const { slotId, name, phone, notes } = result.data;

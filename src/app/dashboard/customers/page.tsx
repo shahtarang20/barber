@@ -8,6 +8,15 @@ import useSWR from "swr";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
+interface CustomerView {
+  _id: string;
+  name: string;
+  phone: string;
+  totalVisits: number;
+  lastVisit: string;
+  note?: string;
+}
+
 export default function CustomersPage() {
   const [page, setPage] = useState(1);
   const [limit] = useState(50);
@@ -21,7 +30,7 @@ export default function CustomersPage() {
     { refreshInterval: 3000 }
   );
 
-  const customers = customersData?.success ? customersData.data : [];
+  const customers: CustomerView[] = customersData?.success ? customersData.data : [];
   const pagination = customersData?.success ? customersData.pagination : null;
 
   useEffect(() => {
