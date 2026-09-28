@@ -74,12 +74,31 @@ export default function DashboardPage() {
     }
   };
 
-  const handleBlockSlot = async (id: string) => {
+  const [showBlockModal, setShowBlockModal] = useState<any>(null);
+
+  const handleBlockSlot = async (id: string, force = false) => {
     try {
-      const res = await fetch(`/api/barber/slots/${id}/block`, { method: "POST" });
+      const url = force ? `/api/barber/slots/${id}/block?force=true` : `/api/barber/slots/${id}/block`;
+      const res = await fetch(url, { method: "POST" });
       const data = await res.json();
       if (data.success) {
         fetchSlots(selectedDate);
+        if (force && data.cancelledCustomers) {
+           setShowBlockModal(null);
+           if (data.cancelledCustomers.length > 0) {
+             const cust = data.cancelledCustomers[0];
+             const cleanPhone = cust.phone.replace(/\D/g, "");
+             const slotTime = slots.find(s => s._id === id)?.startTime || "your slot";
+             const msgStr = t('cancelMessage' as any).replace('{name}', cust.name).replace('{time}', slotTime);
+             window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msgStr)}`, '_blank');
+             
+             if (data.cancelledCustomers.length > 1) {
+               alert(`Note: Only the first customer (${cust.name}) was messaged via WhatsApp automatically to prevent browser pop-up blocking. Please message the others manually.`);
+             }
+           }
+        }
+      } else if (data.requiresConfirmation) {
+        setShowBlockModal({ slotId: id, customers: data.customers });
       } else {
         alert(data.error?.message || "Failed to block slot");
       }
@@ -283,6 +302,49 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+
+      {showBlockModal && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-8 max-w-lg w-full text-center shadow-2xl relative">
+            <button onClick={() => setShowBlockModal(null)} className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-900">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+            
+            <div className="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
+              <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+
+            <h2 className="text-3xl font-black text-zinc-900 mb-4">Warning: Slot is Booked!</h2>
+            <p className="text-lg text-zinc-600 mb-8">
+              There are <b>{showBlockModal.customers.length}</b> customer(s) currently booked in this slot. 
+              Blocking it will instantly cancel their appointments.
+            </p>
+
+            <div className="bg-zinc-50 p-4 rounded-xl mb-8 text-left max-h-40 overflow-y-auto border border-zinc-200">
+              {showBlockModal.customers.map((c: any, i: number) => (
+                <div key={i} className="flex justify-between items-center py-2 border-b last:border-0 border-zinc-100">
+                   <span className="font-semibold text-zinc-800">{c.name}</span>
+                   <span className="text-zinc-500 font-mono text-sm">{c.phone}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-4 w-full">
+              <Button variant="outline" className="w-full h-14 text-lg font-bold" onClick={() => setShowBlockModal(null)}>Go Back</Button>
+              <Button className="w-full h-14 text-lg font-bold bg-red-600 hover:bg-red-700 text-white" onClick={() => handleBlockSlot(showBlockModal.slotId, true)}>
+                Cancel All & Block
+              </Button>
+            </div>
+            
+            <p className="text-xs text-zinc-400 mt-6 flex items-center justify-center gap-2">
+              <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.711.927 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.666.596 1.216.78 1.391.867.174.086.275.072.376-.044.101-.115.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.099.824z"/></svg>
+              A WhatsApp message in your selected language will be automatically prepared for the first customer.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

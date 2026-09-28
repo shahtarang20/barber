@@ -35,28 +35,50 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       return NextResponse.json({ success: false, error: { message: "Forbidden" } }, { status: 403 });
     }
 
+    const url = new URL(req.url);
+    const force = url.searchParams.get("force") === "true";
+
+    const { Booking } = await import("@/models/Booking");
+    const { Customer } = await import("@/models/Customer");
+
     if (slot.status === "BOOKED" || slot.bookingsCount > 0) {
-      // Find the bookings to tell the barber who is in the slot
-      const { Booking } = await import("@/models/Booking");
-      const { Customer } = await import("@/models/Customer");
-      
       const activeBookings = await Booking.find({ 
         slotId: slot._id,
         status: "CONFIRMED"
       });
       
-      let customerNames = [];
+      let customersList = [];
       for (const b of activeBookings) {
         const customer = await Customer.findById(b.customerId);
-        if (customer) customerNames.push(customer.name);
+        if (customer) {
+          customersList.push({ name: customer.name, phone: customer.phone, bookingId: b._id });
+        }
       }
       
-      const namesStr = customerNames.length > 0 ? customerNames.join(", ") : "a customer";
-      
-      return NextResponse.json({ 
-        success: false, 
-        error: { message: `Sorry, you cannot block this slot because ${namesStr} has already booked it. Please cancel their appointment(s) first.` } 
-      }, { status: 400 });
+      if (!force) {
+        return NextResponse.json({ 
+          success: false, 
+          requiresConfirmation: true,
+          customers: customersList,
+          error: { message: `This slot has existing bookings.` } 
+        }, { status: 409 });
+      } else {
+        // Force cancel all bookings
+        for (const b of activeBookings) {
+          b.status = "CANCELLED";
+          await b.save();
+        }
+        
+        slot.status = "BLOCKED";
+        slot.bookingsCount = 0;
+        await slot.save();
+
+        return NextResponse.json({ 
+          success: true, 
+          data: slot,
+          cancelledCustomers: customersList 
+        });
+      }
     }
 
     slot.status = "BLOCKED";
