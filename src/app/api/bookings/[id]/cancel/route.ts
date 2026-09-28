@@ -43,10 +43,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     await booking.save();
 
     // Free up the slot
-    await Slot.findByIdAndUpdate(booking.slotId, {
-      $set: { status: "AVAILABLE" },
-      $unset: { bookingId: 1 }
-    });
+    const slot = await Slot.findById(booking.slotId);
+    if (slot) {
+      const newCount = Math.max(0, slot.bookingsCount - 1);
+      slot.bookingsCount = newCount;
+      if (newCount < slot.capacity) {
+        slot.status = "AVAILABLE";
+      }
+      await slot.save();
+    }
 
     return NextResponse.json({ success: true, data: { message: "Booking cancelled successfully", booking } });
   } catch (error) {

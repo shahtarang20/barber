@@ -41,6 +41,22 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     booking.status = "NO_SHOW";
     await booking.save();
 
+    // Also decrement the slot's bookingsCount and make it available again
+    const { Slot } = await import("@/models/Slot");
+    const slot = await Slot.findById(booking.slotId);
+    if (slot) {
+      const newCount = Math.max(0, slot.bookingsCount - 1);
+      
+      // The user says: "check that tell left for that slot or not if yes then automatic the slot dynamically one down"
+      // If there's 15 mins left, or any time left, it becomes available. 
+      // Our dashboard hides slots in the past, so if it's in the past, making it AVAILABLE won't hurt, it will just be hidden!
+      slot.bookingsCount = newCount;
+      if (slot.status === "BOOKED" && newCount < slot.capacity) {
+        slot.status = "AVAILABLE";
+      }
+      await slot.save();
+    }
+
     return NextResponse.json({ success: true, data: { message: "Booking marked as no-show", booking } });
   } catch (error) {
     console.error("No-show booking error:", error);

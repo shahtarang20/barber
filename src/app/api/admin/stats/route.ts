@@ -25,7 +25,8 @@ export async function GET(req: Request) {
     const totalBarbers = await User.countDocuments({ role: "BARBER" });
     const totalBookings = await Booking.countDocuments();
     const totalCustomers = await Customer.countDocuments();
-    const today = new Date().toISOString().split('T')[0];
+    const { format } = await import("date-fns");
+    const today = format(new Date(), "yyyy-MM-dd");
     const todayBookings = await Booking.countDocuments({ date: today });
 
     return NextResponse.json({ 

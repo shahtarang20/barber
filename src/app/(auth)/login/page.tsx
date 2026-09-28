@@ -53,7 +53,7 @@ export default function LoginPage() {
       <div className="mb-8 text-center">
         <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">Welcome back</h1>
         <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-2">
-          Enter your barber code to access your dashboard
+          Enter your email or barber code to access your dashboard
         </p>
       </div>
 
@@ -65,11 +65,11 @@ export default function LoginPage() {
         )}
         
         <div className="space-y-2">
-          <Label htmlFor="barberCode">Barber Code</Label>
+          <Label htmlFor="barberCode">Email or Barber Code</Label>
           <Input 
             id="barberCode" 
             name="barberCode" 
-            placeholder="e.g. b001" 
+            placeholder="e.g. john@example.com or b001" 
             required 
             autoComplete="username"
             className="h-11"

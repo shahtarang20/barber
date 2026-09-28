@@ -24,8 +24,14 @@ export async function POST(req: Request) {
     
     const { barberCode, password } = result.data;
     
-    // Find user by barberCode
-    const user = await User.findOne({ barberCode: barberCode.toLowerCase() });
+    // Find user by barberCode or email
+    const searchTerm = barberCode.toLowerCase();
+    const user = await User.findOne({
+      $or: [
+        { barberCode: searchTerm },
+        { email: searchTerm }
+      ]
+    });
     
     if (!user) {
       return NextResponse.json({ success: false, error: { message: "Invalid barber code or password" } }, { status: 401 });
