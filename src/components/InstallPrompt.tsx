@@ -22,13 +22,9 @@ export function InstallPrompt({ isCustomer = false }: { isCustomer?: boolean }) 
 
     if (standalone) return;
 
-    // Detect if mobile device
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    
-    if (isMobile) {
-      // Small delay so it doesn't pop up too aggressively on first load
-      setTimeout(() => setShowPrompt(true), 3000);
-    }
+    // Always show prompt after a short delay (for both mobile and desktop)
+    // Desktop users can also install PWAs!
+    const timer = setTimeout(() => setShowPrompt(true), 3000);
 
     const handleBeforeInstallPrompt = (e: any) => {
       e.preventDefault();
@@ -45,6 +41,7 @@ export function InstallPrompt({ isCustomer = false }: { isCustomer?: boolean }) 
     }
 
     return () => {
+      clearTimeout(timer);
       window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
     };
   }, []);

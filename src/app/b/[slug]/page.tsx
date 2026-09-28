@@ -21,10 +21,43 @@ export default function BarberBookingPage() {
   const [bookingError, setBookingError] = useState("");
   const [bookingSuccess, setBookingSuccess] = useState<any>(null);
 
+  const [barberError, setBarberError] = useState(false);
+
   useEffect(() => {
-    fetchBarber();
+    const fetchInitialData = async () => {
+      setLoading(true);
+      try {
+        const formattedDate = format(selectedDate, "yyyy-MM-dd");
+        
+        // Fetch both barber profile and today's slots in parallel! 
+        // This cuts the loading time literally in half (removes the waterfall effect)
+        const [barberRes, slotsRes] = await Promise.all([
+          fetch(`/api/public/barbers/${slug}`),
+          fetch(`/api/public/barbers/${slug}/slots?date=${formattedDate}`)
+        ]);
+
+        const barberData = await barberRes.json();
+        const slotsData = await slotsRes.json();
+
+        if (barberData.success) {
+          setBarber(barberData.data);
+        } else {
+          setBarberError(true);
+        }
+
+        if (slotsData.success) {
+          setSlots(slotsData.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch initial data");
+        setBarberError(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchInitialData();
     
-    // Register PWA service worker
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(err => {
         console.error('Service Worker registration failed:', err);
@@ -32,26 +65,7 @@ export default function BarberBookingPage() {
     }
   }, [slug]);
 
-  useEffect(() => {
-    if (barber) {
-      fetchSlots(selectedDate);
-    }
-  }, [selectedDate, barber]);
-
-  const fetchBarber = async () => {
-    try {
-      const res = await fetch(`/api/public/barbers/${slug}`);
-      const data = await res.json();
-      if (data.success) {
-        setBarber(data.data);
-      }
-    } catch (error) {
-      console.error("Failed to fetch barber");
-    }
-  };
-
   const fetchSlots = async (date: Date) => {
-    setLoading(true);
     try {
       const formattedDate = format(date, "yyyy-MM-dd");
       const res = await fetch(`/api/public/barbers/${slug}/slots?date=${formattedDate}`);
@@ -61,10 +75,22 @@ export default function BarberBookingPage() {
       }
     } catch (error) {
       console.error("Failed to fetch slots");
-    } finally {
-      setLoading(false);
     }
   };
+
+  // Handle subsequent date changes
+  useEffect(() => {
+    // Skip the very first render since it's handled by the initial load
+    if (!barber) return;
+    
+    const fetchSlotsOnly = async () => {
+      setLoading(true);
+      await fetchSlots(selectedDate);
+      setLoading(false);
+    };
+
+    fetchSlotsOnly();
+  }, [selectedDate, slug]);
 
   const handleBookingSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -105,8 +131,23 @@ export default function BarberBookingPage() {
     }
   };
 
-  if (!barber && !loading) {
-    return <div className="min-h-screen flex items-center justify-center">Barber not found.</div>;
+  if (barberError) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-zinc-50">
+        <div className="text-4xl mb-4">✂️</div>
+        <h2 className="text-xl font-bold text-zinc-900 mb-2">Barber Not Found</h2>
+        <p className="text-zinc-500">Please check the URL and try again.</p>
+      </div>
+    );
+  }
+
+  if (loading && !barber) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-zinc-50">
+        <div className="w-12 h-12 border-4 border-zinc-200 border-t-zinc-900 rounded-full animate-spin mb-4"></div>
+        <p className="text-zinc-500 font-medium">Loading schedule...</p>
+      </div>
+    );
   }
 
   if (bookingSuccess) {
