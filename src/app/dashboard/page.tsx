@@ -316,10 +316,9 @@ export default function DashboardPage() {
               </svg>
             </div>
 
-            <h2 className="text-3xl font-black text-zinc-900 mb-4">Warning: Slot is Booked!</h2>
+            <h2 className="text-3xl font-black text-zinc-900 mb-4">{t('warningBookedTitle' as any)}</h2>
             <p className="text-lg text-zinc-600 mb-8">
-              There are <b>{showBlockModal.customers.length}</b> customer(s) currently booked in this slot. 
-              Blocking it will instantly cancel their appointments.
+              {t('warningBookedDesc' as any).replace('{count}', showBlockModal.customers.length.toString())}
             </p>
 
             <div className="bg-zinc-50 p-4 rounded-xl mb-8 text-left max-h-40 overflow-y-auto border border-zinc-200">
@@ -332,15 +331,15 @@ export default function DashboardPage() {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4 w-full">
-              <Button variant="outline" className="w-full h-14 text-lg font-bold" onClick={() => setShowBlockModal(null)}>Go Back</Button>
+              <Button variant="outline" className="w-full h-14 text-lg font-bold" onClick={() => setShowBlockModal(null)}>{t('goBack' as any)}</Button>
               <Button className="w-full h-14 text-lg font-bold bg-red-600 hover:bg-red-700 text-white" onClick={() => handleBlockSlot(showBlockModal.slotId, true)}>
-                Cancel All & Block
+                {t('cancelAllAndBlock' as any)}
               </Button>
             </div>
             
             <p className="text-xs text-zinc-400 mt-6 flex items-center justify-center gap-2">
               <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.711.927 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.666.596 1.216.78 1.391.867.174.086.275.072.376-.044.101-.115.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.099.824z"/></svg>
-              A WhatsApp message in your selected language will be automatically prepared for the first customer.
+              {t('whatsappNotice' as any)}
             </p>
           </div>
         </div>

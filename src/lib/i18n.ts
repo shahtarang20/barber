@@ -65,7 +65,12 @@ const translations = {
     barberNotFound: "Barber Not Found",
     checkUrl: "Please check the URL and try again.",
     cancelPrompt: "Booking cancelled! Would you like to send a WhatsApp message to {name} to let them know you are unavailable?",
-    cancelMessage: "Hi {name}, sorry but we had to cancel your appointment at {time}. We are unavailable right now. Please book another time!"
+    cancelMessage: "Hi {name}, sorry but we had to cancel your appointment at {time}. We are unavailable right now. Please book another time!",
+    warningBookedTitle: "Warning: Slot is Booked!",
+    warningBookedDesc: "There are {count} customer(s) currently booked in this slot. Blocking it will instantly cancel their appointments.",
+    goBack: "Go Back",
+    cancelAllAndBlock: "Cancel All & Block",
+    whatsappNotice: "A WhatsApp message in your selected language will be automatically prepared for the first customer."
   },
   hi: {
     loading: "लोड हो रहा है...",
@@ -106,7 +111,12 @@ const translations = {
     barberNotFound: "नाई नहीं मिला",
     checkUrl: "कृपया URL जांचें और पुनः प्रयास करें।",
     cancelPrompt: "बुकिंग रद्द हो गई! क्या आप {name} को व्हाट्सएप संदेश भेजना चाहेंगे कि आप अनुपलब्ध हैं?",
-    cancelMessage: "नमस्ते {name}, क्षमा करें लेकिन हमें {time} का आपका अपॉइंटमेंट रद्द करना पड़ा। हम अभी अनुपलब्ध हैं। कृपया दूसरी बार बुक करें!"
+    cancelMessage: "नमस्ते {name}, क्षमा करें लेकिन हमें {time} का आपका अपॉइंटमेंट रद्द करना पड़ा। हम अभी अनुपलब्ध हैं। कृपया दूसरी बार बुक करें!",
+    warningBookedTitle: "चेतावनी: स्लॉट बुक है!",
+    warningBookedDesc: "इस स्लॉट में वर्तमान में {count} ग्राहक बुक हैं। इसे ब्लॉक करने से उनकी अपॉइंटमेंट तुरंत रद्द हो जाएगी।",
+    goBack: "वापस जाएं",
+    cancelAllAndBlock: "सभी रद्द करें और ब्लॉक करें",
+    whatsappNotice: "पहले ग्राहक के लिए आपकी चुनी हुई भाषा में एक व्हाट्सएप संदेश स्वचालित रूप से तैयार किया जाएगा।"
   },
   gu: {
     loading: "લોડ થઈ રહ્યું છે...",
@@ -147,7 +157,12 @@ const translations = {
     barberNotFound: "વાળંદ મળ્યો નથી",
     checkUrl: "કૃપા કરીને URL તપાસો અને ફરી પ્રયાસ કરો.",
     cancelPrompt: "બુકિંગ રદ થયું! શું તમે {name} ને વૉટ્સએપ મેસેજ મોકલવા માંગો છો કે તમે અનુપલબ્ધ છો?",
-    cancelMessage: "નમસ્તે {name}, માફ કરશો પરંતુ અમારે {time} ની તમારી એપોઇન્ટમેન્ટ રદ કરવી પડી. અમે અત્યારે અનુપલબ્ધ છીએ. કૃપા કરીને બીજી વાર બુક કરો!"
+    cancelMessage: "નમસ્તે {name}, માફ કરશો પરંતુ અમારે {time} ની તમારી એપોઇન્ટમેન્ટ રદ કરવી પડી. અમે અત્યારે અનુપલબ્ધ છીએ. કૃપા કરીને બીજી વાર બુક કરો!",
+    warningBookedTitle: "ચેતવણી: સ્લોટ બુક થયેલ છે!",
+    warningBookedDesc: "આ સ્લોટમાં હાલમાં {count} ગ્રાહક(ઓ) બુક થયેલ છે. તેને બ્લોક કરવાથી તેમની એપોઇન્ટમેન્ટ તરત જ રદ થઈ જશે.",
+    goBack: "પાછા જાવ",
+    cancelAllAndBlock: "બધા રદ કરો અને બ્લોક કરો",
+    whatsappNotice: "તમારી પસંદ કરેલી ભાષામાં પ્રથમ ગ્રાહક માટે આપમેળે વૉટ્સએપ મેસેજ તૈયાર કરવામાં આવશે."
   },
   mr: {
     loading: "लोड होत आहे...",
@@ -188,7 +203,12 @@ const translations = {
     barberNotFound: "न्हावी सापडला नाही",
     checkUrl: "कृपया URL तपासा आणि पुन्हा प्रयत्न करा.",
     cancelPrompt: "बुकिंग रद्द केले! तुम्ही {name} ला व्हॉट्सॲप संदेश पाठवू इच्छिता की तुम्ही अनुपलब्ध आहात?",
-    cancelMessage: "नमस्कार {name}, क्षमस्व पण आम्हाला तुमची {time} ची अपॉइंटमेंट रद्द करावी लागली. आम्ही सध्या अनुपलब्ध आहोत. कृपया दुसऱ्या वेळी बुक करा!"
+    cancelMessage: "नमस्कार {name}, क्षमस्व पण आम्हाला तुमची {time} ची अपॉइंटमेंट रद्द करावी लागली. आम्ही सध्या अनुपलब्ध आहोत. कृपया दुसऱ्या वेळी बुक करा!",
+    warningBookedTitle: "चेतावणी: स्लॉट बुक केले आहे!",
+    warningBookedDesc: "या स्लॉटमध्ये सध्या {count} ग्राहक बुक आहेत. हे ब्लॉक केल्याने त्यांच्या अपॉइंटमेंट त्वरित रद्द होतील.",
+    goBack: "मागे जा",
+    cancelAllAndBlock: "सर्व रद्द करा आणि ब्लॉक करा",
+    whatsappNotice: "तुमच्या निवडलेल्या भाषेत पहिल्या ग्राहकासाठी एक व्हाट्सएप संदेश स्वयंचलितपणे तयार केला जाईल."
   }
 };
 
