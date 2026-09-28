@@ -53,7 +53,17 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       await slot.save();
     }
 
-    return NextResponse.json({ success: true, data: { message: "Booking cancelled successfully", booking } });
+    const { Customer } = await import("@/models/Customer");
+    const customer = await Customer.findById(booking.customerId);
+
+    return NextResponse.json({ 
+      success: true, 
+      data: { 
+        message: "Booking cancelled successfully", 
+        booking,
+        customer: customer ? { name: customer.name, phone: customer.phone } : null
+      } 
+    });
   } catch (error) {
     console.error("Cancel booking error:", error);
     return NextResponse.json({ success: false, error: { message: "Internal server error" } }, { status: 500 });

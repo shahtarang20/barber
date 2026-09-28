@@ -36,6 +36,18 @@ export default function AppointmentsPage() {
       const data = await res.json();
       if (data.success) {
         fetchBookings();
+        
+        if (action === "cancel" && data.data?.customer?.phone) {
+          const { name, phone } = data.data.customer;
+          const time = data.data.booking.startTime;
+          
+          if (confirm(`Booking cancelled! Would you like to send a WhatsApp message to ${name} to let them know you are unavailable?`)) {
+            // Clean phone number (strip non-digits)
+            const cleanPhone = phone.replace(/\D/g, "");
+            const msg = encodeURIComponent(`Hi ${name}, sorry but we had to cancel your appointment at ${time}. We are unavailable right now. Please book another time!`);
+            window.open(`https://wa.me/${cleanPhone}?text=${msg}`, '_blank');
+          }
+        }
       } else {
         alert(data.error?.message || `Failed to ${action} booking`);
       }
