@@ -27,7 +27,7 @@ export default function BarberBookingPage() {
   const { data: slotsData, isLoading: slotsLoading, mutate: mutateSlots } = useSWR(
     slug ? `/api/public/barbers/${slug}/slots?date=${formattedDate}` : null, 
     fetcher,
-    { refreshInterval: 3000 }
+    { refreshInterval: 10000 }
   );
 
   const barber = barberData?.success ? barberData.data : null;
