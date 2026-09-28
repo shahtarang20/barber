@@ -217,22 +217,9 @@ export default function DashboardPage() {
                 
                 <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-end border-t border-zinc-100 dark:border-zinc-800/50 sm:border-0 pt-4 sm:pt-0">
                   <div className="flex items-center gap-2 px-2 sm:px-3 py-1 sm:py-1.5 bg-zinc-100 dark:bg-zinc-800/60 hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors rounded-lg border border-zinc-200/80 dark:border-zinc-700/80 group" title="Maximum Capacity for this slot">
-                    <svg className="w-3 h-3 sm:w-4 sm:h-4 text-zinc-400 group-hover:text-zinc-600 dark:group-hover:text-zinc-300 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                    </svg>
-                    <input 
-                      type="number" 
-                      min={slot.bookingsCount > 0 ? slot.bookingsCount : 1} 
-                      defaultValue={slot.capacity || 1}
-                      onBlur={(e) => {
-                        const val = parseInt(e.target.value);
-                        if (!isNaN(val) && val !== slot.capacity && val >= (slot.bookingsCount || 0) && val > 0) {
-                          handleInlineCapacityChange(slot._id, val);
-                        } else {
-                          e.target.value = slot.capacity || 1; // reset if invalid
-                        }
-                      }}
-                      className="w-8 sm:w-10 h-5 sm:h-6 bg-transparent text-xs sm:text-sm font-bold text-zinc-700 dark:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-400/50 rounded text-center transition-all"
+                    <CapacityEditor 
+                      slot={slot} 
+                      onSave={(val) => handleInlineCapacityChange(slot._id, val)} 
                     />
                   </div>
                   <div className="flex items-center gap-2">
@@ -250,6 +237,48 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function CapacityEditor({ slot, onSave }: { slot: any, onSave: (val: number) => void }) {
+  const [val, setVal] = useState(slot.capacity || 1);
+
+  useEffect(() => {
+    setVal(slot.capacity || 1);
+  }, [slot.capacity]);
+
+  const isChanged = val !== (slot.capacity || 1);
+
+  return (
+    <div className="flex items-center gap-1">
+      <svg className="w-3 h-3 sm:w-4 sm:h-4 text-zinc-400 group-hover:text-zinc-600 dark:group-hover:text-zinc-300 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+      </svg>
+      <input 
+        type="number" 
+        min={slot.bookingsCount > 0 ? slot.bookingsCount : 1} 
+        value={val}
+        onChange={(e) => setVal(parseInt(e.target.value) || 1)}
+        className="w-8 sm:w-10 h-5 sm:h-6 bg-transparent text-xs sm:text-sm font-bold text-zinc-700 dark:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-400/50 rounded text-center transition-all"
+      />
+      {isChanged && (
+        <button 
+          onClick={() => {
+            if (val >= (slot.bookingsCount || 0) && val > 0) {
+              onSave(val);
+            } else {
+              setVal(slot.capacity || 1);
+            }
+          }}
+          className="ml-1 bg-zinc-900 text-white rounded p-0.5 hover:bg-zinc-800 transition-colors"
+          title="Save Capacity"
+        >
+          <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+        </button>
+      )}
     </div>
   );
 }
