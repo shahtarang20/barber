@@ -44,6 +44,24 @@ export default function AdminBarbersPage() {
     }
   };
 
+  const handleResetPassword = async (id: string, name: string) => {
+    if (!confirm(`Reset ${name}'s password? Their current password will stop working immediately.`)) return;
+    try {
+      const res = await fetch(`/api/admin/barbers/${id}/reset-password`, { method: "POST" });
+      const data = await res.json();
+      if (data.success) {
+        window.prompt(
+          `New temporary password for ${name} (copy this now — it won't be shown again). Share it with them securely:`,
+          data.data.tempPassword
+        );
+      } else {
+        toast.add({ title: "Error", description: data.error?.message || "Failed to reset password", type: "error" });
+      }
+    } catch (error) {
+      toast.add({ title: "Error", description: "Error resetting password", type: "error" });
+    }
+  };
+
   return (
     <div className="space-y-8">
       <div>
@@ -107,6 +125,7 @@ export default function AdminBarbersPage() {
                       />
                     </td>
                     <td className="px-6 py-4 text-right space-x-2">
+                      <Button variant="outline" size="sm" onClick={() => handleResetPassword(b._id, b.name)}>Reset Password</Button>
                       <Link href={`/b/${b.slug}`} target="_blank">
                         <Button variant="outline" size="sm">Visit Store</Button>
                       </Link>

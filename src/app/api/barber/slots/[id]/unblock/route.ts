@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import { Slot } from "@/models/Slot";
+import { Customer } from "@/models/Customer";
+import { Booking } from "@/models/Booking";
+import { Counter } from "@/models/Counter";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -32,19 +35,53 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     }
 
     slot.status = "AVAILABLE";
-    
+
     let waitlistCustomer = null;
-    if (slot.waitlist && slot.waitlist.length > 0) {
-      // Pull the first person off the waitlist
-      waitlistCustomer = slot.waitlist.shift();
-      // Wait, do we want to auto-book them or just notify them?
-      // "automatically prepares a WhatsApp message to notify them that a spot just opened up"
-      // Let's just pull them from the waitlist and notify them. They can book it themselves.
+    let autoBooking = null;
+
+    // Auto-convert the first waitlisted customer into a confirmed booking,
+    // rather than just notifying them — avoids the race where someone else
+    // books the slot before they get a chance to.
+    if (slot.waitlist && slot.waitlist.length > 0 && slot.bookingsCount < slot.capacity) {
+      const entry = slot.waitlist.shift();
+      waitlistCustomer = { name: entry.name, phone: entry.phone };
+
+      let customer = await Customer.findOne({ phone: entry.phone });
+      if (!customer) {
+        customer = new Customer({ name: entry.name, phone: entry.phone });
+        await customer.save();
+      }
+
+      const counter = await Counter.findByIdAndUpdate(
+        { _id: "bookingNumber" },
+        { $inc: { seq: 1 } },
+        { new: true, upsert: true }
+      );
+      const bookingNumber = `B-${counter.seq.toString().padStart(4, "0")}`;
+
+      const newBooking = new Booking({
+        bookingNumber,
+        barberId: slot.barberId,
+        slotId: slot._id,
+        customerId: customer._id,
+        date: slot.date,
+        startTime: slot.startTime,
+        endTime: slot.endTime,
+        status: "CONFIRMED",
+      });
+      await newBooking.save();
+
+      slot.bookingsCount += 1;
+      if (slot.bookingsCount >= slot.capacity) {
+        slot.status = "BOOKED";
+      }
+
+      autoBooking = { bookingNumber: newBooking.bookingNumber };
     }
-    
+
     await slot.save();
 
-    return NextResponse.json({ success: true, data: slot, waitlistCustomer });
+    return NextResponse.json({ success: true, data: slot, waitlistCustomer, autoBooking });
   } catch (error) {
     console.error("Unblock slot error:", error);
     return NextResponse.json({ success: false, error: { message: "Internal server error" } }, { status: 500 });

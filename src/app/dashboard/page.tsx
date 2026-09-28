@@ -151,13 +151,17 @@ export default function DashboardPage() {
            const cust = data.waitlistCustomer;
            const cleanPhone = cust.phone.replace(/\D/g, "");
            const slotTime = slots.find((s: SlotView) => s._id === id)?.startTime || "your slot";
-           const bookingLink = `${window.location.origin}/b/${profile?.slug}`;
-           
-           const msgStr = t('waitlistNotifyMessage' as any)
-             .replace('{name}', cust.name)
-             .replace('{time}', slotTime)
-             .replace('{link}', bookingLink);
-             
+
+           const msgStr = data.autoBooking
+             ? t('waitlistAutoBookedMessage' as any)
+                 .replace('{name}', cust.name)
+                 .replace('{time}', slotTime)
+                 .replace('{bookingId}', data.autoBooking.bookingNumber)
+             : t('waitlistNotifyMessage' as any)
+                 .replace('{name}', cust.name)
+                 .replace('{time}', slotTime)
+                 .replace('{link}', `${window.location.origin}/b/${profile?.slug}`);
+
            window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msgStr)}`, '_blank');
         }
       } else {

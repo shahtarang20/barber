@@ -63,6 +63,59 @@ export default function AdminDashboard() {
             </div>
           </div>
 
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mt-8">
+            <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
+              <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 mb-4">Bookings by Status</h2>
+              <div className="space-y-3">
+                {["CONFIRMED", "COMPLETED", "CANCELLED", "NO_SHOW"].map((status) => {
+                  const count = stats?.bookingsByStatus?.[status] || 0;
+                  const total = stats?.totalBookings || 1;
+                  const pct = Math.round((count / total) * 100);
+                  const colors: Record<string, string> = {
+                    CONFIRMED: "bg-blue-500",
+                    COMPLETED: "bg-green-500",
+                    CANCELLED: "bg-zinc-400",
+                    NO_SHOW: "bg-red-500",
+                  };
+                  return (
+                    <div key={status}>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="text-zinc-600 dark:text-zinc-400">{status.replace("_", " ")}</span>
+                        <span className="font-medium text-zinc-900 dark:text-zinc-100">{count}</span>
+                      </div>
+                      <div className="h-2 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
+                        <div className={`h-full ${colors[status]}`} style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
+              <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 mb-4">Last 7 Days</h2>
+              <div className="flex items-end gap-2 h-32">
+                {(stats?.last7Days || []).map((d: { date: string; count: number }) => {
+                  const max = Math.max(...(stats?.last7Days || []).map((x: { count: number }) => x.count), 1);
+                  const heightPct = Math.max((d.count / max) * 100, 4);
+                  return (
+                    <div key={d.date} className="flex-1 flex flex-col items-center gap-1">
+                      <div className="w-full flex items-end justify-center h-24">
+                        <div
+                          className="w-full max-w-6 bg-blue-500 rounded-t-md"
+                          style={{ height: `${heightPct}%` }}
+                          title={`${d.date}: ${d.count} bookings`}
+                        />
+                      </div>
+                      <span className="text-[10px] text-zinc-500">{format(new Date(d.date), "EEE")}</span>
+                      <span className="text-xs font-medium text-zinc-900 dark:text-zinc-100">{d.count}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
           <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden mt-8">
             <div className="px-6 py-5 border-b border-zinc-200 dark:border-zinc-800">
               <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">Active Stores (Barbers)</h2>

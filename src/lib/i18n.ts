@@ -79,7 +79,8 @@ const translations = {
     joinWaitlist: "Join Waitlist",
     waitlistConfirmed: "Waitlist Confirmed",
     waitlistSuccess: "You will be notified via WhatsApp if a spot opens up!",
-    waitlistNotifyMessage: "Hi {name}, a spot just opened up at {time}! Book it now before someone else takes it: {link}"
+    waitlistNotifyMessage: "Hi {name}, a spot just opened up at {time}! Book it now before someone else takes it: {link}",
+    waitlistAutoBookedMessage: "Hi {name}, great news! We've confirmed your booking at {time} from the waitlist. Booking ID: {bookingId}. See you then!"
   },
   hi: {
     loading: "लोड हो रहा है...",
@@ -134,7 +135,8 @@ const translations = {
     joinWaitlist: "प्रतीक्षा सूची में शामिल हों",
     waitlistConfirmed: "प्रतीक्षा सूची की पुष्टि हुई",
     waitlistSuccess: "जगह खाली होने पर आपको व्हाट्सएप के माध्यम से सूचित किया जाएगा!",
-    waitlistNotifyMessage: "नमस्ते {name}, {time} पर अभी एक जगह खाली हुई है! इसे अभी बुक करें: {link}"
+    waitlistNotifyMessage: "नमस्ते {name}, {time} पर अभी एक जगह खाली हुई है! इसे अभी बुक करें: {link}",
+    waitlistAutoBookedMessage: "नमस्ते {name}, बढ़िया खबर! हमने प्रतीक्षा सूची से आपकी {time} की बुकिंग की पुष्टि कर दी है। बुकिंग आईडी: {bookingId}। मिलते हैं!"
   },
   gu: {
     loading: "લોડ થઈ રહ્યું છે...",
@@ -189,7 +191,8 @@ const translations = {
     joinWaitlist: "પ્રતીક્ષા સૂચિમાં જોડાઓ",
     waitlistConfirmed: "પ્રતીક્ષા સૂચિની પુષ્ટિ થઈ",
     waitlistSuccess: "જો કોઈ જગ્યા ખાલી થશે તો તમને વોટ્સએપ દ્વારા જાણ કરવામાં આવશે!",
-    waitlistNotifyMessage: "નમસ્તે {name}, {time} વાગ્યે એક જગ્યા ખાલી થઈ છે! અત્યારે જ બુક કરો: {link}"
+    waitlistNotifyMessage: "નમસ્તે {name}, {time} વાગ્યે એક જગ્યા ખાલી થઈ છે! અત્યારે જ બુક કરો: {link}",
+    waitlistAutoBookedMessage: "નમસ્તે {name}, સારા સમાચાર! અમે તમારી પ્રતીક્ષા યાદીની {time} ની બુકિંગ કન્ફર્મ કરી દીધી છે. બુકિંગ ID: {bookingId}. મળીશું!"
   },
   mr: {
     loading: "लोड होत आहे...",
@@ -244,7 +247,8 @@ const translations = {
     joinWaitlist: "प्रतीक्षा यादीत सामील व्हा",
     waitlistConfirmed: "प्रतीक्षा यादी निश्चित",
     waitlistSuccess: "जागा मोकळी झाल्यास तुम्हाला व्हॉट्सअॅपद्वारे सूचित केले जाईल!",
-    waitlistNotifyMessage: "नमस्कार {name}, {time} वाजता एक जागा मोकळी झाली आहे! आता बुक करा: {link}"
+    waitlistNotifyMessage: "नमस्कार {name}, {time} वाजता एक जागा मोकळी झाली आहे! आता बुक करा: {link}",
+    waitlistAutoBookedMessage: "नमस्कार {name}, आनंदाची बातमी! आम्ही प्रतीक्षा यादीतून तुमची {time} ची बुकिंग निश्चित केली आहे. बुकिंग आयडी: {bookingId}. भेटूया!"
   }
 };
 

@@ -19,13 +19,23 @@ interface CustomerView {
 
 export default function CustomersPage() {
   const [page, setPage] = useState(1);
-  const [limit] = useState(50);
+  const [limit, setLimit] = useState(10);
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [noteInputs, setNoteInputs] = useState<Record<string, string>>({});
   const [savingId, setSavingId] = useState<string | null>(null);
 
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [search]);
+
   const { data: customersData, isLoading: loading } = useSWR(
-    `/api/barber/customers?page=${page}&limit=${limit}`,
+    `/api/barber/customers?page=${page}&limit=${limit}&search=${encodeURIComponent(debouncedSearch)}`,
     fetcher,
     { refreshInterval: 3000 }
   );
@@ -80,12 +90,40 @@ export default function CustomersPage() {
         </p>
       </div>
 
+      <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by name or phone..."
+          className="w-full sm:w-72 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-4 py-2 text-sm focus:ring-2 focus:ring-zinc-900 outline-none"
+        />
+        <div className="flex items-center gap-2 text-sm text-zinc-500">
+          <label htmlFor="pageSize">Show</label>
+          <select
+            id="pageSize"
+            value={limit}
+            onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); }}
+            className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-2 py-1.5 text-sm"
+          >
+            <option value={5}>5</option>
+            <option value={10}>10</option>
+            <option value={15}>15</option>
+          </select>
+          <span>per page</span>
+        </div>
+      </div>
+
       {loading ? (
         <div className="text-zinc-500 py-12 text-center">Loading customers...</div>
       ) : customers.length === 0 ? (
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-8 rounded-2xl text-center shadow-sm">
           <div className="text-4xl mb-4">👥</div>
-          <p className="text-zinc-500 dark:text-zinc-400">No customers yet. When customers book with you, they will appear here!</p>
+          <p className="text-zinc-500 dark:text-zinc-400">
+            {debouncedSearch
+              ? `No customers match "${debouncedSearch}".`
+              : "No customers yet. When customers book with you, they will appear here!"}
+          </p>
         </div>
       ) : (
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">

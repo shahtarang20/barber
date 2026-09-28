@@ -8,7 +8,8 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "50");
+    const limit = Math.min(parseInt(searchParams.get("limit") || "10"), 100);
+    const search = (searchParams.get("search") || "").trim();
     const skip = (page - 1) * limit;
 
     const payload = await requireAuth(["BARBER"]);
@@ -38,6 +39,16 @@ export async function GET(req: Request) {
         }
       },
       { $unwind: "$customerData" },
+      ...(search
+        ? [{
+            $match: {
+              $or: [
+                { "customerData.name": { $regex: search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), $options: "i" } },
+                { "customerData.phone": { $regex: search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), $options: "i" } },
+              ],
+            },
+          }]
+        : []),
       {
         $project: {
           _id: 1,
