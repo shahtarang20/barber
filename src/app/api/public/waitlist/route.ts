@@ -22,7 +22,7 @@ const PHONE_LIMIT = 5;
 export async function POST(req: Request) {
   try {
     const ip = getClientIp(req);
-    if (!rateLimit(`public-waitlist:${ip}`, IP_LIMIT, 60_000)) {
+    if (!(await rateLimit)(`public-waitlist:${ip}`, IP_LIMIT, 60_000)) {
       return NextResponse.json({ success: false, error: { message: "Too many requests from your network. Please try again shortly." } }, { status: 429 });
     }
 
@@ -38,7 +38,7 @@ export async function POST(req: Request) {
     const { slotId, name } = result.data;
     const phone = normalizePhone(result.data.phone);
 
-    if (!rateLimit(`public-waitlist-phone:${phone}`, PHONE_LIMIT, 60_000)) {
+    if (!(await rateLimit)(`public-waitlist-phone:${phone}`, PHONE_LIMIT, 60_000)) {
       return NextResponse.json({ success: false, error: { message: "Too many waitlist attempts with this phone number. Please try again in a minute." } }, { status: 429 });
     }
 

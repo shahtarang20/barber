@@ -29,7 +29,7 @@ const bookingSchema = z.object({
 export async function POST(req: Request) {
   try {
     const ip = getClientIp(req);
-    if (!rateLimit(`public-booking:${ip}`, IP_LIMIT, 60_000)) {
+    if (!(await rateLimit)(`public-booking:${ip}`, IP_LIMIT, 60_000)) {
       return NextResponse.json({ success: false, error: { message: "Too many requests from your network. Please try again shortly." } }, { status: 429 });
     }
 
@@ -44,7 +44,7 @@ export async function POST(req: Request) {
 
     const { slotId, name, phone, notes } = result.data;
 
-    if (!rateLimit(`public-booking-phone:${normalizePhone(phone)}`, PHONE_LIMIT, 60_000)) {
+    if (!(await rateLimit)(`public-booking-phone:${normalizePhone(phone)}`, PHONE_LIMIT, 60_000)) {
       return NextResponse.json({ success: false, error: { message: "Too many booking attempts with this phone number. Please try again in a minute." } }, { status: 429 });
     }
 

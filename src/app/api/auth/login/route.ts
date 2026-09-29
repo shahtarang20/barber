@@ -15,7 +15,7 @@ const loginSchema = z.object({
 export async function POST(req: Request) {
   try {
     const ip = getClientIp(req);
-    if (!rateLimit(`login:${ip}`, 10, 60_000)) {
+    if (!(await rateLimit)(`login:${ip}`, 10, 60_000)) {
       return NextResponse.json({ success: false, error: { message: "Too many login attempts. Please try again in a minute." } }, { status: 429 });
     }
 
