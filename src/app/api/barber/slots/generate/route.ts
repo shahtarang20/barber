@@ -17,9 +17,6 @@ export async function POST(req: Request) {
 
     const body = await req.json();
     const { date, capacity: rawCapacity = 1 } = body;
-    // Slots are always exactly 30 minutes — this is fixed, not configurable,
-    // so barbers and customers always see a consistent, easy-to-scan schedule.
-    const slotDuration = 30;
 
     if (!date) {
       return NextResponse.json({ success: false, error: { message: "Date is required" } }, { status: 400 });
@@ -49,6 +46,10 @@ export async function POST(req: Request) {
     if (!user) {
       return NextResponse.json({ success: false, error: { message: "User not found" } }, { status: 404 });
     }
+
+    // Configurable per barber — a high-volume quick-trim shop needs shorter
+    // slots than a 30-min grid suits; defaults to 30 for anyone who hasn't set one.
+    const slotDuration = user.slotDuration || 30;
 
     // Determine day of week — parsed as a local calendar date, not UTC, since
     // `new Date("2026-09-29")` shifts to the previous evening in any

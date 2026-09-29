@@ -53,6 +53,7 @@ export default function SettingsPage() {
   const [profile, setProfile] = useState<any>(null);
   const [bio, setBio] = useState("");
   const [workingHours, setWorkingHours] = useState<any[]>([]);
+  const [slotDuration, setSlotDuration] = useState(30);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -68,6 +69,7 @@ export default function SettingsPage() {
         setProfile(data.data);
         setBio(data.data.bio || "");
         setWorkingHours(data.data.workingHours || []);
+        setSlotDuration(data.data.slotDuration || 30);
       }
     } catch (error) {
       console.error("Failed to fetch profile");
@@ -95,7 +97,7 @@ export default function SettingsPage() {
       const res = await fetch("/api/barber/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bio, workingHours: formattedWorkingHours }),
+        body: JSON.stringify({ bio, workingHours: formattedWorkingHours, slotDuration }),
       });
       const data = await res.json();
       if (data.success) {
@@ -113,7 +115,11 @@ export default function SettingsPage() {
             type: "success",
           });
         } else {
-          toast.add({ title: "Success", description: "Settings saved successfully!", type: "success" });
+          toast.add({ 
+            title: "Success", 
+            description: "Settings saved! If you expanded your hours, don't forget to click 'Sync Schedule' on your Dashboard.", 
+            type: "success" 
+          });
         }
       } else {
         toast.add({ title: "Error", description: data.error?.message || "Failed to save settings", type: "error" });
@@ -179,6 +185,27 @@ export default function SettingsPage() {
           <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
             These hours are used when generating your daily slots.
           </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Slot Length</Label>
+          <div className="flex items-center gap-3">
+            <select
+              value={slotDuration}
+              onChange={(e) => setSlotDuration(Number(e.target.value))}
+              className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 py-2 text-sm w-40"
+            >
+              <option value={10}>10 minutes</option>
+              <option value={15}>15 minutes</option>
+              <option value={20}>20 minutes</option>
+              <option value={30}>30 minutes</option>
+              <option value={45}>45 minutes</option>
+              <option value={60}>60 minutes</option>
+            </select>
+            <p className="text-xs text-zinc-500">
+              Shorter slots fit more bookings into busy hours. Re-generate your schedule after changing this for it to take effect.
+            </p>
+          </div>
         </div>
 
         <div className="space-y-4">

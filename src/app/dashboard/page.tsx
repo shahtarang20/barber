@@ -282,13 +282,12 @@ export default function DashboardPage() {
             <div className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-800/50 p-1 rounded-lg border border-zinc-200 dark:border-zinc-800">
               <label className="text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 hidden sm:block pl-2">Capacity:</label>
               <input type="number" min="1" max="50" value={capacity || ""} onChange={(e) => setCapacity(e.target.value === "" ? 0 : Number(e.target.value))} className="w-14 h-8 rounded-md border border-zinc-300 px-2 text-sm dark:border-zinc-700 dark:bg-zinc-900" />
-              {slots.length > 0 && (
-                 <Button variant="default" size="sm" className="h-8 text-xs px-3" onClick={generateSlots} disabled={generating}>
-                   {generating ? "..." : "Apply"}
-                 </Button>
-              )}
             </div>
-            {slots.length === 0 && (
+            {slots.length > 0 ? (
+              <Button variant="default" size="sm" className="h-9 px-4" onClick={generateSlots} disabled={generating}>
+                {generating ? "..." : "Sync Schedule"}
+              </Button>
+            ) : (
               <Button variant="outline" size="sm" className="sm:size-default" onClick={generateSlots} disabled={generating}>
                 {generating ? t('loading') : t('generateSlots')}
               </Button>
@@ -461,6 +460,16 @@ function CapacityEditor({ slot, onSave }: { slot: SlotView, onSave: (val: number
 
   const isChanged = val !== "" && Number(val) !== (slot.capacity || 1);
 
+  const handleSave = () => {
+    if (!isChanged) return;
+    const numVal = Number(val);
+    if (numVal >= (slot.bookingsCount || 0) && numVal > 0) {
+      onSave(numVal);
+    } else {
+      setVal(slot.capacity || 1);
+    }
+  };
+
   return (
     <div className="flex items-center gap-1">
       <svg className="w-3 h-3 sm:w-4 sm:h-4 text-zinc-400 group-hover:text-zinc-600 dark:group-hover:text-zinc-300 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -477,21 +486,22 @@ function CapacityEditor({ slot, onSave }: { slot: SlotView, onSave: (val: number
             setVal(parseInt(e.target.value) || 1);
           }
         }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") handleSave();
+          if (e.key === "Escape") setVal(slot.capacity || 1);
+        }}
         onBlur={() => {
-          if (val === "" || Number(val) < 1) setVal(slot.capacity || 1);
+          if (val === "" || Number(val) < 1) {
+            setVal(slot.capacity || 1);
+          } else {
+            handleSave();
+          }
         }}
         className="w-8 sm:w-10 h-5 sm:h-6 bg-transparent text-xs sm:text-sm font-bold text-zinc-700 dark:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-400/50 rounded text-center transition-all"
       />
       {isChanged && (
         <button 
-          onClick={() => {
-            const numVal = Number(val);
-            if (numVal >= (slot.bookingsCount || 0) && numVal > 0) {
-              onSave(numVal);
-            } else {
-              setVal(slot.capacity || 1);
-            }
-          }}
+          onClick={handleSave}
           className="ml-1 bg-zinc-900 text-white rounded p-0.5 hover:bg-zinc-800 transition-colors"
           title="Save Capacity"
         >

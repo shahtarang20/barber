@@ -13,24 +13,34 @@ const waitlistSchema = z.object({
   phone: z.string().min(10, "Valid phone number is required"),
 });
 
+// Same two-layer approach as public bookings — a generous per-IP ceiling
+// (CGNAT means many real customers can share one IP) plus a tight per-phone
+// limit that actually catches a repeat offender.
+const IP_LIMIT = 60;
+const PHONE_LIMIT = 5;
+
 export async function POST(req: Request) {
   try {
     const ip = getClientIp(req);
-    if (!rateLimit(`public-waitlist:${ip}`, 10, 60_000)) {
-      return NextResponse.json({ success: false, error: { message: "Too many requests. Please try again shortly." } }, { status: 429 });
+    if (!rateLimit(`public-waitlist:${ip}`, IP_LIMIT, 60_000)) {
+      return NextResponse.json({ success: false, error: { message: "Too many requests from your network. Please try again shortly." } }, { status: 429 });
     }
 
     await connectToDatabase();
-    
+
     const body = await req.json();
     const result = waitlistSchema.safeParse(body);
-    
+
     if (!result.success) {
       return NextResponse.json({ success: false, error: { message: result.error.issues[0].message } }, { status: 400 });
     }
-    
+
     const { slotId, name } = result.data;
     const phone = normalizePhone(result.data.phone);
+
+    if (!rateLimit(`public-waitlist-phone:${phone}`, PHONE_LIMIT, 60_000)) {
+      return NextResponse.json({ success: false, error: { message: "Too many waitlist attempts with this phone number. Please try again in a minute." } }, { status: 429 });
+    }
 
     // Don't let the same person join the same slot's waitlist repeatedly
     // (e.g. a resubmitted form) — check before the atomic push.

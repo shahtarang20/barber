@@ -11,6 +11,14 @@ import { normalizePhone } from "@/lib/phone";
 import { User } from "@/models/User";
 import { minutesUntilSlot } from "@/lib/istTime";
 
+// Two layers: a generous per-IP ceiling that only stops an actual scripted
+// flood (Indian mobile carriers commonly put hundreds of real customers
+// behind one shared IP via CGNAT, so a tight per-IP limit punishes strangers
+// on the same network for each other's activity), plus a tight per-phone
+// limit that catches the actual repeat offender regardless of their IP.
+const IP_LIMIT = 60;
+const PHONE_LIMIT = 5;
+
 const bookingSchema = z.object({
   slotId: z.string().min(1, "Slot is required"),
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -21,21 +29,25 @@ const bookingSchema = z.object({
 export async function POST(req: Request) {
   try {
     const ip = getClientIp(req);
-    if (!rateLimit(`public-booking:${ip}`, 10, 60_000)) {
-      return NextResponse.json({ success: false, error: { message: "Too many requests. Please try again shortly." } }, { status: 429 });
+    if (!rateLimit(`public-booking:${ip}`, IP_LIMIT, 60_000)) {
+      return NextResponse.json({ success: false, error: { message: "Too many requests from your network. Please try again shortly." } }, { status: 429 });
     }
 
     await connectToDatabase();
-    
+
     const body = await req.json();
     const result = bookingSchema.safeParse(body);
-    
+
     if (!result.success) {
       return NextResponse.json({ success: false, error: { message: result.error.issues[0].message } }, { status: 400 });
     }
-    
+
     const { slotId, name, phone, notes } = result.data;
-    
+
+    if (!rateLimit(`public-booking-phone:${normalizePhone(phone)}`, PHONE_LIMIT, 60_000)) {
+      return NextResponse.json({ success: false, error: { message: "Too many booking attempts with this phone number. Please try again in a minute." } }, { status: 429 });
+    }
+
     // ATOMIC OPERATION: Check if bookingsCount < capacity and increment in one step.
     const slot = await Slot.findOneAndUpdate(
       { _id: slotId, status: "AVAILABLE", $expr: { $lt: ["$bookingsCount", "$capacity"] } },

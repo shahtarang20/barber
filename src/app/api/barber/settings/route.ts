@@ -29,6 +29,9 @@ function validateWorkingHours(workingHours: any): string | null {
     }
     const start = timeStringToMinutes(wh.startTime);
     const end = timeStringToMinutes(wh.endTime);
+    if (start === Number.MAX_SAFE_INTEGER || end === Number.MAX_SAFE_INTEGER) {
+      return `Invalid time format for ${wh.day}. Please use standard formats like "10:00 AM".`;
+    }
     if (start >= end) {
       return `${wh.day}'s closing time must be after its opening time.`;
     }
@@ -44,12 +47,19 @@ export async function PUT(req: Request) {
     }
 
     const body = await req.json();
-    const { bio, workingHours } = body;
+    const { bio, workingHours, slotDuration } = body;
 
     if (workingHours !== undefined) {
       const validationError = validateWorkingHours(workingHours);
       if (validationError) {
         return NextResponse.json({ success: false, error: { message: validationError } }, { status: 400 });
+      }
+    }
+
+    if (slotDuration !== undefined) {
+      const duration = Number(slotDuration);
+      if (!Number.isInteger(duration) || duration < 10 || duration > 60) {
+        return NextResponse.json({ success: false, error: { message: "Slot duration must be a whole number of minutes between 10 and 60." } }, { status: 400 });
       }
     }
 
@@ -62,6 +72,7 @@ export async function PUT(req: Request) {
 
     if (bio !== undefined) user.bio = bio;
     if (workingHours !== undefined) user.workingHours = workingHours;
+    if (slotDuration !== undefined) user.slotDuration = Number(slotDuration);
 
     await user.save();
 

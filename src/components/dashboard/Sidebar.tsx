@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { CalendarDays, Settings, Users, Link as LinkIcon, LogOut } from "lucide-react";
+import { CalendarDays, Settings, Users, Link as LinkIcon, LogOut, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/lib/i18n";
 
@@ -22,6 +22,7 @@ export function Sidebar() {
     { key: "appointments" as const, href: "/dashboard/appointments", icon: CalendarDays },
     { key: "customers" as const, href: "/dashboard/customers", icon: Users },
     { key: "publicPage" as const, href: "/dashboard/link", icon: LinkIcon },
+    { key: "shop" as const, href: "/dashboard/shop", icon: Store },
     { key: "settings" as const, href: "/dashboard/settings", icon: Settings },
   ];
 

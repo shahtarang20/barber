@@ -20,10 +20,12 @@ export interface IUser extends Document {
   profileImage?: string;
   bio?: string;
   workingHours: IWorkingHours[];
+  slotDuration: number;
   premiumAmount: number;
   premiumDueDay: number;
   isActive: boolean;
   tokenVersion: number;
+  shopId?: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -53,6 +55,10 @@ const UserSchema: Schema = new Schema(
     profileImage: { type: String },
     bio: { type: String },
     workingHours: [WorkingHoursSchema],
+    // Configurable per barber — a high-volume quick-trim shop needs shorter
+    // slots than the 30-min default suits, and forcing everyone onto one
+    // fixed grid undersells real capacity for busy single-chair shops.
+    slotDuration: { type: Number, default: 30, min: 10, max: 60 },
     premiumAmount: { type: Number, default: 0 },
     premiumDueDay: { type: Number, default: 28 }, // default 28th of month
     isActive: { type: Boolean, default: true },
@@ -60,6 +66,9 @@ const UserSchema: Schema = new Schema(
     // outstanding JWTs immediately — tokens carry the version they were
     // issued with, so a mismatch means "log this session out".
     tokenVersion: { type: Number, default: 0 },
+    // null/unset = a solo barber, unchanged from today's behavior. Set once
+    // a barber joins or creates a Shop grouping multiple barbers together.
+    shopId: { type: Schema.Types.ObjectId, ref: "Shop", default: null, index: true },
   },
   { timestamps: true }
 );
