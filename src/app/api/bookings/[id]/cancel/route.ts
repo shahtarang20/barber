@@ -50,11 +50,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     // Free up the slot
     const slot = await Slot.findById(booking.slotId);
+    let waitlistToNotify = [];
     if (slot) {
       const newCount = Math.max(0, slot.bookingsCount - 1);
       slot.bookingsCount = newCount;
       if (newCount < slot.capacity) {
         slot.status = "AVAILABLE";
+        // Grab up to 3 people to notify about the new opening
+        if (slot.waitlist && slot.waitlist.length > 0) {
+          waitlistToNotify = slot.waitlist.slice(0, 3);
+        }
       }
       await slot.save();
     }
@@ -69,7 +74,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       data: { 
         message: "Booking cancelled successfully", 
         booking,
-        customer: customer ? { name: customer.name, phone: customer.phone } : null
+        customer: customer ? { name: customer.name, phone: customer.phone } : null,
+        waitlistCustomers: waitlistToNotify,
+        slotTime: slot ? slot.startTime : ""
       } 
     });
   } catch (error) {

@@ -41,6 +41,7 @@ export default function AppointmentsPage() {
     name: string;
     time: string;
     prompt: string;
+    waitlistCustomers?: { name: string, phone: string }[];
   } | null>(null);
 
   const { data: bookingsData, isLoading: loading, mutate: mutateBookings } = useSWR(
@@ -73,7 +74,7 @@ export default function AppointmentsPage() {
           const time = data.data.booking.startTime;
           
           const prompt = t('cancelPrompt' as any).replace('{name}', name);
-          setWhatsappPromptData({ phone, name, time, prompt });
+          setWhatsappPromptData({ phone, name, time, prompt, waitlistCustomers: data.data.waitlistCustomers });
         }
       } else {
         toast.add({ title: "Error", description: data.error?.message || `Failed to ${action} booking`, type: "error" });
@@ -220,17 +221,39 @@ export default function AppointmentsPage() {
       <Dialog open={!!whatsappPromptData} onOpenChange={(open) => !open && setWhatsappPromptData(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Send WhatsApp Message</DialogTitle>
+            <DialogTitle>Cancellation Successful</DialogTitle>
             <DialogDescription>
               {whatsappPromptData?.prompt}
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => setWhatsappPromptData(null)}>
-              Cancel
-            </Button>
+          <div className="flex flex-col gap-2 mt-2">
             <Button variant="default" onClick={handleSendWhatsApp}>
-              Send Message
+              Message {whatsappPromptData?.name} (Cancelled)
+            </Button>
+            
+            {whatsappPromptData?.waitlistCustomers && whatsappPromptData.waitlistCustomers.length > 0 && (
+              <div className="mt-4 border-t pt-4">
+                <h4 className="text-sm font-semibold mb-2">Waitlist Customers (Slot now open)</h4>
+                {whatsappPromptData.waitlistCustomers.map((wc, i) => (
+                  <Button 
+                    key={i} 
+                    variant="outline" 
+                    className="w-full justify-start mb-2 border-green-200 bg-green-50 text-green-700 hover:bg-green-100" 
+                    onClick={() => {
+                      const cleanPhone = wc.phone.replace(/\D/g, "");
+                      const msgStr = `Hi ${wc.name}! A slot just opened up at ${whatsappPromptData.time}. Click here to claim it: ${window.location.origin}`;
+                      window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msgStr)}`, '_blank');
+                    }}
+                  >
+                    Message {wc.name} ({wc.phone})
+                  </Button>
+                ))}
+              </div>
+            )}
+          </div>
+          <DialogFooter className="mt-2">
+            <Button variant="ghost" onClick={() => setWhatsappPromptData(null)}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>

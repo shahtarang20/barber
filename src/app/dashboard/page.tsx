@@ -124,6 +124,10 @@ export default function DashboardPage() {
   };
 
   const [showBlockModal, setShowBlockModal] = useState<any>(null);
+  const [shiftModal, setShiftModal] = useState<boolean>(false);
+  const [shiftMinutes, setShiftMinutes] = useState<number>(30);
+  const [shifting, setShifting] = useState<boolean>(false);
+  const [affectedCustomers, setAffectedCustomers] = useState<any[] | null>(null);
 
   const handleBlockSlot = async (id: string, force = false) => {
     try {
@@ -154,6 +158,35 @@ export default function DashboardPage() {
     } catch (error) {
       toast.add({ title: "Error", description: "Error blocking slot", type: "error" });
     }
+  };
+
+  const handleShiftSchedule = async () => {
+    setShifting(true);
+    try {
+      const res = await fetch("/api/barber/slots/shift", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          date: format(selectedDate, "yyyy-MM-dd"),
+          shiftMinutes
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        mutateSlots();
+        setShiftModal(false);
+        if (data.data.affectedCustomers && data.data.affectedCustomers.length > 0) {
+          setAffectedCustomers(data.data.affectedCustomers);
+        } else {
+          toast.add({ title: "Success", description: data.data.message, type: "success" });
+        }
+      } else {
+        toast.add({ title: "Error", description: data.error?.message, type: "error" });
+      }
+    } catch (e) {
+      toast.add({ title: "Error", description: "Failed to shift schedule.", type: "error" });
+    }
+    setShifting(false);
   };
 
   const handleUnblockSlot = async (id: string) => {
@@ -283,6 +316,12 @@ export default function DashboardPage() {
               <label className="text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 hidden sm:block pl-2">Capacity:</label>
               <input type="number" min="1" max="50" value={capacity || ""} onChange={(e) => setCapacity(e.target.value === "" ? 0 : Number(e.target.value))} className="w-14 h-8 rounded-md border border-zinc-300 px-2 text-sm dark:border-zinc-700 dark:bg-zinc-900" />
             </div>
+            {slots.length > 0 && (
+              <Button variant="outline" size="sm" className="h-9 px-3 text-orange-600 border-orange-200 hover:bg-orange-50 dark:hover:bg-orange-950/30" onClick={() => setShiftModal(true)}>
+                <svg className="w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                Run Late
+              </Button>
+            )}
             {slots.length > 0 ? (
               <Button variant="default" size="sm" className="h-9 px-4" onClick={generateSlots} disabled={generating}>
                 {generating ? "..." : "Sync Schedule"}
@@ -444,6 +483,156 @@ export default function DashboardPage() {
               <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.711.927 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.666.596 1.216.78 1.391.867.174.086.275.072.376-.044.101-.115.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.099.824z"/></svg>
               {t('whatsappNotice' as any)}
             </p>
+          </div>
+        </div>
+      )}
+
+      {shiftModal && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full text-center shadow-2xl relative">
+            <button onClick={() => setShiftModal(false)} className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-900">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+            <div className="w-16 h-16 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            </div>
+            <h2 className="text-2xl font-bold text-zinc-900 mb-2">Running Late?</h2>
+            <p className="text-zinc-600 mb-6 text-sm">
+              Push all remaining slots today down by a set amount of time. You will be able to message affected customers.
+            </p>
+            <div className="flex justify-center gap-3 mb-8">
+              {[15, 30, 45, 60].map(mins => (
+                <button 
+                  key={mins}
+                  onClick={() => setShiftMinutes(mins)}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    shiftMinutes === mins 
+                      ? "bg-zinc-900 text-white" 
+                      : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+                  }`}
+                >
+                  {mins}m
+                </button>
+              ))}
+            </div>
+            <Button className="w-full h-12 text-lg font-bold bg-orange-600 hover:bg-orange-700 text-white" onClick={handleShiftSchedule} disabled={shifting}>
+              {shifting ? "Shifting..." : `Shift Schedule by ${shiftMinutes} mins`}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {affectedCustomers && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl relative max-h-[90vh] flex flex-col">
+            <button onClick={() => setAffectedCustomers(null)} className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-900">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+            <h2 className="text-xl font-bold text-zinc-900 mb-2">Schedule Shifted!</h2>
+            <p className="text-zinc-600 text-sm mb-4">
+              Your schedule has been successfully updated. The following {affectedCustomers.length} customers have been delayed. Click to notify them:
+            </p>
+            <div className="flex-1 overflow-y-auto min-h-0 mb-4 border border-zinc-200 rounded-xl divide-y divide-zinc-100">
+              {affectedCustomers.map((c, i) => (
+                <div key={i} className="p-4 flex flex-col sm:flex-row gap-3 sm:items-center justify-between hover:bg-zinc-50 transition-colors">
+                  <div>
+                    <p className="font-semibold text-zinc-900">{c.name}</p>
+                    <p className="text-xs text-zinc-500 line-through inline-block mr-2">{c.oldTime}</p>
+                    <p className="text-sm text-orange-600 font-medium inline-block">Now: {c.newTime}</p>
+                  </div>
+                  <Button 
+                    variant="outline"
+                    size="sm"
+                    className="border-green-200 text-green-700 hover:bg-green-50 shrink-0"
+                    onClick={() => {
+                      const cleanPhone = c.phone.replace(/\D/g, "");
+                      const msgStr = `Hi ${c.name}, I am running a bit late today! Your appointment has been shifted from ${c.oldTime} to ${c.newTime}. See you then!`;
+                      window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msgStr)}`, '_blank');
+                    }}
+                  >
+                    WhatsApp
+                  </Button>
+                </div>
+              ))}
+            </div>
+            <Button className="w-full" onClick={() => setAffectedCustomers(null)}>
+              Done
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {shiftModal && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full text-center shadow-2xl relative">
+            <button onClick={() => setShiftModal(false)} className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-900">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+            <div className="w-16 h-16 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            </div>
+            <h2 className="text-2xl font-bold text-zinc-900 mb-2">Running Late?</h2>
+            <p className="text-zinc-600 mb-6 text-sm">
+              Push all remaining slots today down by a set amount of time. You will be able to message affected customers.
+            </p>
+            <div className="flex justify-center gap-3 mb-8">
+              {[15, 30, 45, 60].map(mins => (
+                <button 
+                  key={mins}
+                  onClick={() => setShiftMinutes(mins)}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    shiftMinutes === mins 
+                      ? "bg-zinc-900 text-white" 
+                      : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+                  }`}
+                >
+                  {mins}m
+                </button>
+              ))}
+            </div>
+            <Button className="w-full h-12 text-lg font-bold bg-orange-600 hover:bg-orange-700 text-white" onClick={handleShiftSchedule} disabled={shifting}>
+              {shifting ? "Shifting..." : `Shift Schedule by ${shiftMinutes} mins`}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {affectedCustomers && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl relative max-h-[90vh] flex flex-col">
+            <button onClick={() => setAffectedCustomers(null)} className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-900">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+            <h2 className="text-xl font-bold text-zinc-900 mb-2">Schedule Shifted!</h2>
+            <p className="text-zinc-600 text-sm mb-4">
+              Your schedule has been successfully updated. The following {affectedCustomers.length} customers have been delayed. Click to notify them:
+            </p>
+            <div className="flex-1 overflow-y-auto min-h-0 mb-4 border border-zinc-200 rounded-xl divide-y divide-zinc-100">
+              {affectedCustomers.map((c, i) => (
+                <div key={i} className="p-4 flex flex-col sm:flex-row gap-3 sm:items-center justify-between hover:bg-zinc-50 transition-colors">
+                  <div>
+                    <p className="font-semibold text-zinc-900">{c.name}</p>
+                    <p className="text-xs text-zinc-500 line-through inline-block mr-2">{c.oldTime}</p>
+                    <p className="text-sm text-orange-600 font-medium inline-block">Now: {c.newTime}</p>
+                  </div>
+                  <Button 
+                    variant="outline"
+                    size="sm"
+                    className="border-green-200 text-green-700 hover:bg-green-50 shrink-0"
+                    onClick={() => {
+                      const cleanPhone = c.phone.replace(/\D/g, "");
+                      const msgStr = `Hi ${c.name}, I am running a bit late today! Your appointment has been shifted from ${c.oldTime} to ${c.newTime}. See you then!`;
+                      window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msgStr)}`, '_blank');
+                    }}
+                  >
+                    WhatsApp
+                  </Button>
+                </div>
+              ))}
+            </div>
+            <Button className="w-full" onClick={() => setAffectedCustomers(null)}>
+              Done
+            </Button>
           </div>
         </div>
       )}
