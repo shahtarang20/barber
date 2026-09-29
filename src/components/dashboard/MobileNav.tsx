@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarDays, Settings, Users, Link as LinkIcon } from "lucide-react";
+import { CalendarDays, Settings, Users, Store } from "lucide-react";
 
 export function MobileNav() {
   const pathname = usePathname();
@@ -11,6 +11,7 @@ export function MobileNav() {
     { name: "Schedule", href: "/dashboard", icon: CalendarDays },
     { name: "Appointments", href: "/dashboard/appointments", icon: CalendarDays },
     { name: "Customers", href: "/dashboard/customers", icon: Users },
+    { name: "Shop", href: "/dashboard/shop", icon: Store },
     { name: "Settings", href: "/dashboard/settings", icon: Settings },
   ];
 
