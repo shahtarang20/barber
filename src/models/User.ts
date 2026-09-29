@@ -25,6 +25,7 @@ export interface IUser extends Document {
   premiumAmount: number;
   premiumDueDay: number;
   isActive: boolean;
+  tokenVersion: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -59,6 +60,10 @@ const UserSchema: Schema = new Schema(
     premiumAmount: { type: Number, default: 0 },
     premiumDueDay: { type: Number, default: 28 }, // default 28th of month
     isActive: { type: Boolean, default: true },
+    // Bumped on logout, password reset, or suspension to invalidate any
+    // outstanding JWTs immediately — tokens carry the version they were
+    // issued with, so a mismatch means "log this session out".
+    tokenVersion: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

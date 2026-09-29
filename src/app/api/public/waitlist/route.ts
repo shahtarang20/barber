@@ -4,6 +4,8 @@ import { Slot } from "@/models/Slot";
 import { z } from "zod";
 import { rateLimit, getClientIp } from "@/lib/rateLimit";
 import { notifyBarber } from "@/lib/realtime";
+import { normalizePhone } from "@/lib/phone";
+import { User } from "@/models/User";
 
 const waitlistSchema = z.object({
   slotId: z.string().min(1, "Slot is required"),
@@ -27,24 +29,44 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: { message: result.error.issues[0].message } }, { status: 400 });
     }
     
-    const { slotId, name, phone } = result.data;
-    
+    const { slotId, name } = result.data;
+    const phone = normalizePhone(result.data.phone);
+
+    // Don't let the same person join the same slot's waitlist repeatedly
+    // (e.g. a resubmitted form) — check before the atomic push.
+    const existingSlot = await Slot.findOne({ _id: slotId, "waitlist.phone": phone });
+    if (existingSlot) {
+      return NextResponse.json({
+        success: false,
+        error: { message: "You're already on the waitlist for this slot." },
+      }, { status: 409 });
+    }
+
     // Add to waitlist array using atomic push
     const slot = await Slot.findOneAndUpdate(
       { _id: slotId, status: { $ne: "BLOCKED" } },
-      { 
-        $push: { 
-          waitlist: { name, phone, joinedAt: new Date() } 
-        } 
+      {
+        $push: {
+          waitlist: { name, phone, joinedAt: new Date() }
+        }
       },
       { new: true }
     );
 
     if (!slot) {
-      return NextResponse.json({ 
-        success: false, 
-        error: { message: "Slot is no longer available for waitlisting." } 
+      return NextResponse.json({
+        success: false,
+        error: { message: "Slot is no longer available for waitlisting." }
       }, { status: 400 });
+    }
+
+    const barber = await User.findById(slot.barberId).select("isActive").lean();
+    if (!barber || barber.isActive === false) {
+      await Slot.findByIdAndUpdate(slot._id, { $pull: { waitlist: { phone } } });
+      return NextResponse.json({
+        success: false,
+        error: { message: "This barber is no longer accepting bookings." },
+      }, { status: 410 });
     }
 
     notifyBarber(slot.barberId.toString(), "SLOTS_UPDATED");

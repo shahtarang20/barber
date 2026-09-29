@@ -3,6 +3,7 @@ import { requireAuth } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import { Slot } from "@/models/Slot";
 import { notifyBarber } from "@/lib/realtime";
+import mongoose from "mongoose";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -56,15 +57,24 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           error: { message: `This slot has existing bookings.` } 
         }, { status: 409 });
       } else {
-        // Force cancel all bookings
-        for (const b of activeBookings) {
-          b.status = "CANCELLED";
-          await b.save();
+        // Force-cancel all bookings and block the slot as one atomic unit —
+        // without a transaction, a failure partway through (e.g. after
+        // cancelling booking 1 of 3) left the slot's bookingsCount out of
+        // sync with which bookings were actually cancelled.
+        const session = await mongoose.startSession();
+        try {
+          await session.withTransaction(async () => {
+            for (const b of activeBookings) {
+              b.status = "CANCELLED";
+              await b.save({ session });
+            }
+            slot.status = "BLOCKED";
+            slot.bookingsCount = 0;
+            await slot.save({ session });
+          });
+        } finally {
+          await session.endSession();
         }
-        
-        slot.status = "BLOCKED";
-        slot.bookingsCount = 0;
-        await slot.save();
 
         notifyBarber(payload.userId, "SLOTS_UPDATED");
 

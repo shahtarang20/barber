@@ -5,6 +5,36 @@ import { User } from "@/models/User";
 import { cleanupStaleSlots } from "@/lib/slotCleanup";
 import { notifyBarber } from "@/lib/realtime";
 import { format } from "date-fns";
+import { timeStringToMinutes } from "@/lib/timeSort";
+
+const VALID_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+function validateWorkingHours(workingHours: any): string | null {
+  if (!Array.isArray(workingHours)) return "Working hours must be a list.";
+
+  const seenDays = new Set<string>();
+  for (const wh of workingHours) {
+    if (!VALID_DAYS.includes(wh?.day)) {
+      return `"${wh?.day}" is not a valid day of the week.`;
+    }
+    if (seenDays.has(wh.day)) {
+      return `${wh.day} is listed more than once.`;
+    }
+    seenDays.add(wh.day);
+
+    if (wh.isClosed) continue;
+
+    if (!wh.startTime || !wh.endTime) {
+      return `${wh.day} needs both an opening and closing time, or should be marked closed.`;
+    }
+    const start = timeStringToMinutes(wh.startTime);
+    const end = timeStringToMinutes(wh.endTime);
+    if (start >= end) {
+      return `${wh.day}'s closing time must be after its opening time.`;
+    }
+  }
+  return null;
+}
 
 export async function PUT(req: Request) {
   try {
@@ -15,6 +45,13 @@ export async function PUT(req: Request) {
 
     const body = await req.json();
     const { bio, workingHours } = body;
+
+    if (workingHours !== undefined) {
+      const validationError = validateWorkingHours(workingHours);
+      if (validationError) {
+        return NextResponse.json({ success: false, error: { message: validationError } }, { status: 400 });
+      }
+    }
 
     await connectToDatabase();
 

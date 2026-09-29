@@ -19,30 +19,53 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     }
 
     await connectToDatabase();
-    
+
     const resolvedParams = await params;
-    const slot = await Slot.findOne({ _id: resolvedParams.id, barberId: payload.userId });
+
+    // Atomic conditional update: the capacity-vs-bookingsCount check and the
+    // write happen as one operation, so a concurrent booking (which bumps
+    // bookingsCount separately) or a second capacity edit can't act on data
+    // that's gone stale between a separate read and a separate write.
+    const slot = await Slot.findOneAndUpdate(
+      {
+        _id: resolvedParams.id,
+        barberId: payload.userId,
+        $expr: { $gte: [capacity, "$bookingsCount"] },
+      },
+      [
+        {
+          $set: {
+            capacity,
+            isCustomCapacity: true,
+            status: {
+              $cond: [
+                { $and: [{ $gt: [capacity, "$bookingsCount"] }, { $eq: ["$status", "BOOKED"] }] },
+                "AVAILABLE",
+                {
+                  $cond: [
+                    { $and: [{ $eq: [capacity, "$bookingsCount"] }, { $eq: ["$status", "AVAILABLE"] }] },
+                    "BOOKED",
+                    "$status",
+                  ],
+                },
+              ],
+            },
+          },
+        },
+      ],
+      { new: true }
+    );
+
     if (!slot) {
-      return NextResponse.json({ success: false, error: { message: "Slot not found" } }, { status: 404 });
+      // Either the slot doesn't exist/belong to this barber, or the
+      // capacity would now be less than the (possibly just-changed)
+      // current booking count — re-check which, for an accurate message.
+      const existing = await Slot.findOne({ _id: resolvedParams.id, barberId: payload.userId }).select("bookingsCount");
+      if (!existing) {
+        return NextResponse.json({ success: false, error: { message: "Slot not found" } }, { status: 404 });
+      }
+      return NextResponse.json({ success: false, error: { message: `Capacity cannot be less than current bookings (${existing.bookingsCount}).` } }, { status: 400 });
     }
-
-    if (capacity < slot.bookingsCount) {
-      return NextResponse.json({ success: false, error: { message: `Capacity cannot be less than current bookings (${slot.bookingsCount}).` } }, { status: 400 });
-    }
-
-    slot.capacity = capacity;
-    slot.isCustomCapacity = true;
-    
-    // If the new capacity is greater than current bookings, and the slot was BOOKED, we should open it up to AVAILABLE
-    if (slot.capacity > slot.bookingsCount && slot.status === "BOOKED") {
-      slot.status = "AVAILABLE";
-    }
-    // If the new capacity equals current bookings, and the slot is AVAILABLE, we should mark it as BOOKED
-    else if (slot.capacity === slot.bookingsCount && slot.status === "AVAILABLE") {
-      slot.status = "BOOKED";
-    }
-
-    await slot.save();
 
     notifyBarber(payload.userId, "SLOTS_UPDATED");
 

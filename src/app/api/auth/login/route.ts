@@ -49,12 +49,17 @@ export async function POST(req: Request) {
     if (!isPasswordValid) {
       return NextResponse.json({ success: false, error: { message: "Invalid barber code or password" } }, { status: 401 });
     }
-    
+
+    if (user.isActive === false) {
+      return NextResponse.json({ success: false, error: { message: "This account has been suspended. Please contact the platform admin." } }, { status: 403 });
+    }
+
     // Generate JWT token
     const token = signToken({
       userId: user._id.toString(),
       role: user.role,
-      barberCode: user.barberCode
+      barberCode: user.barberCode,
+      tokenVersion: user.tokenVersion || 0,
     });
     
     // Set cookie

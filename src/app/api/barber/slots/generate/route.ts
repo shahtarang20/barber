@@ -3,7 +3,7 @@ import { requireAuth } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import { Slot } from "@/models/Slot";
 import { User } from "@/models/User";
-import { addMinutes, format, parse, isValid } from "date-fns";
+import { addMinutes, format, parse, isValid, addDays, startOfDay } from "date-fns";
 import { notifyBarber } from "@/lib/realtime";
 import { cleanupStaleSlots } from "@/lib/slotCleanup";
 
@@ -22,6 +22,19 @@ export async function POST(req: Request) {
 
     if (!date) {
       return NextResponse.json({ success: false, error: { message: "Date is required" } }, { status: 400 });
+    }
+
+    const requestedDate = startOfDay(new Date(date));
+    const today = startOfDay(new Date());
+    const maxFutureDate = addDays(today, 90);
+    if (isNaN(requestedDate.getTime())) {
+      return NextResponse.json({ success: false, error: { message: "Invalid date." } }, { status: 400 });
+    }
+    if (requestedDate < today) {
+      return NextResponse.json({ success: false, error: { message: "Cannot generate slots for a past date." } }, { status: 400 });
+    }
+    if (requestedDate > maxFutureDate) {
+      return NextResponse.json({ success: false, error: { message: "Cannot generate slots more than 90 days in advance." } }, { status: 400 });
     }
 
     await connectToDatabase();
@@ -148,7 +161,17 @@ export async function POST(req: Request) {
     }
 
     if (newSlots.length > 0) {
-      await Slot.insertMany(newSlots);
+      try {
+        // ordered: false lets Mongo skip past a duplicate-key conflict (a
+        // concurrent request already inserted that exact slot) instead of
+        // aborting the whole batch — the unique index is the real guard
+        // against two requests creating independently-bookable duplicates.
+        await Slot.insertMany(newSlots, { ordered: false });
+      } catch (err: any) {
+        if (err?.code !== 11000 && !(err?.writeErrors?.every((e: any) => e.code === 11000))) {
+          throw err;
+        }
+      }
     }
 
     notifyBarber(payload.userId, "SLOTS_UPDATED");

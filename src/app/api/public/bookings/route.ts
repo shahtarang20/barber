@@ -7,6 +7,8 @@ import { Counter } from "@/models/Counter";
 import { z } from "zod";
 import { rateLimit, getClientIp } from "@/lib/rateLimit";
 import { notifyBarber } from "@/lib/realtime";
+import { normalizePhone } from "@/lib/phone";
+import { User } from "@/models/User";
 
 const bookingSchema = z.object({
   slotId: z.string().min(1, "Slot is required"),
@@ -41,10 +43,21 @@ export async function POST(req: Request) {
     );
 
     if (!slot) {
-      return NextResponse.json({ 
-        success: false, 
-        error: { code: "SLOT_ALREADY_BOOKED", message: "Sorry, this slot is fully booked or unavailable. Please choose another time." } 
+      return NextResponse.json({
+        success: false,
+        error: { code: "SLOT_ALREADY_BOOKED", message: "Sorry, this slot is fully booked or unavailable. Please choose another time." }
       }, { status: 409 });
+    }
+
+    // A slot can outlive the barber being deactivated after it was
+    // generated — don't let a booking complete against a suspended barber.
+    const barber = await User.findById(slot.barberId).select("isActive").lean();
+    if (!barber || barber.isActive === false) {
+      await Slot.findByIdAndUpdate(slot._id, { $set: { status: "AVAILABLE" }, $inc: { bookingsCount: -1 } });
+      return NextResponse.json({
+        success: false,
+        error: { message: "This barber is no longer accepting bookings." },
+      }, { status: 410 });
     }
 
     // If we just hit capacity, mark it as BOOKED so it doesn't show in UI
@@ -52,11 +65,14 @@ export async function POST(req: Request) {
       await Slot.findByIdAndUpdate(slot._id, { $set: { status: "BOOKED" } });
     }
 
+    let counterIncremented = false;
     try {
+      const normalizedPhone = normalizePhone(phone);
+
       // Find or create customer
-      let customer = await Customer.findOne({ phone });
+      let customer = await Customer.findOne({ phone: normalizedPhone });
       if (!customer) {
-        customer = new Customer({ name, phone });
+        customer = new Customer({ name, phone: normalizedPhone });
         await customer.save();
       } else if (customer.name !== name) {
         // Update the name if they changed it
@@ -71,7 +87,8 @@ export async function POST(req: Request) {
         { $inc: { seq: 1 } },
         { new: true, upsert: true }
       );
-      
+      counterIncremented = true;
+
       const bookingNumber = `B-${counter.seq.toString().padStart(4, "0")}`;
 
       // Create Booking
@@ -107,6 +124,11 @@ export async function POST(req: Request) {
     } catch (bookingError) {
       // ROLLBACK: If creating the booking fails, we MUST release the slot back to AVAILABLE
       await Slot.findByIdAndUpdate(slot._id, { $set: { status: "AVAILABLE" }, $inc: { bookingsCount: -1 } });
+      if (counterIncremented) {
+        // Best-effort: avoid permanently burning a booking-number sequence
+        // value for a booking that never actually got created.
+        await Counter.findByIdAndUpdate({ _id: "bookingNumber" }, { $inc: { seq: -1 } });
+      }
       console.error("Booking creation failed, rolled back slot:", bookingError);
       return NextResponse.json({ success: false, error: { message: "Failed to create booking. Slot has been released." } }, { status: 500 });
     }

@@ -7,7 +7,7 @@ export async function GET() {
     await connectToDatabase();
     
     // Get all barbers. In a real app we might paginate or filter.
-    const barbers = await User.find({ role: "BARBER" })
+    const barbers = await User.find({ role: "BARBER", isActive: true })
       .select("name slug bio profileImage barberCode")
       .lean();
 

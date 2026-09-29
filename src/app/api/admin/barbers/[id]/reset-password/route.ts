@@ -22,12 +22,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const { id } = resolvedParams;
 
     const user = await User.findById(id);
-    if (!user) {
+    if (!user || user.role !== "BARBER") {
       return NextResponse.json({ success: false, error: { message: "Barber not found" } }, { status: 404 });
     }
 
     const tempPassword = generateTempPassword();
     user.passwordHash = await bcrypt.hash(tempPassword, 10);
+    // Invalidate any session the barber currently has open — a password
+    // reset should force re-login everywhere, not leave old tokens valid.
+    user.tokenVersion = (user.tokenVersion || 0) + 1;
     await user.save();
 
     return NextResponse.json({

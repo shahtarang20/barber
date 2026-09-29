@@ -39,4 +39,10 @@ const SlotSchema: Schema = new Schema(
   { timestamps: true }
 );
 
+// Enforces uniqueness at the database level — two concurrent "Generate
+// Slots" requests (double-click, two tabs) can both pass an in-app
+// existence check before either has inserted; only a DB constraint can
+// actually prevent the resulting duplicate, independently-bookable slot.
+SlotSchema.index({ barberId: 1, date: 1, startTime: 1 }, { unique: true });
+
 export const Slot = mongoose.models.Slot || mongoose.model<ISlot>("Slot", SlotSchema);

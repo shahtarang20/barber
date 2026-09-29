@@ -21,8 +21,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
     }
 
     const barber = await User.findOne({ slug, role: "BARBER" });
-    
-    if (!barber) {
+
+    if (!barber || barber.isActive === false) {
       return NextResponse.json({ success: false, error: { message: "Barber not found" } }, { status: 404 });
     }
 
