@@ -5,6 +5,7 @@ import { Slot } from "@/models/Slot";
 import { User } from "@/models/User";
 import { addMinutes, format, parse, isValid } from "date-fns";
 import { notifyBarber } from "@/lib/realtime";
+import { cleanupStaleSlots } from "@/lib/slotCleanup";
 
 export async function POST(req: Request) {
   try {
@@ -14,7 +15,10 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { date, slotDuration = 30, capacity = 1 } = body; // default 30 mins, 1 booking per slot
+    const { date, capacity = 1 } = body;
+    // Slots are always exactly 30 minutes — this is fixed, not configurable,
+    // so barbers and customers always see a consistent, easy-to-scan schedule.
+    const slotDuration = 30;
 
     if (!date) {
       return NextResponse.json({ success: false, error: { message: "Date is required" } }, { status: 400 });
@@ -34,7 +38,19 @@ export async function POST(req: Request) {
     const dayConfig = user.workingHours.find((h: any) => h.day === dayOfWeek);
     
     if (!dayConfig || dayConfig.isClosed) {
-      return NextResponse.json({ success: false, error: { message: `You are closed on ${dayOfWeek}s.` } }, { status: 400 });
+      // Even though we can't generate new slots for a closed day, still clear
+      // out any stale unbooked slots left over from before it was marked
+      // closed — otherwise manually re-clicking "Generate" here can't help
+      // either, since this early return used to skip cleanup entirely.
+      const cleanup = await cleanupStaleSlots(payload.userId, user.workingHours, date);
+      if (cleanup.deletedCount > 0) {
+        notifyBarber(payload.userId, "SLOTS_UPDATED");
+      }
+      return NextResponse.json({
+        success: false,
+        error: { message: `You are closed on ${dayOfWeek}s.` },
+        data: { removedSlots: cleanup.deletedCount, slotsNeedingManualCancellation: cleanup.blockedByBookings },
+      }, { status: 400 });
     }
 
     // Generate slots. date-fns' `parse` never throws on a bad format — it

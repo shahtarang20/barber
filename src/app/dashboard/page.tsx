@@ -102,13 +102,19 @@ export default function DashboardPage() {
       const res = await fetch("/api/barber/slots/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ date: formattedDate, slotDuration: 30, capacity }),
+        body: JSON.stringify({ date: formattedDate, capacity }),
       });
       const data = await res.json();
       if (data.success) {
         mutateSlots();
       } else {
-        toast.add({ title: "Error", description: data.error?.message || "Failed to generate slots", type: "error" });
+        const removedSlots = data.data?.removedSlots || 0;
+        const needsAttention = data.data?.slotsNeedingManualCancellation || 0;
+        if (removedSlots > 0) mutateSlots();
+        const message = needsAttention > 0
+          ? `${data.error?.message || ""} ${needsAttention} existing booking(s) on this date need manual cancellation.`.trim()
+          : data.error?.message || "Failed to generate slots";
+        toast.add({ title: "Error", description: message, type: "error" });
       }
     } catch (error) {
       toast.add({ title: "Error", description: "An unexpected error occurred", type: "error" });

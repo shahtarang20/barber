@@ -99,7 +99,22 @@ export default function SettingsPage() {
       });
       const data = await res.json();
       if (data.success) {
-        toast.add({ title: "Success", description: "Settings saved successfully!", type: "success" });
+        const { removedSlots, slotsNeedingManualCancellation } = data.data;
+        if (slotsNeedingManualCancellation > 0) {
+          toast.add({
+            title: "Settings saved — action needed",
+            description: `${slotsNeedingManualCancellation} existing booking(s) fall outside your new hours and weren't removed automatically. Please cancel them manually from Appointments.`,
+            type: "error",
+          });
+        } else if (removedSlots > 0) {
+          toast.add({
+            title: "Success",
+            description: `Settings saved. ${removedSlots} slot(s) outside your new hours were removed from the schedule.`,
+            type: "success",
+          });
+        } else {
+          toast.add({ title: "Success", description: "Settings saved successfully!", type: "success" });
+        }
       } else {
         toast.add({ title: "Error", description: data.error?.message || "Failed to save settings", type: "error" });
       }

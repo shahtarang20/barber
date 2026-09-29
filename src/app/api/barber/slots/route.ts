@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import { Slot } from "@/models/Slot";
+import { sortByStartTime } from "@/lib/timeSort";
 
 export async function GET(req: Request) {
   try {
@@ -19,14 +20,14 @@ export async function GET(req: Request) {
 
     await connectToDatabase();
     
-    // Fetch slots for this barber on this date
-    // Sort by startTime (lexicographical sort works for HH:MM format if 24hr, but we have AM/PM, so we'll need to sort on client or ensure format is correct)
+    // Fetch slots for this barber on this date, sorted chronologically —
+    // AM/PM strings can't be sorted lexicographically ("10:00 AM" < "2:00 PM").
     const slots = await Slot.find({
       barberId: payload.userId,
       date: date
     });
 
-    return NextResponse.json({ success: true, data: slots });
+    return NextResponse.json({ success: true, data: sortByStartTime(slots) });
   } catch (error) {
     console.error("Fetch slots error:", error);
     return NextResponse.json({ success: false, error: { message: "Internal server error" } }, { status: 500 });

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import { User } from "@/models/User";
 import { Slot } from "@/models/Slot";
+import { sortByStartTime } from "@/lib/timeSort";
 
 export const dynamic = 'force-dynamic';
 
@@ -31,9 +32,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
     const slots = await Slot.find({
       barberId: barber._id,
       date: date
-    }).select("startTime endTime status");
+    }).select("startTime endTime status capacity bookingsCount");
 
-    return NextResponse.json({ success: true, data: slots });
+    return NextResponse.json({ success: true, data: sortByStartTime(slots) });
   } catch (error) {
     console.error("Fetch public slots error:", error);
     return NextResponse.json({ success: false, error: { message: "Internal server error" } }, { status: 500 });
