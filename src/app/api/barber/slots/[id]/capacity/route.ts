@@ -53,7 +53,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
           },
         },
       ],
-      { new: true }
+      { new: true, updatePipeline: true }
     );
 
     if (!slot) {

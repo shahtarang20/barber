@@ -16,10 +16,6 @@ export function MobileNav() {
 
   return (
     <>
-      <div className="md:hidden flex items-center justify-between p-4 bg-white dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800">
-        <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-50">BarberSaaS</h1>
-      </div>
-      
       <div className="md:hidden fixed bottom-0 left-0 right-0 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 z-50 px-2 pb-safe">
         <nav className="flex justify-around py-3">
           {navItems.map((item) => {

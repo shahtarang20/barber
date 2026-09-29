@@ -2,9 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import { User } from "@/models/User";
-import { cleanupStaleSlots } from "@/lib/slotCleanup";
 import { notifyBarber } from "@/lib/realtime";
-import { format } from "date-fns";
 import { timeStringToMinutes } from "@/lib/timeSort";
 import { autoGenerateFutureSlots } from "@/lib/slotGenerator";
 
@@ -48,7 +46,7 @@ export async function PUT(req: Request) {
     }
 
     const body = await req.json();
-    const { bio, workingHours, slotDuration } = body;
+    const { bio, workingHours, slotDuration, defaultCapacity } = body;
 
     if (workingHours !== undefined) {
       const validationError = validateWorkingHours(workingHours);
@@ -64,6 +62,13 @@ export async function PUT(req: Request) {
       }
     }
 
+    if (defaultCapacity !== undefined) {
+      const cap = Number(defaultCapacity);
+      if (!Number.isInteger(cap) || cap < 1 || cap > 50) {
+        return NextResponse.json({ success: false, error: { message: "Default capacity must be a whole number between 1 and 50." } }, { status: 400 });
+      }
+    }
+
     await connectToDatabase();
 
     const user = await User.findById(payload.userId);
@@ -74,35 +79,36 @@ export async function PUT(req: Request) {
     if (bio !== undefined) user.bio = bio;
     if (workingHours !== undefined) user.workingHours = workingHours;
     if (slotDuration !== undefined) user.slotDuration = Number(slotDuration);
+    if (defaultCapacity !== undefined) user.defaultCapacity = Number(defaultCapacity);
 
     await user.save();
 
-    // Working hours only update this User document — already-generated Slot
-    // documents for future dates don't know hours changed unless we sweep
-    // them here (e.g. a day switched to closed after slots existed for it).
-    let cleanup = { deletedCount: 0, blockedByBookings: 0 };
-    if (workingHours !== undefined) {
-      const todayStr = format(new Date(), "yyyy-MM-dd");
-      cleanup = await cleanupStaleSlots(payload.userId, workingHours, { $gte: todayStr });
-      if (cleanup.deletedCount > 0) {
+    // Any of these three settings changing means the future schedule can be
+    // stale relative to what's now configured: a day's hours changed, the
+    // slot-duration grid shifted (old slots no longer line up with it), or
+    // the default capacity changed (existing slots would keep a stale
+    // value). One reconciliation pass handles deletion of now-invalid
+    // slots, capacity updates on still-valid ones, and creation of newly
+    // opened ones — so Schedule always reflects exactly what Settings says.
+    let reconcile = { createdCount: 0, updatedCount: 0, deletedCount: 0, blockedByBookings: 0 };
+    if (workingHours !== undefined || slotDuration !== undefined || defaultCapacity !== undefined) {
+      reconcile = await autoGenerateFutureSlots(
+        payload.userId,
+        workingHours !== undefined ? workingHours : user.workingHours,
+        slotDuration !== undefined ? Number(slotDuration) : user.slotDuration || 30,
+        defaultCapacity !== undefined ? Number(defaultCapacity) : user.defaultCapacity || 1
+      );
+      if (reconcile.createdCount > 0 || reconcile.updatedCount > 0 || reconcile.deletedCount > 0) {
         notifyBarber(payload.userId, "SLOTS_UPDATED");
       }
-      
-      // Feature Fix: Automatically generate missing future slots so the barber 
-      // doesn't have to manually click "Sync Schedule" 90 times after opening a day.
-      await autoGenerateFutureSlots(
-        payload.userId, 
-        workingHours, 
-        slotDuration !== undefined ? Number(slotDuration) : user.slotDuration || 30
-      );
     }
 
     return NextResponse.json({
       success: true,
       data: {
         message: "Settings updated successfully",
-        removedSlots: cleanup.deletedCount,
-        slotsNeedingManualCancellation: cleanup.blockedByBookings,
+        removedSlots: reconcile.deletedCount,
+        slotsNeedingManualCancellation: reconcile.blockedByBookings,
       },
     });
   } catch (error) {

@@ -67,7 +67,11 @@ export default function DashboardPage() {
       if (data.success) {
         const p = data.data;
         setProfile(p);
-        
+        // Same persisted default the Settings page's auto-generation uses —
+        // keeps the two pages' idea of "your usual capacity" in sync instead
+        // of Schedule always starting from a hardcoded 1.
+        setCapacity(p.defaultCapacity || 1);
+
         // Premium popup logic
         if (p.premiumAmount > 0) {
           const today = new Date();
@@ -562,80 +566,6 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {shiftModal && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-8 max-w-md w-full text-center shadow-2xl relative">
-            <button onClick={() => setShiftModal(false)} className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-900">
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
-            </button>
-            <div className="w-16 h-16 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-            </div>
-            <h2 className="text-2xl font-bold text-zinc-900 mb-2">Running Late?</h2>
-            <p className="text-zinc-600 mb-6 text-sm">
-              Push all remaining slots today down by a set amount of time. You will be able to message affected customers.
-            </p>
-            <div className="flex justify-center gap-3 mb-8">
-              {[15, 30, 45, 60].map(mins => (
-                <button 
-                  key={mins}
-                  onClick={() => setShiftMinutes(mins)}
-                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                    shiftMinutes === mins 
-                      ? "bg-zinc-900 text-white" 
-                      : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
-                  }`}
-                >
-                  {mins}m
-                </button>
-              ))}
-            </div>
-            <Button className="w-full h-12 text-lg font-bold bg-orange-600 hover:bg-orange-700 text-white" onClick={handleShiftSchedule} disabled={shifting}>
-              {shifting ? "Shifting..." : `Shift Schedule by ${shiftMinutes} mins`}
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {affectedCustomers && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl relative max-h-[90vh] flex flex-col">
-            <button onClick={() => setAffectedCustomers(null)} className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-900">
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
-            </button>
-            <h2 className="text-xl font-bold text-zinc-900 mb-2">Schedule Shifted!</h2>
-            <p className="text-zinc-600 text-sm mb-4">
-              Your schedule has been successfully updated. The following {affectedCustomers.length} customers have been delayed. Click to notify them:
-            </p>
-            <div className="flex-1 overflow-y-auto min-h-0 mb-4 border border-zinc-200 rounded-xl divide-y divide-zinc-100">
-              {affectedCustomers.map((c, i) => (
-                <div key={i} className="p-4 flex flex-col sm:flex-row gap-3 sm:items-center justify-between hover:bg-zinc-50 transition-colors">
-                  <div>
-                    <p className="font-semibold text-zinc-900">{c.name}</p>
-                    <p className="text-xs text-zinc-500 line-through inline-block mr-2">{c.oldTime}</p>
-                    <p className="text-sm text-orange-600 font-medium inline-block">Now: {c.newTime}</p>
-                  </div>
-                  <Button 
-                    variant="outline"
-                    size="sm"
-                    className="border-green-200 text-green-700 hover:bg-green-50 shrink-0"
-                    onClick={() => {
-                      const cleanPhone = c.phone.replace(/\D/g, "");
-                      const msgStr = `Hi ${c.name}, I am running a bit late today! Your appointment has been shifted from ${c.oldTime} to ${c.newTime}. See you then!`;
-                      window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msgStr)}`, '_blank');
-                    }}
-                  >
-                    WhatsApp
-                  </Button>
-                </div>
-              ))}
-            </div>
-            <Button className="w-full" onClick={() => setAffectedCustomers(null)}>
-              Done
-            </Button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -689,8 +619,9 @@ function CapacityEditor({ slot, onSave }: { slot: SlotView, onSave: (val: number
         className="w-8 sm:w-10 h-5 sm:h-6 bg-transparent text-xs sm:text-sm font-bold text-zinc-700 dark:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-400/50 rounded text-center transition-all"
       />
       {isChanged && (
-        <button 
+        <button
           onClick={handleSave}
+          onMouseDown={(e) => e.preventDefault()}
           className="ml-1 bg-zinc-900 text-white rounded p-0.5 hover:bg-zinc-800 transition-colors"
           title="Save Capacity"
         >

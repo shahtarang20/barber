@@ -21,6 +21,7 @@ export interface IUser extends Document {
   bio?: string;
   workingHours: IWorkingHours[];
   slotDuration: number;
+  defaultCapacity: number;
   premiumAmount: number;
   premiumDueDay: number;
   isActive: boolean;
@@ -59,6 +60,11 @@ const UserSchema: Schema = new Schema(
     // slots than the 30-min default suits, and forcing everyone onto one
     // fixed grid undersells real capacity for busy single-chair shops.
     slotDuration: { type: Number, default: 30, min: 10, max: 60 },
+    // Shared source of truth for both the manual "Generate"/"Sync Schedule"
+    // button on the Schedule page and the automatic slot generation that
+    // runs after saving Settings — without this, the two paths silently
+    // used different capacities and drifted out of sync with each other.
+    defaultCapacity: { type: Number, default: 1, min: 1, max: 50 },
     premiumAmount: { type: Number, default: 0 },
     premiumDueDay: { type: Number, default: 28 }, // default 28th of month
     isActive: { type: Boolean, default: true },

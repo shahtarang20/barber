@@ -54,6 +54,7 @@ export default function SettingsPage() {
   const [bio, setBio] = useState("");
   const [workingHours, setWorkingHours] = useState<any[]>([]);
   const [slotDuration, setSlotDuration] = useState(30);
+  const [defaultCapacity, setDefaultCapacity] = useState(1);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -70,6 +71,7 @@ export default function SettingsPage() {
         setBio(data.data.bio || "");
         setWorkingHours(data.data.workingHours || []);
         setSlotDuration(data.data.slotDuration || 30);
+        setDefaultCapacity(data.data.defaultCapacity || 1);
       }
     } catch (error) {
       console.error("Failed to fetch profile");
@@ -97,7 +99,7 @@ export default function SettingsPage() {
       const res = await fetch("/api/barber/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bio, workingHours: formattedWorkingHours, slotDuration }),
+        body: JSON.stringify({ bio, workingHours: formattedWorkingHours, slotDuration, defaultCapacity }),
       });
       const data = await res.json();
       if (data.success) {
@@ -204,6 +206,23 @@ export default function SettingsPage() {
             </select>
             <p className="text-xs text-zinc-500">
               Shorter slots fit more bookings into busy hours. Re-generate your schedule after changing this for it to take effect.
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Default Capacity per Slot</Label>
+          <div className="flex items-center gap-3">
+            <input
+              type="number"
+              min={1}
+              max={50}
+              value={defaultCapacity}
+              onChange={(e) => setDefaultCapacity(Number(e.target.value) || 1)}
+              className="w-20 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 py-2 text-sm"
+            />
+            <p className="text-xs text-zinc-500">
+              How many customers can book the same time slot by default. This is the same value your Schedule page's "Generate" button starts with.
             </p>
           </div>
         </div>

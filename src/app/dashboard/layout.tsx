@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { verifyToken } from "@/lib/auth";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { MobileNav } from "@/components/dashboard/MobileNav";
+import { Header } from "@/components/dashboard/Header";
 import { InstallPrompt } from "@/components/InstallPrompt";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -24,6 +25,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       </div>
       <MobileNav />
       <main className="flex-1 overflow-auto pb-20 md:pb-0 relative">
+        <Header />
         <div className="p-4 md:p-8 max-w-5xl mx-auto">
           {children}
         </div>

@@ -24,8 +24,16 @@ export async function POST(req: Request) {
 
     await connectToDatabase();
     
-    // Find all slots for this date for this barber
-    const slots = await Slot.find({ barberId: payload.userId, date }).sort({ startTime: 1 });
+    // Find all slots for this date for this barber, then sort DESCENDING by
+    // actual time (not a Mongo string sort — "10:00 AM" vs "9:00 AM" sorts
+    // wrong lexicographically). Since we're shifting forward in time,
+    // processing the latest slot first means it moves into an empty time
+    // slot before an earlier slot tries to move into where it currently
+    // sits — processing ascending would collide with the unique
+    // {barberId,date,startTime} index the moment two back-to-back slots
+    // both exist, which is the normal case.
+    const unsortedSlots = await Slot.find({ barberId: payload.userId, date });
+    const slots = unsortedSlots.sort((a, b) => timeStringToMinutes(b.startTime) - timeStringToMinutes(a.startTime));
     if (slots.length === 0) {
       return NextResponse.json({ success: false, error: { message: "No slots found for this date." } }, { status: 404 });
     }
@@ -48,6 +56,15 @@ export async function POST(req: Request) {
 
     if (slotsToShift.length === 0) {
       return NextResponse.json({ success: false, error: { message: "No upcoming slots to shift today." } }, { status: 400 });
+    }
+
+    // Reject upfront if shifting the latest slot would cross midnight —
+    // silently letting it wrap would produce a slot whose time label says
+    // e.g. "12:30 AM" while its `date` field still says today, corrupting
+    // the two out of sync with each other.
+    const latestEndMins = Math.max(...slotsToShift.map((s) => timeStringToMinutes(s.endTime)));
+    if (latestEndMins + shiftMinutes >= 24 * 60) {
+      return NextResponse.json({ success: false, error: { message: "That shift would push a slot past midnight. Please choose a smaller amount." } }, { status: 400 });
     }
 
     // Process shifting
