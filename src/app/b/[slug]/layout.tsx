@@ -7,10 +7,10 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   
   await connectToDatabase();
   const barber = await User.findOne({ slug });
-  
-  const storeName = barber?.storeName || "Barber Shop";
+
+  const storeName = barber?.name || "Barber Shop";
   const title = `Book ${storeName}`;
-  const description = barber?.address ? `Book your next haircut at ${storeName}, located at ${barber.address}.` : `Book your next haircut at ${storeName}.`;
+  const description = barber?.bio || `Book your next haircut at ${storeName}.`;
 
   return {
     title,
@@ -38,11 +38,16 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 import { InstallPrompt } from "@/components/InstallPrompt";
 
-export default function BarberLayout({ children }: { children: React.ReactNode }) {
+export default async function BarberLayout({ children, params }: { children: React.ReactNode; params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+
+  await connectToDatabase();
+  const barber = await User.findOne({ slug }).select("name").lean();
+
   return (
     <>
       {children}
-      <InstallPrompt isCustomer={true} />
+      <InstallPrompt isCustomer={true} appName={barber?.name || "this barber"} />
     </>
   );
 }

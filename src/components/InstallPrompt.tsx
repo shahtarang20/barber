@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
 
-export function InstallPrompt({ isCustomer = false }: { isCustomer?: boolean }) {
+export function InstallPrompt({ isCustomer = false, appName = "BarberSaaS" }: { isCustomer?: boolean; appName?: string }) {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showPrompt, setShowPrompt] = useState(false);
   const [isStandalone, setIsStandalone] = useState(true);
@@ -78,10 +78,10 @@ export function InstallPrompt({ isCustomer = false }: { isCustomer?: boolean }) 
         </button>
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 bg-black dark:bg-white rounded-xl flex items-center justify-center shrink-0">
-             <span className="text-white dark:text-black font-serif font-bold text-2xl">B</span>
+             <span className="text-white dark:text-black font-serif font-bold text-2xl">{appName.charAt(0).toUpperCase()}</span>
           </div>
           <div>
-            <h4 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Install BarberSaaS</h4>
+            <h4 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Install {appName}</h4>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
               Add to home screen for faster booking
             </p>
