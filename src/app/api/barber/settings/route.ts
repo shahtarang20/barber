@@ -6,6 +6,7 @@ import { cleanupStaleSlots } from "@/lib/slotCleanup";
 import { notifyBarber } from "@/lib/realtime";
 import { format } from "date-fns";
 import { timeStringToMinutes } from "@/lib/timeSort";
+import { autoGenerateFutureSlots } from "@/lib/slotGenerator";
 
 const VALID_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
@@ -86,6 +87,14 @@ export async function PUT(req: Request) {
       if (cleanup.deletedCount > 0) {
         notifyBarber(payload.userId, "SLOTS_UPDATED");
       }
+      
+      // Feature Fix: Automatically generate missing future slots so the barber 
+      // doesn't have to manually click "Sync Schedule" 90 times after opening a day.
+      await autoGenerateFutureSlots(
+        payload.userId, 
+        workingHours, 
+        slotDuration !== undefined ? Number(slotDuration) : user.slotDuration || 30
+      );
     }
 
     return NextResponse.json({

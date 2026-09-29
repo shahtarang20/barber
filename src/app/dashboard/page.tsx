@@ -311,10 +311,10 @@ export default function DashboardPage() {
               <button onClick={() => setSelectedDate(addDays(selectedDate, 1))} className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-md">→</button>
             </h2>
           </div>
-          <div className="flex items-center gap-3 sm:gap-4 w-full md:w-auto justify-between md:justify-end">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-4 w-full md:w-auto justify-start sm:justify-end mt-2 md:mt-0">
             <div className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-800/50 p-1 rounded-lg border border-zinc-200 dark:border-zinc-800">
               <label className="text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 hidden sm:block pl-2">Capacity:</label>
-              <input type="number" min="1" max="50" value={capacity || ""} onChange={(e) => setCapacity(e.target.value === "" ? 0 : Number(e.target.value))} className="w-14 h-8 rounded-md border border-zinc-300 px-2 text-sm dark:border-zinc-700 dark:bg-zinc-900" />
+              <input type="number" min="1" max="50" value={capacity || ""} onChange={(e) => setCapacity(e.target.value === "" ? 0 : Number(e.target.value))} className="w-12 sm:w-14 h-8 rounded-md border border-zinc-300 px-2 text-sm dark:border-zinc-700 dark:bg-zinc-900" />
             </div>
             {slots.length > 0 && (
               <Button variant="outline" size="sm" className="h-9 px-3 text-orange-600 border-orange-200 hover:bg-orange-50 dark:hover:bg-orange-950/30" onClick={() => setShiftModal(true)}>
