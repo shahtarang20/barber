@@ -9,6 +9,7 @@ import { rateLimit, getClientIp } from "@/lib/rateLimit";
 import { notifyBarber } from "@/lib/realtime";
 import { normalizePhone } from "@/lib/phone";
 import { User } from "@/models/User";
+import { minutesUntilSlot } from "@/lib/istTime";
 
 const bookingSchema = z.object({
   slotId: z.string().min(1, "Slot is required"),
@@ -57,6 +58,18 @@ export async function POST(req: Request) {
       return NextResponse.json({
         success: false,
         error: { message: "This barber is no longer accepting bookings." },
+      }, { status: 410 });
+    }
+
+    // Reject booking a slot that's already started — always judged against a
+    // fixed IST "now", not the server's or customer's ambient local clock,
+    // so a customer whose browser timezone disagrees with India can't book
+    // (or appear to book) a slot that's actually already in the past.
+    if (minutesUntilSlot(slot.date, slot.startTime) < 0) {
+      await Slot.findByIdAndUpdate(slot._id, { $set: { status: "AVAILABLE" }, $inc: { bookingsCount: -1 } });
+      return NextResponse.json({
+        success: false,
+        error: { message: "This slot has already passed. Please choose another time." },
       }, { status: 410 });
     }
 

@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { format, addDays, parse, isAfter } from "date-fns";
+import { format, addDays } from "date-fns";
+import { getTodayISTString, minutesUntilSlot } from "@/lib/istTime";
+import { parseDateOnly } from "@/lib/timeSort";
 import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,7 +37,7 @@ export default function BarberBookingPage() {
   const { slug } = useParams();
   const { t, language } = useTranslation();
   
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date>(() => parseDateOnly(getTodayISTString()));
   const formattedDate = format(selectedDate, "yyyy-MM-dd");
   
   const { data: barberData, isLoading: barberLoading, error: barberLoadError } = useSWR(
@@ -194,7 +196,7 @@ export default function BarberBookingPage() {
   }
 
   // Generate simple next 7 days for selection
-  const upcomingDates = Array.from({ length: 7 }).map((_, i) => addDays(new Date(), i));
+  const upcomingDates = Array.from({ length: 7 }).map((_, i) => addDays(parseDateOnly(getTodayISTString()), i));
 
   return (
     <div className="min-h-screen bg-zinc-50 pb-20">
@@ -256,21 +258,13 @@ export default function BarberBookingPage() {
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {slots
                     .filter((slot: SlotView) => {
-                      // If it's not today, show all slots
-                      if (format(selectedDate, "yyyy-MM-dd") !== format(new Date(), "yyyy-MM-dd")) return true;
-                      
-                      // If it is today, check if the slot is in the past
+                      // Judged against a fixed IST "now", not this browser's
+                      // local clock — a customer in a different timezone
+                      // than India must see exactly the same "is this slot
+                      // still bookable" answer the server will give them.
                       try {
-                        // Support both "h:mm a" and "HH:mm" parsing
-                        let slotDate;
-                        const cleanStr = slot.startTime.trim().toLowerCase();
-                        if (cleanStr.includes("am") || cleanStr.includes("pm")) {
-                          const strWithSpace = cleanStr.replace(/([0-9])(am|pm)/, "$1 $2");
-                          slotDate = parse(strWithSpace, "h:mm a", new Date());
-                        } else {
-                          slotDate = parse(slot.startTime, "HH:mm", new Date());
-                        }
-                        return isAfter(slotDate, new Date());
+                        const dateStr = format(selectedDate, "yyyy-MM-dd");
+                        return minutesUntilSlot(dateStr, slot.startTime) >= 0;
                       } catch(e) {
                         return true; // If parsing fails, show it to be safe
                       }

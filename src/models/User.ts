@@ -19,9 +19,7 @@ export interface IUser extends Document {
   slug: string;
   profileImage?: string;
   bio?: string;
-  timezone: string;
   workingHours: IWorkingHours[];
-  settings?: Record<string, any>;
   premiumAmount: number;
   premiumDueDay: number;
   isActive: boolean;
@@ -54,9 +52,7 @@ const UserSchema: Schema = new Schema(
     slug: { type: String, required: true, unique: true },
     profileImage: { type: String },
     bio: { type: String },
-    timezone: { type: String, default: "Asia/Kolkata" },
     workingHours: [WorkingHoursSchema],
-    settings: { type: Schema.Types.Mixed },
     premiumAmount: { type: Number, default: 0 },
     premiumDueDay: { type: Number, default: 28 }, // default 28th of month
     isActive: { type: Boolean, default: true },
