@@ -21,7 +21,7 @@ export async function GET(req: Request) {
     const total = await User.countDocuments({ role: "BARBER" });
 
     const barbers = await User.find({ role: "BARBER" })
-      .select("-passwordHash")
+      .select("-passwordHash -tokenVersion")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)

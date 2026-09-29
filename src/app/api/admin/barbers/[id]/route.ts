@@ -50,7 +50,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const updateQuery: any = { $set: setFields };
     if ($inc) updateQuery.$inc = $inc;
 
-    const updatedUser = await User.findByIdAndUpdate(id, updateQuery, { new: true }).select("-passwordHash");
+    const updatedUser = await User.findByIdAndUpdate(id, updateQuery, { new: true }).select("-passwordHash -tokenVersion");
 
     if (!updatedUser) {
       return NextResponse.json({ success: false, error: { message: "Barber not found" } }, { status: 404 });

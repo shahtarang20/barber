@@ -6,6 +6,7 @@ import { User } from "@/models/User";
 import { addMinutes, format, parse, isValid, addDays, startOfDay } from "date-fns";
 import { notifyBarber } from "@/lib/realtime";
 import { cleanupStaleSlots } from "@/lib/slotCleanup";
+import { parseDateOnly } from "@/lib/timeSort";
 
 export async function POST(req: Request) {
   try {
@@ -15,7 +16,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { date, capacity = 1 } = body;
+    const { date, capacity: rawCapacity = 1 } = body;
     // Slots are always exactly 30 minutes — this is fixed, not configurable,
     // so barbers and customers always see a consistent, easy-to-scan schedule.
     const slotDuration = 30;
@@ -24,7 +25,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: { message: "Date is required" } }, { status: 400 });
     }
 
-    const requestedDate = startOfDay(new Date(date));
+    const capacity = Number(rawCapacity);
+    if (!Number.isFinite(capacity) || capacity < 1 || capacity > 50) {
+      return NextResponse.json({ success: false, error: { message: "Capacity must be a whole number between 1 and 50." } }, { status: 400 });
+    }
+
+    const requestedDate = isNaN(Date.parse(date)) ? new Date(NaN) : startOfDay(parseDateOnly(date));
     const today = startOfDay(new Date());
     const maxFutureDate = addDays(today, 90);
     if (isNaN(requestedDate.getTime())) {
@@ -44,8 +50,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: { message: "User not found" } }, { status: 404 });
     }
 
-    // Determine day of week
-    const dateObj = new Date(date);
+    // Determine day of week — parsed as a local calendar date, not UTC, since
+    // `new Date("2026-09-29")` shifts to the previous evening in any
+    // timezone west of UTC, which silently computes the wrong weekday.
+    const dateObj = parseDateOnly(date);
     const dayOfWeek = format(dateObj, "EEEE"); // e.g. "Monday"
     
     const dayConfig = user.workingHours.find((h: any) => h.day === dayOfWeek);

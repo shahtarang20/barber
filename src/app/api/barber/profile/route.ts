@@ -12,8 +12,8 @@ export async function GET() {
 
     await connectToDatabase();
     
-    // Get user without passwordHash
-    const user = await User.findById(payload.userId).select("-passwordHash");
+    // Exclude passwordHash and internal session-bookkeeping fields
+    const user = await User.findById(payload.userId).select("-passwordHash -tokenVersion");
     
     if (!user) {
       return NextResponse.json({ success: false, error: { message: "User not found" } }, { status: 404 });

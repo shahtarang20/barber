@@ -1,5 +1,5 @@
 import { Slot } from "@/models/Slot";
-import { timeStringToMinutes } from "@/lib/timeSort";
+import { timeStringToMinutes, parseDateOnly } from "@/lib/timeSort";
 import { format } from "date-fns";
 
 interface WorkingHourDay {
@@ -33,7 +33,7 @@ export async function cleanupStaleSlots(
   let blockedByBookings = 0;
 
   for (const slot of slots) {
-    const dayOfWeek = format(new Date(slot.date), "EEEE");
+    const dayOfWeek = format(parseDateOnly(slot.date), "EEEE");
     const dayConfig = workingHours.find((h) => h.day === dayOfWeek);
 
     let outsideHours = false;

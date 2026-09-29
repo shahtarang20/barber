@@ -1,12 +1,17 @@
 import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import { User } from "@/models/User";
+import { rateLimit, getClientIp } from "@/lib/rateLimit";
 
 export async function GET(req: Request, { params }: { params: Promise<{ slug: string }> }) {
   try {
+    if (!rateLimit(`manifest:${getClientIp(req)}`, 60, 60_000)) {
+      return new NextResponse("Too Many Requests", { status: 429 });
+    }
+
     await connectToDatabase();
     const { slug } = await params;
-    const barber = await User.findOne({ slug, role: "BARBER" });
+    const barber = await User.findOne({ slug, role: "BARBER", isActive: true });
 
     if (!barber) {
       return new NextResponse("Not Found", { status: 404 });

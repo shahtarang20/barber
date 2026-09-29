@@ -26,3 +26,15 @@ export function timeStringToMinutes(timeStr: string): number {
 export function sortByStartTime<T extends { startTime: string }>(slots: T[]): T[] {
   return [...slots].sort((a, b) => timeStringToMinutes(a.startTime) - timeStringToMinutes(b.startTime));
 }
+
+/**
+ * Parses a "YYYY-MM-DD" date string as a LOCAL calendar date, not UTC.
+ * `new Date("2026-09-29")` is parsed as UTC midnight per the ISO 8601 spec,
+ * which shifts to the previous evening in any timezone west of UTC — that
+ * silently returns the wrong day-of-week for date computations. Constructing
+ * from explicit y/m/d components avoids the ambiguity entirely.
+ */
+export function parseDateOnly(dateStr: string): Date {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  return new Date(year, (month || 1) - 1, day || 1);
+}

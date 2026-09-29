@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Copy, ExternalLink, Share2, Download } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { toast } from "@/components/ui/toast";
 
 export default function PublicLinkPage() {
   const [profile, setProfile] = useState<any>(null);
@@ -60,6 +61,9 @@ export default function PublicLinkPage() {
   const downloadQR = async () => {
     try {
       const response = await fetch(qrCodeUrl);
+      if (!response.ok) {
+        throw new Error(`QR service returned ${response.status}`);
+      }
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -71,6 +75,7 @@ export default function PublicLinkPage() {
       document.body.removeChild(a);
     } catch (error) {
       console.error("Failed to download QR code", error);
+      toast.add({ title: "Error", description: "Couldn't download the QR code right now. Please try again.", type: "error" });
     }
   };
 
