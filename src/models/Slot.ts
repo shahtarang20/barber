@@ -14,6 +14,7 @@ export interface ISlot extends Document {
     joinedAt: Date;
   }[];
   isCustomCapacity?: boolean;
+  shiftedAt?: Date; // set when the barber shifted the day ("running late"); auto-reconcile leaves that date alone
   createdAt: Date;
   updatedAt: Date;
 }
@@ -35,6 +36,7 @@ const SlotSchema: Schema = new Schema(
       },
     ],
     isCustomCapacity: { type: Boolean, default: false },
+    shiftedAt: { type: Date },
   },
   { timestamps: true }
 );

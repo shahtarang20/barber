@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import { Slot } from "@/models/Slot";
-import { Customer } from "@/models/Customer";
-import { Booking } from "@/models/Booking";
-import { Counter } from "@/models/Counter";
+import { createConfirmedBooking } from "@/lib/createBooking";
 import { z } from "zod";
+import mongoose from "mongoose";
 import { rateLimit, getClientIp } from "@/lib/rateLimit";
 import { notifyBarber } from "@/lib/realtime";
 import { normalizePhone } from "@/lib/phone";
@@ -29,7 +28,7 @@ const bookingSchema = z.object({
 export async function POST(req: Request) {
   try {
     const ip = getClientIp(req);
-    if (!(await rateLimit)(`public-booking:${ip}`, IP_LIMIT, 60_000)) {
+    if (!(await rateLimit(`public-booking:${ip}`, IP_LIMIT, 60_000))) {
       return NextResponse.json({ success: false, error: { message: "Too many requests from your network. Please try again shortly." } }, { status: 429 });
     }
 
@@ -43,8 +42,11 @@ export async function POST(req: Request) {
     }
 
     const { slotId, name, phone, notes } = result.data;
+    if (!mongoose.isValidObjectId(slotId)) {
+      return NextResponse.json({ success: false, error: { code: "SLOT_ALREADY_BOOKED", message: "Sorry, this slot is fully booked or unavailable. Please choose another time." } }, { status: 409 });
+    }
 
-    if (!(await rateLimit)(`public-booking-phone:${normalizePhone(phone)}`, PHONE_LIMIT, 60_000)) {
+    if (!(await rateLimit(`public-booking-phone:${normalizePhone(phone)}`, PHONE_LIMIT, 60_000))) {
       return NextResponse.json({ success: false, error: { message: "Too many booking attempts with this phone number. Please try again in a minute." } }, { status: 429 });
     }
 
@@ -90,50 +92,8 @@ export async function POST(req: Request) {
       await Slot.findByIdAndUpdate(slot._id, { $set: { status: "BOOKED" } });
     }
 
-    let counterIncremented = false;
     try {
-      const normalizedPhone = normalizePhone(phone);
-
-      // Find customer by BOTH phone and name (case-insensitive) to support families sharing a phone
-      // Exact, case-insensitive match via collation — never build a RegExp
-      // from user input (names like "Raj (Jr)" or "A+B" would break it).
-      let customer = await Customer.findOne({ phone: normalizedPhone, name: name.trim() })
-        .collation({ locale: "en", strength: 2 });
-
-      if (!customer) {
-        // Create a distinct customer record for this family member
-        customer = new Customer({ name, phone: normalizedPhone });
-        await customer.save();
-      }
-
-      // Generate human-readable booking number (e.g. RB-1042)
-      // For MVP, we will use a global counter for booking numbers
-      const counter = await Counter.findByIdAndUpdate(
-        { _id: "bookingNumber" },
-        { $inc: { seq: 1 } },
-        { new: true, upsert: true }
-      );
-      counterIncremented = true;
-
-      const bookingNumber = `B-${counter.seq.toString().padStart(4, "0")}`;
-
-      // Create Booking
-      const newBooking = new Booking({
-        bookingNumber,
-        barberId: slot.barberId,
-        slotId: slot._id,
-        customerId: customer._id,
-        date: slot.date,
-        startTime: slot.startTime,
-        endTime: slot.endTime,
-        status: "CONFIRMED",
-        notes
-      });
-
-      await newBooking.save();
-
-      // slot.bookingId is no longer used since a slot can have multiple bookings
-      // The relation is maintained by Booking.slotId
+      const { booking: newBooking, customer } = await createConfirmedBooking(slot, name, phone, notes);
 
       notifyBarber(slot.barberId.toString(), "BOOKINGS_UPDATED");
 
@@ -150,11 +110,6 @@ export async function POST(req: Request) {
     } catch (bookingError) {
       // ROLLBACK: If creating the booking fails, we MUST release the slot back to AVAILABLE
       await Slot.findByIdAndUpdate(slot._id, { $set: { status: "AVAILABLE" }, $inc: { bookingsCount: -1 } });
-      if (counterIncremented) {
-        // Best-effort: avoid permanently burning a booking-number sequence
-        // value for a booking that never actually got created.
-        await Counter.findByIdAndUpdate({ _id: "bookingNumber" }, { $inc: { seq: -1 } });
-      }
       console.error("Booking creation failed, rolled back slot:", bookingError);
       return NextResponse.json({ success: false, error: { message: "Failed to create booking. Slot has been released." } }, { status: 500 });
     }

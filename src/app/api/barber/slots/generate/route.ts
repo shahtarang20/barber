@@ -6,7 +6,8 @@ import { User } from "@/models/User";
 import { addMinutes, format, parse, isValid, addDays, startOfDay } from "date-fns";
 import { notifyBarber } from "@/lib/realtime";
 import { cleanupStaleSlots } from "@/lib/slotCleanup";
-import { parseDateOnly } from "@/lib/timeSort";
+import { parseDateOnly, timeStringToMinutes } from "@/lib/timeSort";
+import { getTodayISTString, minutesUntilSlot } from "@/lib/istTime";
 
 export async function POST(req: Request) {
   try {
@@ -28,7 +29,7 @@ export async function POST(req: Request) {
     }
 
     const requestedDate = isNaN(Date.parse(date)) ? new Date(NaN) : startOfDay(parseDateOnly(date));
-    const today = startOfDay(new Date());
+    const today = startOfDay(parseDateOnly(getTodayISTString()));
     const maxFutureDate = addDays(today, 90);
     if (isNaN(requestedDate.getTime())) {
       return NextResponse.json({ success: false, error: { message: "Invalid date." } }, { status: 400 });
@@ -50,6 +51,11 @@ export async function POST(req: Request) {
     // Configurable per barber — a high-volume quick-trim shop needs shorter
     // slots than a 30-min grid suits; defaults to 30 for anyone who hasn't set one.
     const slotDuration = user.slotDuration || 30;
+
+    // A capacity that differs from the saved default is a deliberate choice for
+    // this date, so mark it custom — otherwise the next Settings save or daily
+    // sync would quietly reset it back to the default.
+    const isCustom = Number(capacity) !== (user.defaultCapacity || 1);
 
     // Determine day of week — parsed as a local calendar date, not UTC, since
     // `new Date("2026-09-29")` shifts to the previous evening in any
@@ -75,6 +81,15 @@ export async function POST(req: Request) {
       }, { status: 400 });
     }
 
+    // A day the barber shifted ("running late") is deliberately off the normal
+    // grid; regenerating would recreate the original slots on top of it.
+    if (await Slot.exists({ barberId: user._id, date, shiftedAt: { $exists: true } })) {
+      return NextResponse.json({
+        success: false,
+        error: { message: "This day's schedule was shifted, so it can't be regenerated. Shift it again, or block/unblock individual slots." },
+      }, { status: 409 });
+    }
+
     // Generate slots. date-fns' `parse` never throws on a bad format — it
     // silently returns an Invalid Date — so fallbacks must be checked with
     // `isValid`, not try/catch, and must convert the string before retrying.
@@ -98,6 +113,8 @@ export async function POST(req: Request) {
     try {
       startObj = parseTime(dayConfig.startTime, dateObj);
       endObj = parseTime(dayConfig.endTime, dateObj);
+      // A closing time of "12:00 AM" means midnight at the END of this day.
+      if (timeStringToMinutes(dayConfig.endTime) === 0) endObj = addDays(endObj, 1);
     } catch (e) {
       return NextResponse.json({ success: false, error: { message: `Invalid working hours configured for ${dayOfWeek}. Please re-save your working hours.` } }, { status: 400 });
     }
@@ -122,6 +139,11 @@ export async function POST(req: Request) {
       });
 
       if (!existingSlot) {
+        // Nobody can book a time that has already passed today, so don't create it.
+        if (minutesUntilSlot(date, startTimeStr) < 0) {
+          currentSlotStart = currentSlotEnd;
+          continue;
+        }
         newSlots.push({
           barberId: user._id,
           date: date,
@@ -130,12 +152,14 @@ export async function POST(req: Request) {
           status: "AVAILABLE",
           capacity: Number(capacity),
           bookingsCount: 0,
+          isCustomCapacity: isCustom,
         });
       } else if (!existingSlot.isCustomCapacity) {
         // Feature Fix: If barber generates again with a new capacity, update existing slots
         const newCap = Number(capacity);
         if (newCap >= (existingSlot.bookingsCount || 0)) {
           existingSlot.capacity = newCap;
+          if (isCustom) existingSlot.isCustomCapacity = true;
           if (existingSlot.status === "BOOKED" && newCap > (existingSlot.bookingsCount || 0)) {
             existingSlot.status = "AVAILABLE";
           } else if (existingSlot.status === "AVAILABLE" && newCap === existingSlot.bookingsCount) {

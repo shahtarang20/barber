@@ -38,3 +38,12 @@ export function parseDateOnly(dateStr: string): Date {
   const [year, month, day] = dateStr.split("-").map(Number);
   return new Date(year, (month || 1) - 1, day || 1);
 }
+
+/**
+ * Minutes since midnight for a CLOSING time. "12:00 AM" as a closing time means
+ * the end of that day (24:00), not its start, so a shop can close at midnight.
+ */
+export function endTimeToMinutes(timeStr: string): number {
+  const m = timeStringToMinutes(timeStr);
+  return m === 0 ? 24 * 60 : m;
+}

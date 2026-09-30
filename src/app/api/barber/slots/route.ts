@@ -3,6 +3,8 @@ import { requireAuth } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import { Slot } from "@/models/Slot";
 import { sortByStartTime } from "@/lib/timeSort";
+import { getTodayISTString } from "@/lib/istTime";
+import { autoCompleteStaleBookings } from "@/lib/bookingMaintenance";
 
 export async function GET(req: Request) {
   try {
@@ -19,7 +21,10 @@ export async function GET(req: Request) {
     }
 
     await connectToDatabase();
-    
+
+    // Opening today's schedule is a natural moment to settle bookings the barber forgot to close.
+    if (date === getTodayISTString()) await autoCompleteStaleBookings(payload.userId);
+
     // Fetch slots for this barber on this date, sorted chronologically —
     // AM/PM strings can't be sorted lexicographically ("10:00 AM" < "2:00 PM").
     const slots = await Slot.find({

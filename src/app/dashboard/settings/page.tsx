@@ -52,6 +52,38 @@ const formatTimeInput = (input: string, isEndTime: boolean): string => {
   return `${hh}:${mm} ${ampm}`;
 };
 
+const HOURS = [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+const MINUTES = ["00", "05", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55"];
+const selectClass =
+  "h-10 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-1.5 text-sm";
+
+// Working-hours time picker in the 12-hour style people use in India: hour 1–12, minutes, AM/PM.
+function TimeSelect({ value, onChange, label }: { value: string; onChange: (v: string) => void; label: string }) {
+  const m = formatTimeInput(value || "", false).match(/^(\d+):(\d+)\s*(AM|PM)$/);
+  const hour = m ? parseInt(m[1]) : 10;
+  const minute = m ? m[2] : "00";
+  const ampm = m ? m[3] : "AM";
+  // Legacy minutes that aren't on the 5-minute list are still shown, not lost.
+  const minuteOptions = MINUTES.includes(minute) ? MINUTES : [...MINUTES, minute].sort();
+  const emit = (h: number, mi: string, ap: string) => onChange(`${h.toString().padStart(2, "0")}:${mi} ${ap}`);
+
+  return (
+    <div className="flex items-center gap-1" role="group" aria-label={label}>
+      <select className={selectClass} value={hour} onChange={(e) => emit(Number(e.target.value), minute, ampm)} aria-label={`${label} hour`}>
+        {HOURS.map((h) => <option key={h} value={h}>{h}</option>)}
+      </select>
+      <span className="text-zinc-500">:</span>
+      <select className={selectClass} value={minute} onChange={(e) => emit(hour, e.target.value, ampm)} aria-label={`${label} minutes`}>
+        {minuteOptions.map((mi) => <option key={mi} value={mi}>{mi}</option>)}
+      </select>
+      <select className={selectClass} value={ampm} onChange={(e) => emit(hour, minute, e.target.value)} aria-label={`${label} AM or PM`}>
+        <option value="AM">AM</option>
+        <option value="PM">PM</option>
+      </select>
+    </div>
+  );
+}
+
 export default function SettingsPage() {
   const [profile, setProfile] = useState<any>(null);
   const [bio, setBio] = useState("");
@@ -110,7 +142,14 @@ export default function SettingsPage() {
       });
       const data = await res.json();
       if (data.success) {
-        const { removedSlots, slotsNeedingManualCancellation } = data.data;
+        const { removedSlots, slotsNeedingManualCancellation, capacityKeptSlots } = data.data;
+        if (capacityKeptSlots > 0) {
+          toast.add({
+            title: t('settingsCapacityKeptTitle'),
+            description: t('settingsCapacityKeptDesc').replace('{count}', capacityKeptSlots.toString()),
+            type: "error",
+          });
+        }
         if (slotsNeedingManualCancellation > 0) {
           setWarningCount(slotsNeedingManualCancellation);
           setShowWarningModal(true);
@@ -193,6 +232,9 @@ export default function SettingsPage() {
           </p>
         </div>
 
+        <details className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-4">
+          <summary className="cursor-pointer text-sm font-medium text-zinc-900 dark:text-zinc-100">{t('settingsMoreOptions')}</summary>
+          <div className="space-y-6 mt-4">
         <div className="space-y-2">
           <Label>Slot Length</Label>
           <div className="flex items-center gap-3">
@@ -209,7 +251,7 @@ export default function SettingsPage() {
               <option value={60}>60 minutes</option>
             </select>
             <p className="text-xs text-zinc-500">
-              Shorter slots fit more bookings into busy hours. Re-generate your schedule after changing this for it to take effect.
+              Shorter slots fit more bookings into busy hours. Saving applies this to your upcoming schedule automatically.
             </p>
           </div>
         </div>
@@ -231,6 +273,20 @@ export default function SettingsPage() {
           </div>
         </div>
 
+          </div>
+        </details>
+
+        <Button
+          variant="outline"
+          onClick={() => {
+            const first = workingHours.find((wh) => !wh.isClosed);
+            if (!first) return;
+            setWorkingHours(workingHours.map((wh) => (wh.isClosed ? wh : { ...wh, startTime: first.startTime, endTime: first.endTime })));
+          }}
+        >
+          {t('settingsCopyHours')}
+        </Button>
+
         <div className="space-y-4">
           {workingHours.map((wh, index) => (
             <div key={wh.day} className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/50">
@@ -244,26 +300,14 @@ export default function SettingsPage() {
                 />
               </div>
               
-              <div className="flex-1 flex items-center gap-2 w-full sm:w-auto">
+              <div className="flex-1 flex flex-wrap items-center gap-2 w-full sm:w-auto">
                 {wh.isClosed ? (
                   <span className="text-sm text-zinc-500 italic py-2">Closed</span>
                 ) : (
                   <>
-                    <Input 
-                      type="text" 
-                      placeholder="e.g. 10:00 AM"
-                      value={wh.startTime} 
-                      onChange={(e) => handleWorkingHourChange(index, "startTime", e.target.value)}
-                      className="w-full sm:w-32"
-                    />
+                    <TimeSelect label="Opening time" value={wh.startTime} onChange={(v) => handleWorkingHourChange(index, "startTime", v)} />
                     <span className="text-zinc-500 text-sm">to</span>
-                    <Input 
-                      type="text" 
-                      placeholder="e.g. 08:00 PM"
-                      value={wh.endTime} 
-                      onChange={(e) => handleWorkingHourChange(index, "endTime", e.target.value)}
-                      className="w-full sm:w-32"
-                    />
+                    <TimeSelect label="Closing time" value={wh.endTime} onChange={(v) => handleWorkingHourChange(index, "endTime", v)} />
                   </>
                 )}
               </div>

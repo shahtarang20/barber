@@ -26,10 +26,14 @@ export async function GET(req: Request) {
       {
         $group: {
           _id: "$customerId",
-          totalVisits: { $sum: 1 },
-          lastVisit: { $max: "$date" }
+          // A "visit" is a completed appointment — cancelled and no-show bookings aren't visits.
+          totalVisits: { $sum: { $cond: [{ $eq: ["$status", "COMPLETED"] }, 1, 0] } },
+          lastVisit: { $max: { $cond: [{ $eq: ["$status", "COMPLETED"] }, "$date", null] } },
+          // Customers whose every booking was cancelled aren't shown.
+          activeBookings: { $sum: { $cond: [{ $ne: ["$status", "CANCELLED"] }, 1, 0] } },
         }
       },
+      { $match: { activeBookings: { $gt: 0 } } },
       {
         $lookup: {
           from: "customers", // Collection name
@@ -65,7 +69,7 @@ export async function GET(req: Request) {
           }
         }
       },
-      { $sort: { lastVisit: -1 } },
+      { $sort: { lastVisit: -1, name: 1 } },
       {
         $facet: {
           metadata: [{ $count: "total" }],

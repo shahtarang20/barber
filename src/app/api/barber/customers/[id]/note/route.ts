@@ -22,6 +22,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     // Resolve params for Next.js 15+
     const resolvedParams = await params;
     const customerId = resolvedParams.id;
+    if (!mongoose.isValidObjectId(customerId)) {
+      return NextResponse.json({ success: false, error: { message: "Customer not found" } }, { status: 404 });
+    }
     const barberId = new mongoose.Types.ObjectId(payload.userId);
 
     const body = await req.json();

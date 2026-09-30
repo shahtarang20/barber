@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import mongoose from "mongoose";
 import { requireAuth } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import { Booking } from "@/models/Booking";
@@ -21,6 +22,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     
     const resolvedParams = await params;
     const bookingId = resolvedParams.id;
+    if (!mongoose.isValidObjectId(bookingId)) {
+      return NextResponse.json({ success: false, error: { message: "Booking not found" } }, { status: 404 });
+    }
     
     const booking = await Booking.findById(bookingId);
     if (!booking) {

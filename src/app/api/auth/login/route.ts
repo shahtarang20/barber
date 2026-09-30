@@ -15,7 +15,9 @@ const loginSchema = z.object({
 export async function POST(req: Request) {
   try {
     const ip = getClientIp(req);
-    if (!(await rateLimit)(`login:${ip}`, 10, 60_000)) {
+    // Generous per-network ceiling: a whole shop (or a mobile carrier's shared
+    // IP) can log in at once. It only stops a scripted flood.
+    if (!(await rateLimit(`login:${ip}`, 200, 60_000))) {
       return NextResponse.json({ success: false, error: { message: "Too many login attempts. Please try again in a minute." } }, { status: 429 });
     }
 
@@ -29,6 +31,11 @@ export async function POST(req: Request) {
     }
     
     const { barberCode, password } = result.data;
+
+    // The real guard against password guessing is per account, not per network.
+    if (!(await rateLimit(`login-account:${barberCode.toLowerCase()}`, 10, 60_000))) {
+      return NextResponse.json({ success: false, error: { message: "Too many login attempts for this account. Please try again in a minute." } }, { status: 429 });
+    }
     
     // Find user by barberCode or email
     const searchTerm = barberCode.toLowerCase();

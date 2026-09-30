@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import { Slot } from "@/models/Slot";
 import { z } from "zod";
+import mongoose from "mongoose";
 import { rateLimit, getClientIp } from "@/lib/rateLimit";
 import { notifyBarber } from "@/lib/realtime";
 import { normalizePhone } from "@/lib/phone";
@@ -22,7 +23,7 @@ const PHONE_LIMIT = 5;
 export async function POST(req: Request) {
   try {
     const ip = getClientIp(req);
-    if (!(await rateLimit)(`public-waitlist:${ip}`, IP_LIMIT, 60_000)) {
+    if (!(await rateLimit(`public-waitlist:${ip}`, IP_LIMIT, 60_000))) {
       return NextResponse.json({ success: false, error: { message: "Too many requests from your network. Please try again shortly." } }, { status: 429 });
     }
 
@@ -38,8 +39,18 @@ export async function POST(req: Request) {
     const { slotId, name } = result.data;
     const phone = normalizePhone(result.data.phone);
 
-    if (!(await rateLimit)(`public-waitlist-phone:${phone}`, PHONE_LIMIT, 60_000)) {
+    if (!(await rateLimit(`public-waitlist-phone:${phone}`, PHONE_LIMIT, 60_000))) {
       return NextResponse.json({ success: false, error: { message: "Too many waitlist attempts with this phone number. Please try again in a minute." } }, { status: 429 });
+    }
+
+    if (!mongoose.isValidObjectId(slotId)) {
+      return NextResponse.json({ success: false, error: { message: "Slot is no longer available for waitlisting." } }, { status: 400 });
+    }
+
+    // A waitlist is only for full slots — if there's still room, book it directly.
+    const target = await Slot.findById(slotId).select("status bookingsCount capacity");
+    if (target && target.status === "AVAILABLE" && target.bookingsCount < target.capacity) {
+      return NextResponse.json({ success: false, error: { message: "This time is still open — please book it directly." } }, { status: 409 });
     }
 
     // Don't let the same person join the same slot's waitlist repeatedly

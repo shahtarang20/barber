@@ -3,7 +3,7 @@ import { requireAuth } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import { Booking } from "@/models/Booking";
 import { Customer } from "@/models/Customer";
-import { getTodayISTString } from "@/lib/istTime";
+import { getTodayISTString, minutesUntilSlotEnd } from "@/lib/istTime";
 import { autoCompleteStaleBookings } from "@/lib/bookingMaintenance";
 
 export async function GET(req: Request) {
@@ -24,11 +24,31 @@ export async function GET(req: Request) {
 
     await autoCompleteStaleBookings(payload.userId);
 
-    // Upcoming bookings plus any past ones still awaiting Complete / No Show.
-    const query = {
-      barberId: payload.userId,
-      $or: [{ date: { $gte: todayStr } }, { status: "CONFIRMED" }],
-    };
+    // Filtering happens here, not in the browser, so every tab pages correctly
+    // and history (completed / cancelled / no-show from past days) is reachable.
+    const filter = (searchParams.get("filter") || "ALL").toUpperCase();
+    const base = { barberId: payload.userId };
+    let query: Record<string, unknown>;
+    switch (filter) {
+      case "TODAY":
+        query = { ...base, status: "CONFIRMED", date: todayStr };
+        break;
+      case "UPCOMING":
+        query = { ...base, status: "CONFIRMED", date: { $gte: todayStr } };
+        break;
+      case "COMPLETED":
+      case "CANCELLED":
+      case "NO_SHOW":
+        query = { ...base, status: filter };
+        break;
+      default:
+        // All = upcoming bookings plus any past ones still awaiting Done / No Show.
+        query = { ...base, $or: [{ date: { $gte: todayStr } }, { status: "CONFIRMED" }] };
+    }
+
+    // How many confirmed bookings have already ended and still need Done / No Show.
+    const pastConfirmed = await Booking.find({ ...base, status: "CONFIRMED", date: { $lte: todayStr } }).select("date endTime");
+    const needsAction = pastConfirmed.filter((b) => minutesUntilSlotEnd(b.date, b.endTime) < 0).length;
 
     const total = await Booking.countDocuments(query);
 
@@ -41,6 +61,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ 
       success: true, 
       data: bookings,
+      meta: { needsAction },
       pagination: {
         total,
         page,

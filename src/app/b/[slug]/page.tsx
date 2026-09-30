@@ -170,7 +170,7 @@ export default function BarberBookingPage() {
           </p>
           {!bookingSuccess.isWaitlist && (
             <p className="text-sm text-zinc-500 -mt-6 mb-8">
-              Can't make it? <a href="/cancel" className="underline">Cancel your booking</a> with your Booking ID.
+              {t('cancelLinkPrompt')} <a href="/cancel" className="underline">{t('cancelLinkText')}</a> {t('cancelLinkSuffix')}
             </p>
           )}
           

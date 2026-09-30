@@ -1,5 +1,5 @@
 import { Booking } from "@/models/Booking";
-import { getTodayISTString, minutesUntilSlot } from "@/lib/istTime";
+import { getTodayISTString, minutesUntilSlotEnd } from "@/lib/istTime";
 
 // A CONFIRMED booking is auto-marked COMPLETED this long after its slot ends,
 // so bookings the barber forgot to close don't stay "Confirmed" forever.
@@ -14,7 +14,7 @@ export async function autoCompleteStaleBookings(barberId?: string): Promise<numb
   }).select("date endTime");
 
   const staleIds = pastConfirmed
-    .filter((b) => minutesUntilSlot(b.date, b.endTime) <= -AUTO_COMPLETE_AFTER_MINUTES)
+    .filter((b) => minutesUntilSlotEnd(b.date, b.endTime) <= -AUTO_COMPLETE_AFTER_MINUTES)
     .map((b) => b._id);
 
   if (staleIds.length > 0) {

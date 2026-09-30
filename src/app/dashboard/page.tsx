@@ -49,9 +49,18 @@ export default function DashboardPage() {
     fetcher
   );
 
-  useRealtimeRefresh(() => mutateSlots());
+  useRealtimeRefresh((event) => {
+    mutateSlots();
+    // Settings changed on another device: re-read working hours and default capacity.
+    if (event?.type === "SETTINGS_UPDATED") fetchProfile();
+  });
 
   const slots: SlotView[] = slotsData?.success ? slotsData.data : [];
+
+  // Settings' working hours are the source of truth for which days are open.
+  const selectedDayName = format(selectedDate, "EEEE");
+  const dayConfig = profile?.workingHours?.find((h: { day: string }) => h.day === selectedDayName);
+  const isClosedDay = !!profile && (!dayConfig || dayConfig.isClosed);
 
   useEffect(() => {
     fetchProfile();
@@ -316,6 +325,7 @@ export default function DashboardPage() {
               <button onClick={() => setSelectedDate(addDays(selectedDate, 1))} className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-md">→</button>
             </h2>
           </div>
+          {!(isClosedDay && slots.length === 0) && (
           <div className="flex flex-wrap items-center gap-2 sm:gap-4 w-full md:w-auto justify-start sm:justify-end mt-2 md:mt-0">
             <div className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-800/50 p-1 rounded-lg border border-zinc-200 dark:border-zinc-800">
               <label className="text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 hidden sm:block pl-2">Capacity:</label>
@@ -337,6 +347,7 @@ export default function DashboardPage() {
               </Button>
             )}
           </div>
+          )}
         </div>
 
         <div className="divide-y divide-zinc-200 dark:divide-zinc-800">
@@ -349,6 +360,13 @@ export default function DashboardPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
               </div>
+              {isClosedDay ? (
+                <>
+                  <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">{t('scheduleClosedDay').replace('{day}', selectedDayName)}</h3>
+                  <p className="text-zinc-500 dark:text-zinc-400 mt-1 max-w-sm">{t('scheduleClosedDayDesc')}</p>
+                  <Link href="/dashboard/settings" className="mt-6 underline text-sm text-zinc-700 dark:text-zinc-300">{t('settings')}</Link>
+                </>
+              ) : (<>
               <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">{t('noSchedule')}</h3>
               <p className="text-zinc-500 dark:text-zinc-400 mt-1 max-w-sm">
                 {t('noScheduleDesc')}
@@ -362,6 +380,7 @@ export default function DashboardPage() {
                   {generating ? t('loading') : t('generateSlots')}
                 </Button>
               </div>
+              </>)}
             </div>
           ) : (
             (() => {

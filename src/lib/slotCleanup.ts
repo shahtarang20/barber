@@ -1,5 +1,6 @@
 import { Slot } from "@/models/Slot";
-import { timeStringToMinutes, parseDateOnly } from "@/lib/timeSort";
+import { confirmedCountBySlot } from "@/lib/openBookings";
+import { timeStringToMinutes, endTimeToMinutes, parseDateOnly } from "@/lib/timeSort";
 import { format } from "date-fns";
 
 interface WorkingHourDay {
@@ -30,6 +31,7 @@ export async function cleanupStaleSlots(
   const slots = await Slot.find({ barberId, date: dateFilter });
 
   const toDelete: string[] = [];
+  const bookedSlotIds: unknown[] = [];
   let blockedByBookings = 0;
 
   for (const slot of slots) {
@@ -42,18 +44,22 @@ export async function cleanupStaleSlots(
     } else if (dayConfig.startTime && dayConfig.endTime) {
       const slotStart = timeStringToMinutes(slot.startTime);
       const openStart = timeStringToMinutes(dayConfig.startTime);
-      const openEnd = timeStringToMinutes(dayConfig.endTime);
+      const openEnd = endTimeToMinutes(dayConfig.endTime);
       if (slotStart < openStart || slotStart >= openEnd) outsideHours = true;
     }
 
     if (!outsideHours) continue;
 
     if (slot.bookingsCount > 0) {
-      blockedByBookings++;
+      bookedSlotIds.push(slot._id);
       continue;
     }
     toDelete.push(slot._id.toString());
   }
+
+  // Booked slots are always kept; only still-confirmed bookings are flagged.
+  const confirmedBySlot = await confirmedCountBySlot(bookedSlotIds);
+  for (const n of confirmedBySlot.values()) blockedByBookings += n;
 
   if (toDelete.length > 0) {
     await Slot.deleteMany({ _id: { $in: toDelete } });

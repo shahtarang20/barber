@@ -3,7 +3,7 @@ import { requireAuth } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import { User } from "@/models/User";
 import { notifyBarber } from "@/lib/realtime";
-import { timeStringToMinutes } from "@/lib/timeSort";
+import { timeStringToMinutes, endTimeToMinutes } from "@/lib/timeSort";
 import { autoGenerateFutureSlots } from "@/lib/slotGenerator";
 
 const VALID_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -27,7 +27,7 @@ function validateWorkingHours(workingHours: any): string | null {
       return `${wh.day} needs both an opening and closing time, or should be marked closed.`;
     }
     const start = timeStringToMinutes(wh.startTime);
-    const end = timeStringToMinutes(wh.endTime);
+    const end = endTimeToMinutes(wh.endTime);
     if (start === Number.MAX_SAFE_INTEGER || end === Number.MAX_SAFE_INTEGER) {
       return `Invalid time format for ${wh.day}. Please use standard formats like "10:00 AM".`;
     }
@@ -90,7 +90,7 @@ export async function PUT(req: Request) {
     // value). One reconciliation pass handles deletion of now-invalid
     // slots, capacity updates on still-valid ones, and creation of newly
     // opened ones — so Schedule always reflects exactly what Settings says.
-    let reconcile = { createdCount: 0, updatedCount: 0, deletedCount: 0, blockedByBookings: 0 };
+    let reconcile = { createdCount: 0, updatedCount: 0, deletedCount: 0, blockedByBookings: 0, capacityKeptCount: 0 };
     if (workingHours !== undefined || slotDuration !== undefined || defaultCapacity !== undefined) {
       reconcile = await autoGenerateFutureSlots(
         payload.userId,
@@ -103,10 +103,14 @@ export async function PUT(req: Request) {
       }
     }
 
+    // Tell other open dashboards (a second device) to re-read the settings.
+    notifyBarber(payload.userId, "SETTINGS_UPDATED");
+
     return NextResponse.json({
       success: true,
       data: {
         message: "Settings updated successfully",
+        capacityKeptSlots: reconcile.capacityKeptCount,
         removedSlots: reconcile.deletedCount,
         slotsNeedingManualCancellation: reconcile.blockedByBookings,
       },

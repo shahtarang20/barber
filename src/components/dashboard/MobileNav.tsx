@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarDays, Settings, Users, Store } from "lucide-react";
+import { LayoutGrid, ClipboardList, Settings, Users, Store } from "lucide-react";
 
 export function MobileNav() {
   const pathname = usePathname();
 
   const navItems = [
-    { name: "Schedule", href: "/dashboard", icon: CalendarDays },
-    { name: "Appointments", href: "/dashboard/appointments", icon: CalendarDays },
+    { name: "Schedule", href: "/dashboard", icon: LayoutGrid },
+    { name: "Today", href: "/dashboard/appointments", icon: ClipboardList },
     { name: "Customers", href: "/dashboard/customers", icon: Users },
     { name: "Shop", href: "/dashboard/shop", icon: Store },
     { name: "Settings", href: "/dashboard/settings", icon: Settings },
@@ -32,8 +32,8 @@ export function MobileNav() {
                     : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50"
                 }`}
               >
-                <Icon className="w-5 h-5" />
-                <span className="text-[10px] font-medium">{item.name}</span>
+                <Icon className="w-6 h-6" />
+                <span className="text-xs font-medium">{item.name}</span>
               </Link>
             );
           })}

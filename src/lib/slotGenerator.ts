@@ -1,7 +1,8 @@
-import { getTodayISTString } from "@/lib/istTime";
+import { getTodayISTString, minutesUntilSlot } from "@/lib/istTime";
 import { Slot } from "@/models/Slot";
+import { confirmedCountBySlot } from "@/lib/openBookings";
 import { format, addDays, parse, isValid, addMinutes } from "date-fns";
-import { parseDateOnly } from "@/lib/timeSort";
+import { parseDateOnly, timeStringToMinutes } from "@/lib/timeSort";
 
 /**
  * Reconciles a barber's future (unbooked) schedule against their current
@@ -35,11 +36,18 @@ export async function autoGenerateFutureSlots(
     date: { $gte: todayStr },
   });
 
+  // A day the barber shifted ("running late") is deliberately off the normal
+  // grid. Reconciling it would recreate the early slots and delete the shifted
+  // ones, silently undoing the shift — so those dates are left alone.
+  const shiftedDates = new Set<string>(existingSlots.filter((s: any) => s.shiftedAt).map((s: any) => s.date));
+
   const existingMap = new Map<string, any>();
   for (const s of existingSlots) {
+    if (shiftedDates.has(s.date)) continue;
     existingMap.set(`${s.date}_${s.startTime}`, s);
   }
 
+  let capacityKeptCount = 0;
   const validKeys = new Set<string>();
   const newSlots: any[] = [];
   const toUpdateCapacity: { _id: any; capacity: number; status: string }[] = [];
@@ -69,6 +77,7 @@ export async function autoGenerateFutureSlots(
   for (let i = 0; i < 90; i++) {
     const currentDate = addDays(today, i);
     const dateStr = format(currentDate, "yyyy-MM-dd");
+    if (shiftedDates.has(dateStr)) continue;
     const dayOfWeek = format(currentDate, "EEEE");
 
     const dayConfig = workingHours.find((h) => h.day === dayOfWeek);
@@ -78,7 +87,9 @@ export async function autoGenerateFutureSlots(
 
     try {
       const startObj = parseTime(dayConfig.startTime, currentDate);
-      const endObj = parseTime(dayConfig.endTime, currentDate);
+      let endObj = parseTime(dayConfig.endTime, currentDate);
+      // A closing time of "12:00 AM" means midnight at the END of this day.
+      if (timeStringToMinutes(dayConfig.endTime) === 0) endObj = addDays(endObj, 1);
 
       let currentSlotStart = startObj;
       while (currentSlotStart < endObj) {
@@ -92,6 +103,12 @@ export async function autoGenerateFutureSlots(
 
         const existing = existingMap.get(key);
         if (!existing) {
+          // Don't create slots for times that have already passed today —
+          // nobody can book them. (validKeys above still keeps existing ones.)
+          if (minutesUntilSlot(dateStr, startTimeStr) < 0) {
+            currentSlotStart = currentSlotEnd;
+            continue;
+          }
           newSlots.push({
             barberId,
             date: dateStr,
@@ -102,7 +119,11 @@ export async function autoGenerateFutureSlots(
             bookingsCount: 0,
             isCustomCapacity: false,
           });
-        } else if (!existing.isCustomCapacity && existing.capacity !== capacity && capacity >= (existing.bookingsCount || 0)) {
+        } else if (!existing.isCustomCapacity && existing.capacity !== capacity && capacity < (existing.bookingsCount || 0)) {
+          // The new default is below what's already booked — the slot must keep
+          // its higher capacity; count it so the barber is told.
+          capacityKeptCount++;
+        } else if (!existing.isCustomCapacity && existing.capacity !== capacity) {
           // A valid, still-current slot whose capacity is stale relative to
           // a just-changed default — bring it in line, and reconcile its
           // status the same way a manual capacity edit would.
@@ -126,10 +147,13 @@ export async function autoGenerateFutureSlots(
   let deletedCount = 0;
   let blockedByBookings = 0;
   const toDelete: any[] = [];
+  const staleBooked = [...existingMap.entries()].filter(([key, slot]) => !validKeys.has(key) && slot.bookingsCount > 0).map(([, slot]) => slot._id);
+  const confirmedBySlot = await confirmedCountBySlot(staleBooked);
   for (const [key, slot] of existingMap.entries()) {
     if (validKeys.has(key)) continue;
     if (slot.bookingsCount > 0) {
-      blockedByBookings++;
+      // Kept either way (history must survive); only still-confirmed bookings are flagged.
+      blockedByBookings += confirmedBySlot.get(String(slot._id)) ?? 0;
       continue;
     }
     toDelete.push(slot._id);
@@ -161,5 +185,6 @@ export async function autoGenerateFutureSlots(
     updatedCount: toUpdateCapacity.length,
     deletedCount,
     blockedByBookings,
+    capacityKeptCount,
   };
 }

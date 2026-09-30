@@ -17,17 +17,27 @@ export async function cancelBookingAndFreeSlot(bookingId: string) {
   );
   if (!booking) return null;
 
-  await Slot.updateOne({ _id: booking.slotId, bookingsCount: { $gt: 0 } }, { $inc: { bookingsCount: -1 } });
+  const { waitlist, slotTime } = await freeSlotSeat(booking.slotId, booking.startTime);
+  return { booking, waitlist, slotTime };
+}
+
+/**
+ * Gives back one seat on a slot (after a cancellation or a reschedule away
+ * from it), reopens it if it was full, and returns up to 3 waitlisted people
+ * to tell about the opening.
+ */
+export async function freeSlotSeat(slotId: unknown, fallbackTime = "") {
+  await Slot.updateOne({ _id: slotId, bookingsCount: { $gt: 0 } }, { $inc: { bookingsCount: -1 } });
   const slot = await Slot.findOneAndUpdate(
-    { _id: booking.slotId, status: "BOOKED", $expr: { $lt: ["$bookingsCount", "$capacity"] } },
+    { _id: slotId, status: "BOOKED", $expr: { $lt: ["$bookingsCount", "$capacity"] } },
     { $set: { status: "AVAILABLE" } },
     { new: true }
-  ) ?? (await Slot.findById(booking.slotId));
+  ) ?? (await Slot.findById(slotId));
 
   const hasRoom = !!slot && slot.bookingsCount < slot.capacity;
   const waitlist: { name: string; phone: string }[] = hasRoom
     ? (slot!.waitlist || []).slice(0, 3).map((w: { name: string; phone: string }) => ({ name: w.name, phone: w.phone }))
     : [];
 
-  return { booking, waitlist, slotTime: slot?.startTime ?? booking.startTime };
+  return { waitlist, slotTime: slot?.startTime ?? fallbackTime };
 }

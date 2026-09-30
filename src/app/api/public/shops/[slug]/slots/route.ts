@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: Request, { params }: { params: Promise<{ slug: string }> }) {
   try {
-    if (!(await rateLimit)(`public-shop-slots:${getClientIp(req)}`, 60, 60_000)) {
+    if (!(await rateLimit(`public-shop-slots:${getClientIp(req)}`, 60, 60_000))) {
       return NextResponse.json({ success: false, error: { message: "Too many requests. Please try again shortly." } }, { status: 429 });
     }
 

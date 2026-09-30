@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { toast } from "@/components/ui/toast";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { useRealtimeRefresh } from "@/lib/useRealtimeRefresh";
+import { parseDateOnly } from "@/lib/timeSort";
 import useSWR from "swr";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
@@ -15,7 +16,7 @@ interface CustomerView {
   name: string;
   phone: string;
   totalVisits: number;
-  lastVisit: string;
+  lastVisit: string | null;
   note?: string;
 }
 
@@ -151,7 +152,7 @@ export default function CustomersPage() {
                   {isExpanded && (
                     <div className="px-4 sm:px-6 pb-6 bg-zinc-50/50 dark:bg-zinc-950/20 pt-2 border-t border-zinc-100 dark:border-zinc-800/50">
                       <div className="text-sm text-zinc-500 mb-4">
-                        Last visited: {format(new Date(c.lastVisit), "MMMM d, yyyy")}
+                        {c.lastVisit ? `Last visited: ${format(parseDateOnly(c.lastVisit), "MMMM d, yyyy")}` : "No completed visits yet"}
                       </div>
                       
                       <div className="space-y-3">

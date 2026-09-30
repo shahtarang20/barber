@@ -27,13 +27,15 @@ export async function GET(req: Request) {
       .limit(limit)
       .lean();
 
-    // Attach booking counts
-    const barbersWithStats = await Promise.all(barbers.map(async (barber) => {
-      const bookingCount = await Booking.countDocuments({ barberId: barber._id });
-      return {
-        ...barber,
-        bookingCount
-      };
+    // One grouped query for every barber on the page, instead of one count per barber.
+    const counts = await Booking.aggregate([
+      { $match: { barberId: { $in: barbers.map((b) => b._id) } } },
+      { $group: { _id: "$barberId", count: { $sum: 1 } } },
+    ]);
+    const countByBarber = new Map<string, number>(counts.map((c) => [String(c._id), c.count]));
+    const barbersWithStats = barbers.map((barber) => ({
+      ...barber,
+      bookingCount: countByBarber.get(String(barber._id)) ?? 0,
     }));
 
     return NextResponse.json({

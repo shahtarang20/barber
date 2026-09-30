@@ -10,7 +10,6 @@ export interface IBooking extends Document {
   endTime: string;
   status: "CONFIRMED" | "COMPLETED" | "CANCELLED" | "NO_SHOW";
   notes?: string;
-  reminderSentAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -31,7 +30,6 @@ const BookingSchema: Schema = new Schema(
       index: true,
     },
     notes: { type: String },
-    reminderSentAt: { type: Date },
   },
   { timestamps: true }
 );

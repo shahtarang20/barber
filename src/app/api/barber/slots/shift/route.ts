@@ -5,9 +5,9 @@ import { Slot } from "@/models/Slot";
 import { Booking } from "@/models/Booking";
 import { Customer } from "@/models/Customer";
 import { notifyBarber } from "@/lib/realtime";
-import { parseDateOnly, timeStringToMinutes } from "@/lib/timeSort";
+import { parseDateOnly, timeStringToMinutes, endTimeToMinutes } from "@/lib/timeSort";
 import { format, addMinutes, startOfDay } from "date-fns";
-import { minutesUntilSlot } from "@/lib/istTime";
+import { minutesUntilSlot, getTodayISTString } from "@/lib/istTime";
 
 export async function POST(req: Request) {
   try {
@@ -44,7 +44,7 @@ export async function POST(req: Request) {
     // We only want to shift slots that haven't happened yet
     const slotsToShift = slots.filter(slot => {
       // If it's today, check if it's in the future
-      if (format(dateObj, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd")) {
+      if (date === getTodayISTString()) {
         try {
           return minutesUntilSlot(date, slot.startTime) > -30; // Shift anything that hasn't fully passed
         } catch (e) {
@@ -62,7 +62,7 @@ export async function POST(req: Request) {
     // silently letting it wrap would produce a slot whose time label says
     // e.g. "12:30 AM" while its `date` field still says today, corrupting
     // the two out of sync with each other.
-    const latestEndMins = Math.max(...slotsToShift.map((s) => timeStringToMinutes(s.endTime)));
+    const latestEndMins = Math.max(...slotsToShift.map((s) => endTimeToMinutes(s.endTime)));
     if (latestEndMins + shiftMinutes >= 24 * 60) {
       return NextResponse.json({ success: false, error: { message: "That shift would push a slot past midnight. Please choose a smaller amount." } }, { status: 400 });
     }
@@ -80,6 +80,7 @@ export async function POST(req: Request) {
       const newStartTimeStr = format(newStartDate, "h:mm a");
       const newEndTimeStr = format(newEndDate, "h:mm a");
 
+      slot.shiftedAt = new Date();
       slot.startTime = newStartTimeStr;
       slot.endTime = newEndTimeStr;
       await slot.save();

@@ -5,7 +5,7 @@ import { rateLimit, getClientIp } from "@/lib/rateLimit";
 
 export async function GET(req: Request, { params }: { params: Promise<{ slug: string }> }) {
   try {
-    if (!(await rateLimit)(`manifest:${getClientIp(req)}`, 60, 60_000)) {
+    if (!(await rateLimit(`manifest:${getClientIp(req)}`, 60, 60_000))) {
       return new NextResponse("Too Many Requests", { status: 429 });
     }
 

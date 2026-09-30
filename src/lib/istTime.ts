@@ -44,3 +44,20 @@ export function minutesUntilSlot(dateStr: string, startTimeStr: string): number 
   const nowMinutes = ist.getUTCHours() * 60 + ist.getUTCMinutes();
   return timeStringToMinutes(startTimeStr) - nowMinutes;
 }
+
+/**
+ * Like minutesUntilSlot, but for a slot's END time: an end of "12:00 AM" means
+ * the end of that day (24:00), not the start of it, so a slot finishing at
+ * midnight isn't treated as already over all day.
+ */
+export function minutesUntilSlotEnd(dateStr: string, endTimeStr: string): number {
+  const todayStr = getTodayISTString();
+
+  if (dateStr > todayStr) return Number.MAX_SAFE_INTEGER;
+  if (dateStr < todayStr) return -Number.MAX_SAFE_INTEGER;
+
+  const ist = getISTNow();
+  const nowMinutes = ist.getUTCHours() * 60 + ist.getUTCMinutes();
+  const endMinutes = timeStringToMinutes(endTimeStr) || 24 * 60;
+  return endMinutes - nowMinutes;
+}

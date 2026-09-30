@@ -9,7 +9,9 @@ import { PaginationControls } from "@/components/ui/pagination-controls";
 import { useRealtimeRefresh } from "@/lib/useRealtimeRefresh";
 import { getWhatsAppNumber } from "@/lib/phone";
 import useSWR from "swr";
-import { minutesUntilSlot } from "@/lib/istTime";
+import { minutesUntilSlotEnd, getTodayISTString } from "@/lib/istTime";
+import { sortByStartTime, parseDateOnly } from "@/lib/timeSort";
+import { Check, X, Phone, MessageCircle, UserPlus } from "lucide-react";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -35,7 +37,7 @@ import {
 export default function AppointmentsPage() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
-  const [filter, setFilter] = useState("ALL");
+  const [filter, setFilter] = useState("TODAY");
   const { t } = useTranslation();
 
   const [cancelBookingId, setCancelBookingId] = useState<string | null>(null);
@@ -48,8 +50,47 @@ export default function AppointmentsPage() {
     byCustomer?: boolean;
   } | null>(null);
 
+  const [walkInOpen, setWalkInOpen] = useState(false);
+  const [walkInName, setWalkInName] = useState("");
+  const [walkInPhone, setWalkInPhone] = useState("");
+  const [walkInSlotId, setWalkInSlotId] = useState("");
+  const [walkInSaving, setWalkInSaving] = useState(false);
+
+  const todayStr = getTodayISTString();
+  const { data: walkInSlotsData } = useSWR(walkInOpen ? `/api/barber/slots?date=${todayStr}` : null, fetcher);
+  const walkInSlots: { _id: string; startTime: string; endTime: string; status: string }[] = walkInSlotsData?.success
+    ? walkInSlotsData.data.filter((sl: { status: string; endTime: string }) => sl.status === "AVAILABLE" && minutesUntilSlotEnd(todayStr, sl.endTime) > 0)
+    : [];
+  const selectedWalkInSlot = walkInSlotId || walkInSlots[0]?._id || "";
+
+  const handleWalkIn = async () => {
+    setWalkInSaving(true);
+    try {
+      const res = await fetch("/api/barber/bookings/walk-in", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slotId: selectedWalkInSlot, name: walkInName, phone: walkInPhone }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.add({ title: t('walkInAdded'), description: `Booking ${data.data.bookingNumber} created.`, type: "success" });
+        setWalkInOpen(false);
+        setWalkInName("");
+        setWalkInPhone("");
+        setWalkInSlotId("");
+        mutateBookings();
+      } else {
+        toast.add({ title: "Error", description: data.error?.message || "Failed to add walk-in", type: "error" });
+      }
+    } catch {
+      toast.add({ title: "Error", description: "Failed to add walk-in", type: "error" });
+    } finally {
+      setWalkInSaving(false);
+    }
+  };
+
   const { data: bookingsData, isLoading: loading, mutate: mutateBookings } = useSWR(
-    `/api/barber/bookings?page=${page}&limit=${limit}`,
+    `/api/barber/bookings?filter=${filter}&page=${page}&limit=${filter === "TODAY" ? 100 : limit}`,
     fetcher
   );
 
@@ -116,20 +157,79 @@ export default function AppointmentsPage() {
     setWhatsappPromptData(null);
   };
 
-  const filteredBookings = bookings.filter((b: BookingView) => {
-    if (filter === "ALL") return true;
-    if (filter === "UPCOMING") return b.status === "CONFIRMED" && new Date(b.date) >= new Date(new Date().setHours(0,0,0,0));
-    if (filter === "TODAY") return b.status === "CONFIRMED" && b.date === format(new Date(), "yyyy-MM-dd");
-    return b.status === filter;
-  });
+  // The server already applied the tab filter (and paging), so the rows are used as they come.
+  const filteredBookingsRaw = bookings;
+
+  const filteredBookings = filter === "TODAY" ? sortByStartTime(filteredBookingsRaw) : filteredBookingsRaw;
+  const needsActionCount: number = bookingsData?.success ? bookingsData.meta?.needsAction ?? 0 : 0;
+  const nextBooking = filter === "TODAY"
+    ? filteredBookings.find((b) => !b.endTime || minutesUntilSlotEnd(b.date, b.endTime) >= 0)
+    : undefined;
+
+  const renderBookingCard = (b: BookingView, highlight = false) => {
+    const ended = b.status === "CONFIRMED" && b.endTime && minutesUntilSlotEnd(b.date, b.endTime) < 0;
+    const statusStyle: Record<string, string> = {
+      CONFIRMED: "border-l-blue-500",
+      COMPLETED: "border-l-green-500",
+      CANCELLED: "border-l-red-500",
+      NO_SHOW: "border-l-zinc-400",
+    };
+    const statusLabel: Record<string, string> = { CONFIRMED: t('apptConfirmed'), COMPLETED: t('apptCompleted'), CANCELLED: t('apptCancelled'), NO_SHOW: t('apptNoShow') };
+    const phone = b.customerId?.phone;
+    return (
+      <div
+        key={b._id}
+        className={`rounded-2xl border border-zinc-200 dark:border-zinc-800 border-l-4 ${statusStyle[b.status] || ""} bg-white dark:bg-zinc-900 p-4 space-y-3 ${highlight ? "ring-2 ring-zinc-900 dark:ring-zinc-100" : ""}`}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">{b.startTime}</div>
+            <div className="text-lg text-zinc-900 dark:text-zinc-100 truncate">{b.customerId?.name || "Unknown"}</div>
+            <div className="text-sm text-zinc-500">
+              {b.date !== getTodayISTString() && <>{format(parseDateOnly(b.date), "MMM d")} · </>}{phone || "N/A"}
+            </div>
+          </div>
+          <div className="flex flex-col items-end gap-1 shrink-0">
+            <span className="text-xs font-medium text-zinc-500">{statusLabel[b.status]}</span>
+            {ended && <span className="px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">{t('apptNeedsAction')}</span>}
+          </div>
+        </div>
+        {b.status === "CONFIRMED" && (
+          <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-2">
+              <Button className="h-12 text-base bg-green-600 hover:bg-green-700 text-white" onClick={() => handleAction(b._id, "complete")}>
+                <Check className="w-5 h-5 mr-1" /> {t('done')}
+              </Button>
+              <Button variant="outline" className="h-12 text-base" onClick={() => handleAction(b._id, "no-show")}>
+                <X className="w-5 h-5 mr-1" /> {t('apptNoShow')}
+              </Button>
+            </div>
+            <div className="flex items-center gap-2">
+              {phone && (
+                <>
+                  <a href={`tel:${phone}`} className="flex-1 h-10 inline-flex items-center justify-center gap-1 rounded-lg border border-zinc-200 dark:border-zinc-700 text-sm">
+                    <Phone className="w-4 h-4" /> {t('callLabel')}
+                  </a>
+                  <a href={`https://wa.me/${getWhatsAppNumber(phone)}`} target="_blank" rel="noreferrer" className="flex-1 h-10 inline-flex items-center justify-center gap-1 rounded-lg border border-green-200 text-green-700 text-sm">
+                    <MessageCircle className="w-4 h-4" /> {t('whatsappLabel')}
+                  </a>
+                </>
+              )}
+              <button onClick={() => handleAction(b._id, "cancel")} className="h-10 px-3 text-sm text-red-600">{t('cancel')}</button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const tabs = [
-    { label: "All", value: "ALL" },
-    { label: "Upcoming", value: "UPCOMING" },
-    { label: "Today", value: "TODAY" },
-    { label: "Completed", value: "COMPLETED" },
-    { label: "Cancelled", value: "CANCELLED" },
-    { label: "No Show", value: "NO_SHOW" },
+    { label: t('apptToday'), value: "TODAY" },
+    { label: t('apptUpcoming'), value: "UPCOMING" },
+    { label: t('apptAll'), value: "ALL" },
+    { label: t('apptCompleted'), value: "COMPLETED" },
+    { label: t('apptCancelled'), value: "CANCELLED" },
+    { label: t('apptNoShow'), value: "NO_SHOW" },
   ];
 
   return (
@@ -137,13 +237,16 @@ export default function AppointmentsPage() {
       <div>
         <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">Appointments</h1>
         <p className="text-zinc-500 dark:text-zinc-400 mt-2">Manage your customer bookings and history.</p>
+        <Button className="mt-4 h-12 text-base w-full sm:w-auto" onClick={() => setWalkInOpen(true)}>
+          <UserPlus className="w-5 h-5 mr-2" /> {t('addWalkIn')}
+        </Button>
       </div>
 
       <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
         {tabs.map(tab => (
           <button
             key={tab.value}
-            onClick={() => setFilter(tab.value)}
+            onClick={() => { setFilter(tab.value); setPage(1); }}
             className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
               filter === tab.value 
                 ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900" 
@@ -155,13 +258,33 @@ export default function AppointmentsPage() {
         ))}
       </div>
 
+      {needsActionCount > 0 && (
+        <button
+          onClick={() => { setFilter("ALL"); setPage(1); }}
+          className="w-full text-left rounded-xl bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-900 text-orange-800 dark:text-orange-300 px-4 py-3 text-sm font-medium"
+        >
+          {t('apptNeedsActionBanner').replace('{count}', String(needsActionCount))}
+        </button>
+      )}
+
+      {nextBooking && (
+        <div className="md:hidden space-y-2">
+          <h2 className="text-sm font-semibold text-zinc-500 uppercase tracking-wide">{t('apptNextCustomer')}</h2>
+          {renderBookingCard(nextBooking, true)}
+        </div>
+      )}
+
       <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
         {loading ? (
           <div className="p-12 text-center text-zinc-500">Loading appointments...</div>
         ) : filteredBookings.length === 0 ? (
           <div className="p-12 text-center text-zinc-500">No appointments found.</div>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          <div className="md:hidden p-3 space-y-3">
+            {filteredBookings.filter((b) => b._id !== nextBooking?._id).map((b) => renderBookingCard(b))}
+          </div>
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left text-sm whitespace-nowrap">
               <thead className="bg-zinc-50 dark:bg-zinc-900/50 text-zinc-500 dark:text-zinc-400 border-b border-zinc-200 dark:border-zinc-800">
                 <tr>
@@ -182,7 +305,7 @@ export default function AppointmentsPage() {
                     </td>
                     <td className="px-6 py-4">
                       {b.status === "CONFIRMED" && <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">Confirmed</span>}
-                      {b.status === "CONFIRMED" && b.endTime && minutesUntilSlot(b.date, b.endTime) < 0 && <span className="ml-2 px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">Needs action</span>}
+                      {b.status === "CONFIRMED" && b.endTime && minutesUntilSlotEnd(b.date, b.endTime) < 0 && <span className="ml-2 px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">{t('apptNeedsAction')}</span>}
                       {b.status === "COMPLETED" && <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">Completed</span>}
                       {b.status === "CANCELLED" && <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">Cancelled</span>}
                       {b.status === "NO_SHOW" && <span className="px-2 py-1 rounded-full text-xs font-medium bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">No Show</span>}
@@ -204,13 +327,16 @@ export default function AppointmentsPage() {
               </tbody>
             </table>
           </div>
+          </>
         )}
         
-        <PaginationControls
-          pagination={pagination}
-          onPageChange={setPage}
-          onLimitChange={(l) => { setLimit(l); setPage(1); }}
-        />
+        {filter !== "TODAY" && (
+          <PaginationControls
+            pagination={pagination}
+            onPageChange={setPage}
+            onLimitChange={(l) => { setLimit(l); setPage(1); }}
+          />
+        )}
       </div>
 
       <Dialog open={!!cancelBookingId} onOpenChange={(open) => !open && setCancelBookingId(null)}>
@@ -232,10 +358,57 @@ export default function AppointmentsPage() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={walkInOpen} onOpenChange={setWalkInOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('addWalkIn')}</DialogTitle>
+            <DialogDescription>{t('walkInDesc')}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <input
+              className="w-full h-12 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-base"
+              placeholder={t('yourName')}
+              value={walkInName}
+              onChange={(e) => setWalkInName(e.target.value)}
+            />
+            <input
+              className="w-full h-12 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-base"
+              placeholder={t('yourPhone')}
+              type="tel"
+              inputMode="numeric"
+              value={walkInPhone}
+              onChange={(e) => setWalkInPhone(e.target.value)}
+            />
+            {walkInSlots.length === 0 ? (
+              <p className="text-sm text-zinc-500">{t('noOpenSlots')}</p>
+            ) : (
+              <select
+                className="w-full h-12 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-base"
+                value={selectedWalkInSlot}
+                onChange={(e) => setWalkInSlotId(e.target.value)}
+              >
+                {walkInSlots.map((sl) => (
+                  <option key={sl._id} value={sl._id}>{sl.startTime} – {sl.endTime}</option>
+                ))}
+              </select>
+            )}
+          </div>
+          <DialogFooter className="mt-2">
+            <Button variant="ghost" onClick={() => setWalkInOpen(false)}>Close</Button>
+            <Button
+              disabled={walkInSaving || !selectedWalkInSlot || walkInName.trim().length < 2 || walkInPhone.replace(/\D/g, "").length < 10}
+              onClick={handleWalkIn}
+            >
+              {walkInSaving ? t('loading') : t('addWalkIn')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={!!whatsappPromptData} onOpenChange={(open) => !open && setWhatsappPromptData(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{whatsappPromptData?.byCustomer ? "Customer Cancelled" : "Cancellation Successful"}</DialogTitle>
+            <DialogTitle>{whatsappPromptData?.byCustomer ? t('customerCancelledTitle') : "Cancellation Successful"}</DialogTitle>
             <DialogDescription>
               {whatsappPromptData?.prompt}
             </DialogDescription>
