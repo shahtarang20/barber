@@ -75,12 +75,18 @@ export default function ShopBookingPage() {
   const hasRoom = (x: ShopSlot) => x.status === "AVAILABLE" || (x.capacity > 1 && x.bookingsCount < x.capacity);
   const bestByTime = new Map<string, ShopSlot>();
   const freeBarbersByTime = new Map<string, number>();
+  // How busy each barber already is that day: when several barbers are equally free at a time,
+  // the quietest one gets the customer, so "any barber" spreads the work instead of piling on the first.
+  const dayLoad = new Map<string, number>();
+  for (const sl of slots) dayLoad.set(sl.barberId, (dayLoad.get(sl.barberId) || 0) + (sl.bookingsCount || 0));
   for (const sl of slots) {
     if (hasRoom(sl)) freeBarbersByTime.set(sl.startTime, (freeBarbersByTime.get(sl.startTime) || 0) + 1);
     const cur = bestByTime.get(sl.startTime);
+    const seats = sl.capacity - sl.bookingsCount;
     const better = !cur
       || (hasRoom(sl) && !hasRoom(cur))
-      || (hasRoom(sl) === hasRoom(cur) && sl.capacity - sl.bookingsCount > cur.capacity - cur.bookingsCount);
+      || (hasRoom(sl) === hasRoom(cur) && (seats > cur.capacity - cur.bookingsCount
+        || (seats === cur.capacity - cur.bookingsCount && (dayLoad.get(sl.barberId) || 0) < (dayLoad.get(cur.barberId) || 0))));
     if (better) bestByTime.set(sl.startTime, sl);
   }
   const loading = shopLoading || (slotsLoading && !slotsData);

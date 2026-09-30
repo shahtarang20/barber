@@ -193,7 +193,21 @@ const translations = {
     linkEditHint: "Letters, numbers and dashes only. If you change it, links you already shared stop working.",
     linkSave: "Save link",
     linkSaved: "Link saved",
-    linkTaken: "That link is already taken"
+    linkTaken: "That link is already taken",
+    shopBookTitle: "Book for a customer",
+    shopBookDesc: "Front desk: book any of your barbers for someone who phoned or walked in.",
+    shopBarberLabel: "Barber",
+    shopAnyBarber: "Any barber",
+    shopBookedOk: "Booked with {barber} at {time}",
+    shopCustomersTitle: "Shop customers",
+    shopCustomersDesc: "Everyone who has booked with any of your barbers. Private notes stay private.",
+    shopSearchCustomers: "Search by name or phone...",
+    shopRepeatOnly: "Only customers who saw more than one barber",
+    shopSeenBy: "Saw: {names}",
+    shopLoadMore: "Show more",
+    shopNoCustomers: "No customers yet.",
+    shopVisitsLine: "{v} visits · {u} booked",
+    shopBookedCount: "{u} booked"
   },
   hi: {
     loading: "लोड हो रहा है...",
@@ -362,7 +376,21 @@ const translations = {
     linkEditHint: "सिर्फ़ अक्षर, संख्या और डैश। बदलने पर पहले भेजे गए लिंक काम नहीं करेंगे।",
     linkSave: "लिंक सहेजें",
     linkSaved: "लिंक सहेजा गया",
-    linkTaken: "यह लिंक पहले से लिया जा चुका है"
+    linkTaken: "यह लिंक पहले से लिया जा चुका है",
+    shopBookTitle: "ग्राहक के लिए बुकिंग करें",
+    shopBookDesc: "फ्रंट डेस्क: फ़ोन करने वाले या आए हुए ग्राहक के लिए अपने किसी भी नाई की बुकिंग करें।",
+    shopBarberLabel: "नाई",
+    shopAnyBarber: "कोई भी नाई",
+    shopBookedOk: "{barber} के साथ {time} पर बुकिंग हो गई",
+    shopCustomersTitle: "दुकान के ग्राहक",
+    shopCustomersDesc: "आपके किसी भी नाई के पास बुकिंग करने वाले सभी ग्राहक। निजी नोट निजी रहते हैं।",
+    shopSearchCustomers: "नाम या फ़ोन से खोजें...",
+    shopRepeatOnly: "सिर्फ़ वे ग्राहक जो एक से ज़्यादा नाई के पास गए",
+    shopSeenBy: "मिले: {names}",
+    shopLoadMore: "और दिखाएँ",
+    shopNoCustomers: "अभी कोई ग्राहक नहीं।",
+    shopVisitsLine: "{v} विज़िट · {u} बुक",
+    shopBookedCount: "{u} बुक"
   },
   gu: {
     loading: "લોડ થઈ રહ્યું છે...",
@@ -531,7 +559,21 @@ const translations = {
     linkEditHint: "ફક્ત અક્ષરો, સંખ્યા અને ડેશ. બદલશો તો અગાઉ મોકલેલી લિંક કામ કરશે નહીં.",
     linkSave: "લિંક સાચવો",
     linkSaved: "લિંક સાચવી",
-    linkTaken: "આ લિંક લેવાઈ ગઈ છે"
+    linkTaken: "આ લિંક લેવાઈ ગઈ છે",
+    shopBookTitle: "ગ્રાહક માટે બુકિંગ કરો",
+    shopBookDesc: "ફ્રન્ટ ડેસ્ક: ફોન કરનાર કે આવેલા ગ્રાહક માટે તમારા કોઈપણ બાર્બરનું બુકિંગ કરો.",
+    shopBarberLabel: "બાર્બર",
+    shopAnyBarber: "કોઈપણ બાર્બર",
+    shopBookedOk: "{barber} સાથે {time} વાગ્યે બુકિંગ થયું",
+    shopCustomersTitle: "દુકાનના ગ્રાહકો",
+    shopCustomersDesc: "તમારા કોઈપણ બાર્બર પાસે બુકિંગ કરનાર બધા ગ્રાહકો. ખાનગી નોંધ ખાનગી રહે છે.",
+    shopSearchCustomers: "નામ અથવા ફોનથી શોધો...",
+    shopRepeatOnly: "ફક્ત એક કરતાં વધુ બાર્બર પાસે ગયેલા ગ્રાહકો",
+    shopSeenBy: "મળ્યા: {names}",
+    shopLoadMore: "વધુ બતાવો",
+    shopNoCustomers: "હજી કોઈ ગ્રાહક નથી.",
+    shopVisitsLine: "{v} મુલાકાત · {u} બુક",
+    shopBookedCount: "{u} બુક"
   },
   mr: {
     loading: "लोड होत आहे...",
@@ -700,7 +742,21 @@ const translations = {
     linkEditHint: "फक्त अक्षरे, संख्या आणि डॅश. बदलल्यास आधी पाठवलेल्या लिंक चालणार नाहीत.",
     linkSave: "लिंक जतन करा",
     linkSaved: "लिंक जतन केली",
-    linkTaken: "ही लिंक आधीच घेतली आहे"
+    linkTaken: "ही लिंक आधीच घेतली आहे",
+    shopBookTitle: "ग्राहकासाठी बुकिंग करा",
+    shopBookDesc: "फ्रंट डेस्क: फोन केलेल्या किंवा आलेल्या ग्राहकासाठी तुमच्या कोणत्याही न्हाव्याची बुकिंग करा.",
+    shopBarberLabel: "न्हावी",
+    shopAnyBarber: "कोणताही न्हावी",
+    shopBookedOk: "{barber} सोबत {time} वाजता बुकिंग झाली",
+    shopCustomersTitle: "दुकानातील ग्राहक",
+    shopCustomersDesc: "तुमच्या कोणत्याही न्हाव्याकडे बुकिंग केलेले सर्व ग्राहक. खाजगी नोंदी खाजगी राहतात.",
+    shopSearchCustomers: "नाव किंवा फोनने शोधा...",
+    shopRepeatOnly: "एकापेक्षा जास्त न्हाव्याकडे गेलेले ग्राहक",
+    shopSeenBy: "भेटले: {names}",
+    shopLoadMore: "आणखी दाखवा",
+    shopNoCustomers: "अजून कोणताही ग्राहक नाही.",
+    shopVisitsLine: "{v} भेटी · {u} बुक",
+    shopBookedCount: "{u} बुक"
   }
 };
 

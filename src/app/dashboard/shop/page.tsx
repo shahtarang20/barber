@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/toast";
+import { FrontDeskBooking } from "@/components/dashboard/FrontDeskBooking";
+import { ShopCustomers } from "@/components/dashboard/ShopCustomers";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -325,6 +327,9 @@ export default function ShopPage() {
               </div>
             )}
           </div>
+
+          {shop.isOwner && <FrontDeskBooking shopSlug={shop.slug} members={shop.members} />}
+          {shop.isOwner && <ShopCustomers />}
         </>
       )}
     </div>
