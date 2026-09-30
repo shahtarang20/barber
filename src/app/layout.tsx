@@ -3,6 +3,9 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { PWARegister } from "@/components/PWARegister";
 import { Toaster } from "@/components/ui/toast";
+import { cookies } from "next/headers";
+import { LanguageProvider } from "@/components/LanguageProvider";
+import type { Language } from "@/lib/i18n";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,16 +35,20 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const cookieLang = (await cookies()).get("lang")?.value;
+  const language: Language = cookieLang === "hi" || cookieLang === "gu" || cookieLang === "mr" || cookieLang === "en" ? cookieLang : "en";
   return (
     <html
-      lang="en"
+      lang={language}
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <PWARegister />
-        {children}
-        <Toaster />
+        <LanguageProvider initial={language} hadCookie={!!cookieLang}>
+          <PWARegister />
+          {children}
+          <Toaster />
+        </LanguageProvider>
       </body>
     </html>
   );

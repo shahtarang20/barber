@@ -5,6 +5,7 @@ import useSWR from "swr";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/lib/i18n";
+import { useDateFormat } from "@/lib/dateLocale";
 import { parseDateOnly } from "@/lib/timeSort";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -14,6 +15,7 @@ interface ShopCustomer { _id: string; name: string; phone: string; visits: numbe
 /** The shop owner's list of every customer across all the shop's barbers (private notes are not shown). */
 export function ShopCustomers() {
   const { t } = useTranslation();
+  const fmt = useDateFormat();
   const [search, setSearch] = useState("");
   const [repeat, setRepeat] = useState(false);
   const [limit, setLimit] = useState(20);
@@ -45,13 +47,13 @@ export function ShopCustomers() {
             <div key={c._id} className="py-3 flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="font-medium text-zinc-900 dark:text-zinc-100 break-words">{c.name}</p>
-                <p className="text-sm text-zinc-500">{c.phone}</p>
+                <p className="text-sm text-zinc-500">{c.phone || t("custNoPhone")}</p>
                 <p className="text-xs text-zinc-500 mt-1">{t("shopSeenBy").replace("{names}", c.barbers.join(", "))}</p>
               </div>
               <div className="text-right shrink-0">
                 {c.barberCount >= 2 && <span className="inline-block mb-1 px-2 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">{c.barberCount} ×</span>}
                 <p className="text-sm text-zinc-700 dark:text-zinc-300">{c.visits} {c.visits === 1 ? t("visit") : t("visits")} · {t("shopBookedCount").replace("{u}", String(c.upcoming))}</p>
-                {c.lastVisit && <p className="text-xs text-zinc-500">{format(parseDateOnly(c.lastVisit), "d MMM yyyy")}</p>}
+                {c.lastVisit && <p className="text-xs text-zinc-500">{fmt(parseDateOnly(c.lastVisit), "d MMM yyyy")}</p>}
               </div>
             </div>
           ))}

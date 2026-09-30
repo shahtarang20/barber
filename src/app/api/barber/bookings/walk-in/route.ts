@@ -9,7 +9,8 @@ import { Slot } from "@/models/Slot";
 const schema = z.object({
   slotId: z.string().min(1, "Slot is required"),
   name: z.string().trim().min(2, "Name must be at least 2 characters"),
-  phone: z.string().min(10, "Valid phone number is required"),
+  // Optional: someone who walks in may have no phone.
+  phone: z.string().optional().transform((v) => v ?? "").refine((v) => v === "" || v.replace(/\D/g, "").length >= 10, { message: "Phone number must have 10 digits (or leave it empty)" }),
 });
 
 /** A barber records a customer who walked in (or phoned): books one of his own open slots for them, any day. */

@@ -8,6 +8,7 @@ import { PaginationControls } from "@/components/ui/pagination-controls";
 import { useRealtimeRefresh } from "@/lib/useRealtimeRefresh";
 import { parseDateOnly } from "@/lib/timeSort";
 import { useTranslation } from "@/lib/i18n";
+import { useDateFormat } from "@/lib/dateLocale";
 import useSWR from "swr";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
@@ -24,6 +25,7 @@ interface CustomerView {
 
 export default function CustomersPage() {
   const { t } = useTranslation();
+  const fmt = useDateFormat();
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [search, setSearch] = useState("");
@@ -77,12 +79,12 @@ export default function CustomersPage() {
       });
       const data = await res.json();
       if (data.success) {
-        toast.add({ title: "Success", description: "Note saved successfully", type: "success" });
+        toast.add({ title: t('done'), description: t('custNoteSaved'), type: "success" });
       } else {
-        toast.add({ title: "Error", description: "Failed to save note", type: "error" });
+        toast.add({ title: t('error'), description: t('genericError'), type: "error" });
       }
     } catch (error) {
-      toast.add({ title: "Error", description: "Error saving note", type: "error" });
+      toast.add({ title: t('error'), description: t('genericError'), type: "error" });
     } finally {
       setSavingId(null);
     }
@@ -91,9 +93,9 @@ export default function CustomersPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">Customer Directory</h1>
+        <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">{t('custTitle')}</h1>
         <p className="text-zinc-500 dark:text-zinc-400 mt-2">
-          Manage your regular customers and private notes.
+          {t('custSubtitle')}
         </p>
       </div>
 
@@ -101,19 +103,19 @@ export default function CustomersPage() {
         type="text"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        placeholder="Search by name or phone..."
+        placeholder={t('shopSearchCustomers')}
         className="w-full sm:w-72 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-4 h-11 text-sm focus:ring-2 focus:ring-zinc-900 outline-none"
       />
 
       {loading ? (
-        <div className="text-zinc-500 py-12 text-center">Loading customers...</div>
+        <div className="text-zinc-500 py-12 text-center">{t('loading')}</div>
       ) : customers.length === 0 ? (
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-8 rounded-2xl text-center shadow-sm">
           <div className="text-4xl mb-4">👥</div>
           <p className="text-zinc-500 dark:text-zinc-400">
             {debouncedSearch
-              ? `No customers match "${debouncedSearch}".`
-              : "No customers yet. When customers book with you, they will appear here!"}
+              ? t('custNoMatch').replace('{q}', debouncedSearch)
+              : t('custEmpty')}
           </p>
         </div>
       ) : (
@@ -135,7 +137,7 @@ export default function CustomersPage() {
                       </div>
                       <div>
                         <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">{c.name}</h3>
-                        <p className="text-sm text-zinc-500">{c.phone}</p>
+                        <p className="text-sm text-zinc-500">{c.phone || t('custNoPhone')}</p>
                       </div>
                     </div>
                     
@@ -155,14 +157,14 @@ export default function CustomersPage() {
                   {isExpanded && (
                     <div className="px-4 sm:px-6 pb-6 bg-zinc-50/50 dark:bg-zinc-950/20 pt-2 border-t border-zinc-100 dark:border-zinc-800/50">
                       <div className="text-sm text-zinc-500 mb-4">
-                        {c.lastVisit ? `Last visited: ${format(parseDateOnly(c.lastVisit), "MMMM d, yyyy")}` : "No completed visits yet"}
+                        {c.lastVisit ? t('custLastVisited').replace('{date}', fmt(parseDateOnly(c.lastVisit), 'd MMMM yyyy')) : t('custNoVisits')}
                       </div>
                       
                       <div className="space-y-3">
-                        <label className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Private Note</label>
+                        <label className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">{t('custPrivateNote')}</label>
                         <textarea
                           className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-3 text-sm focus:ring-2 focus:ring-zinc-900 outline-none resize-none h-24"
-                          placeholder="E.g., Likes a low fade, always arrives 5 mins early..."
+                          placeholder={t('custNotePlaceholder')}
                           value={noteInputs[c._id] || ""}
                           onChange={(e) => setNoteInputs({ ...noteInputs, [c._id]: e.target.value })}
                         />
@@ -172,7 +174,7 @@ export default function CustomersPage() {
                             disabled={savingId === c._id}
                             className="bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:hover:bg-white dark:text-zinc-900"
                           >
-                            {savingId === c._id ? "Saving..." : "Save Note"}
+                            {savingId === c._id ? t('custSaving') : t('custSaveNote')}
                           </Button>
                         </div>
                       </div>

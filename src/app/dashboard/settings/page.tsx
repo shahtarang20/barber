@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/toast";
 import { useTranslation } from "@/lib/i18n";
+import { useDateFormat } from "@/lib/dateLocale";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { AlertTriangle } from "lucide-react";
 
@@ -99,6 +100,10 @@ export default function SettingsPage() {
   const [warningCount, setWarningCount] = useState(0);
   const [showWarningModal, setShowWarningModal] = useState(false);
   const { t } = useTranslation();
+  const fmt = useDateFormat();
+  // Monday..Sunday in the chosen language (2024-01-01 was a Monday).
+  const ORDER = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  const dayLabel = (day: string) => fmt(new Date(2024, 0, 1 + Math.max(0, ORDER.indexOf(day))), "EEEE");
 
   useEffect(() => {
     fetchProfile();
@@ -180,48 +185,48 @@ export default function SettingsPage() {
     }
   };
 
-  if (loading) return <div className="p-12 text-center text-zinc-500">Loading settings...</div>;
+  if (loading) return <div className="p-12 text-center text-zinc-500">{t('loading')}</div>;
 
   return (
     <div className="space-y-8 max-w-3xl mx-auto pb-12">
       <div>
-        <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">Settings</h1>
+        <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">{t('settings')}</h1>
         <p className="text-zinc-500 dark:text-zinc-400 mt-2">
-          Manage your public profile and working hours.
+          {t('setSubtitle')}
         </p>
       </div>
 
       {/* Profile Settings */}
       <div className="bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-6">
-        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">Public Profile</h2>
+        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">{t('setPublicProfile')}</h2>
         
         <div className="space-y-2">
-          <Label>Name</Label>
+          <Label>{t('setName')}</Label>
           <Input disabled value={profile?.name} className="bg-zinc-50 text-zinc-500 dark:bg-zinc-950 dark:text-zinc-400" />
-          <p className="text-xs text-zinc-500">To change your name, contact support.</p>
+          <p className="text-xs text-zinc-500">{t('setNameHint')}</p>
         </div>
 
         <div className="space-y-2">
-          <Label>Premium Subscription</Label>
+          <Label>{t('setPremium')}</Label>
           <div className="flex items-center gap-3">
             <Input disabled value={`₹${profile?.premiumAmount || 0} / month`} className="bg-zinc-50 text-zinc-800 font-semibold dark:bg-zinc-950 dark:text-zinc-200 w-48" />
             <span className="text-sm font-medium bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full">
-              {profile?.premiumAmount > 0 ? "Premium Active" : "Free Tier"}
+              {profile?.premiumAmount > 0 ? t('setPremiumActive') : t('setFreeTier')}
             </span>
           </div>
           <p className="text-xs text-zinc-500">
             {profile?.premiumAmount > 0 
-              ? `Your premium is due on the ${profile?.premiumDueDay || 28}th of every month.` 
-              : `This is set by the admin.`}
+              ? t('setPremiumDue').replace('{day}', String(profile?.premiumDueDay || 28))
+              : t('setSetByAdmin')}
           </p>
         </div>
 
         <div className="space-y-2">
-          <Label>Bio / Description</Label>
+          <Label>{t('setBio')}</Label>
           <Textarea 
             value={bio} 
             onChange={(e) => setBio(e.target.value)} 
-            placeholder="Tell customers about your services and experience..."
+            placeholder={t('setBioPh')}
             className="h-24 resize-none"
           />
         </div>
@@ -230,9 +235,9 @@ export default function SettingsPage() {
       {/* Working Hours */}
       <div className="bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-6">
         <div>
-          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">Working Hours</h2>
+          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">{t('setWorkingHours')}</h2>
           <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-            These hours are used when generating your daily slots.
+            {t('setWorkingHoursDesc')}
           </p>
         </div>
 
@@ -240,28 +245,28 @@ export default function SettingsPage() {
           <summary className="cursor-pointer min-h-11 flex items-center text-sm font-medium text-zinc-900 dark:text-zinc-100">{t('settingsMoreOptions')}</summary>
           <div className="space-y-6 mt-4">
         <div className="space-y-2">
-          <Label>Slot Length</Label>
+          <Label>{t('setSlotLength')}</Label>
           <div className="flex items-center gap-3">
             <select
               value={slotDuration}
               onChange={(e) => setSlotDuration(Number(e.target.value))}
               className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 h-11 text-sm w-40"
             >
-              <option value={10}>10 minutes</option>
-              <option value={15}>15 minutes</option>
-              <option value={20}>20 minutes</option>
-              <option value={30}>30 minutes</option>
-              <option value={45}>45 minutes</option>
-              <option value={60}>60 minutes</option>
+              <option value={10}>{t('setMinutes').replace('{n}', '10')}</option>
+              <option value={15}>{t('setMinutes').replace('{n}', '15')}</option>
+              <option value={20}>{t('setMinutes').replace('{n}', '20')}</option>
+              <option value={30}>{t('setMinutes').replace('{n}', '30')}</option>
+              <option value={45}>{t('setMinutes').replace('{n}', '45')}</option>
+              <option value={60}>{t('setMinutes').replace('{n}', '60')}</option>
             </select>
             <p className="text-xs text-zinc-500">
-              Shorter slots fit more bookings into busy hours. Saving applies this to your upcoming schedule automatically.
+              {t('setSlotHint')}
             </p>
           </div>
         </div>
 
         <div className="space-y-2">
-          <Label>Default Capacity per Slot</Label>
+          <Label>{t('setDefaultCapacity')}</Label>
           <div className="flex items-center gap-3">
             <input
               type="number"
@@ -278,7 +283,7 @@ export default function SettingsPage() {
               className="w-20 h-11 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-sm"
             />
             <p className="text-xs text-zinc-500">
-              How many customers can book the same time slot by default. This is the same value your Schedule page's "Generate" button starts with.
+              {t('setCapacityHint')}
             </p>
           </div>
         </div>
@@ -301,7 +306,7 @@ export default function SettingsPage() {
           {workingHours.map((wh, index) => (
             <div key={wh.day} className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/50">
               <label className="w-32 min-h-11 font-medium text-zinc-900 dark:text-zinc-100 flex items-center justify-between cursor-pointer sm:pointer-events-none">
-                {wh.day}
+                {dayLabel(wh.day)}
                 <input 
                   type="checkbox" 
                   checked={!wh.isClosed} 
@@ -312,12 +317,12 @@ export default function SettingsPage() {
               
               <div className="flex-1 flex flex-wrap items-center gap-2 w-full sm:w-auto">
                 {wh.isClosed ? (
-                  <span className="text-sm text-zinc-500 italic py-2">Closed</span>
+                  <span className="text-sm text-zinc-500 italic py-2">{t('setClosed')}</span>
                 ) : (
                   <>
-                    <TimeSelect label="Opening time" value={wh.startTime} onChange={(v) => handleWorkingHourChange(index, "startTime", v)} />
+                    <TimeSelect label={t('setOpening')} value={wh.startTime} onChange={(v) => handleWorkingHourChange(index, "startTime", v)} />
                     <span className="text-zinc-500 text-sm">to</span>
-                    <TimeSelect label="Closing time" value={wh.endTime} onChange={(v) => handleWorkingHourChange(index, "endTime", v)} />
+                    <TimeSelect label={t('setClosing')} value={wh.endTime} onChange={(v) => handleWorkingHourChange(index, "endTime", v)} />
                   </>
                 )}
               </div>
@@ -330,7 +335,7 @@ export default function SettingsPage() {
                   onChange={(e) => handleWorkingHourChange(index, "isClosed", !e.target.checked)}
                   className="w-6 h-6 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900"
                 />
-                <Label htmlFor={`open-${wh.day}`} className="font-normal cursor-pointer min-h-11 flex items-center pr-2">Open</Label>
+                <Label htmlFor={`open-${wh.day}`} className="font-normal cursor-pointer min-h-11 flex items-center pr-2">{t('setOpen')}</Label>
               </div>
             </div>
           ))}

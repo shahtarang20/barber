@@ -12,7 +12,7 @@ const schema = z.object({
   barberId: z.string().min(1),
   slotId: z.string().min(1, "Please choose a time"),
   name: z.string().trim().min(2, "Name must be at least 2 characters"),
-  phone: z.string().min(10, "Valid phone number is required"),
+  phone: z.string().optional().transform((v) => v ?? "").refine((v) => v === "" || v.replace(/\D/g, "").length >= 10, { message: "Phone number must have 10 digits (or leave it empty)" }),
 });
 
 /** Shop front desk: the shop owner books a customer with ANY barber of the shop. */

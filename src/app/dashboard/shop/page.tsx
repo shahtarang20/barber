@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/toast";
+import { useTranslation } from "@/lib/i18n";
 import { FrontDeskBooking } from "@/components/dashboard/FrontDeskBooking";
 import { ShopCustomers } from "@/components/dashboard/ShopCustomers";
 
@@ -45,6 +46,7 @@ function slugify(input: string): string {
 }
 
 export default function ShopPage() {
+  const { t } = useTranslation();
   const { data, isLoading, mutate } = useSWR("/api/barber/shop", fetcher);
   const shop: ShopData | null = data?.success ? data.data : null;
   const { data: invitesData, mutate: mutateInvites } = useSWR("/api/barber/shop/invites", fetcher);
@@ -61,14 +63,14 @@ export default function ShopPage() {
       });
       const result = await res.json();
       toast.add({
-        title: result.success ? "Done" : "Error",
-        description: result.success ? result.data.message : result.error?.message || "Something went wrong",
+        title: result.success ? t('done') : t('error'),
+        description: result.success ? result.data.message : result.error?.message || t('genericError'),
         type: result.success ? "success" : "error",
       });
       mutate();
       mutateInvites();
     } catch {
-      toast.add({ title: "Error", description: "Something went wrong", type: "error" });
+      toast.add({ title: t('error'), description: t('genericError'), type: "error" });
     } finally {
       setAnsweringId(null);
     }
@@ -79,7 +81,7 @@ export default function ShopPage() {
     try {
       const res = await fetch(`/api/barber/shop/invites/${id}`, { method: "DELETE" });
       const result = await res.json();
-      if (!result.success) toast.add({ title: "Error", description: result.error?.message || "Something went wrong", type: "error" });
+      if (!result.success) toast.add({ title: t('error'), description: result.error?.message || t('genericError'), type: "error" });
       mutate();
     } finally {
       setAnsweringId(null);
@@ -110,13 +112,13 @@ export default function ShopPage() {
       });
       const result = await res.json();
       if (result.success) {
-        toast.add({ title: "Success", description: "Shop created!", type: "success" });
+        toast.add({ title: t('done'), description: t('shopCreated'), type: "success" });
         mutate();
       } else {
-        toast.add({ title: "Error", description: result.error?.message || "Failed to create shop", type: "error" });
+        toast.add({ title: t('error'), description: result.error?.message || t('genericError'), type: "error" });
       }
     } catch {
-      toast.add({ title: "Error", description: "Error creating shop", type: "error" });
+      toast.add({ title: t('error'), description: t('genericError'), type: "error" });
     } finally {
       setCreating(false);
     }
@@ -133,80 +135,80 @@ export default function ShopPage() {
       });
       const result = await res.json();
       if (result.success) {
-        toast.add({ title: "Success", description: result.data.message, type: "success" });
+        toast.add({ title: t('done'), description: result.data.message, type: "success" });
         setNewMemberCode("");
         mutate();
       } else {
-        toast.add({ title: "Error", description: result.error?.message || "Failed to add barber", type: "error" });
+        toast.add({ title: t('error'), description: result.error?.message || t('genericError'), type: "error" });
       }
     } catch {
-      toast.add({ title: "Error", description: "Error adding barber", type: "error" });
+      toast.add({ title: t('error'), description: t('genericError'), type: "error" });
     } finally {
       setAddingMember(false);
     }
   };
 
   const handleRemoveMember = async (memberId: string, isSelf: boolean) => {
-    if (!confirm(isSelf ? "Leave this shop?" : "Remove this barber from your shop?")) return;
+    if (!confirm(isSelf ? t('shopLeaveConfirm') : t('shopRemoveConfirm'))) return;
     setRemovingId(memberId);
     try {
       const res = await fetch(`/api/barber/shop/members/${memberId}`, { method: "DELETE" });
       const result = await res.json();
       if (result.success) {
-        toast.add({ title: "Success", description: result.data.message, type: "success" });
+        toast.add({ title: t('done'), description: result.data.message, type: "success" });
         mutate();
       } else {
-        toast.add({ title: "Error", description: result.error?.message || "Failed to remove", type: "error" });
+        toast.add({ title: t('error'), description: result.error?.message || t('genericError'), type: "error" });
       }
     } catch {
-      toast.add({ title: "Error", description: "Error removing barber", type: "error" });
+      toast.add({ title: t('error'), description: t('genericError'), type: "error" });
     } finally {
       setRemovingId(null);
     }
   };
 
   const handleDeleteShop = async () => {
-    if (!confirm("Delete this shop? All members (including you) will become solo barbers again — their own bookings and public links are unaffected.")) return;
+    if (!confirm(t('shopDeleteConfirm'))) return;
     setDeleting(true);
     try {
       const res = await fetch("/api/barber/shop", { method: "DELETE" });
       const result = await res.json();
       if (result.success) {
-        toast.add({ title: "Success", description: "Shop deleted.", type: "success" });
+        toast.add({ title: t('done'), description: t('shopDeleted'), type: "success" });
         mutate();
       } else {
-        toast.add({ title: "Error", description: result.error?.message || "Failed to delete shop", type: "error" });
+        toast.add({ title: t('error'), description: result.error?.message || t('genericError'), type: "error" });
       }
     } catch {
-      toast.add({ title: "Error", description: "Error deleting shop", type: "error" });
+      toast.add({ title: t('error'), description: t('genericError'), type: "error" });
     } finally {
       setDeleting(false);
     }
   };
 
-  if (isLoading) return <div className="p-12 text-center text-zinc-500">Loading...</div>;
+  if (isLoading) return <div className="p-12 text-center text-zinc-500">{t('loading')}</div>;
 
   return (
     <div className="space-y-8 max-w-2xl mx-auto">
       <div>
-        <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">Shop</h1>
+        <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">{t('shop')}</h1>
         <p className="text-zinc-500 dark:text-zinc-400 mt-2">
-          Group multiple barbers under one shop so customers can pick who they want from a single storefront.
+          {t('shopIntro')}
         </p>
       </div>
 
       {!shop && myInvites.length > 0 && (
         <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-900 rounded-2xl p-6 space-y-4">
-          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">You've been invited to a shop</h2>
+          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">{t('shopInvitedTitle')}</h2>
           {myInvites.map((inv) => (
             <div key={inv._id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <p className="text-zinc-800 dark:text-zinc-200">
                 <span className="font-semibold">{inv.shopName}</span>
-                {inv.invitedBy ? <span className="text-sm text-zinc-500"> — invited by {inv.invitedBy}</span> : null}
+                {inv.invitedBy ? <span className="text-sm text-zinc-500"> — {t('shopInvitedBy').replace('{name}', inv.invitedBy)}</span> : null}
               </p>
               <div className="flex gap-2">
-                <Button className="h-11 px-5" disabled={answeringId === inv._id} onClick={() => answerInvite(inv._id, "accept")}>Accept</Button>
-                <Button variant="outline" className="h-11 px-5" disabled={answeringId === inv._id} onClick={() => answerInvite(inv._id, "decline")}>Decline</Button>
+                <Button className="h-11 px-5" disabled={answeringId === inv._id} onClick={() => answerInvite(inv._id, "accept")}>{t('shopAccept')}</Button>
+                <Button variant="outline" className="h-11 px-5" disabled={answeringId === inv._id} onClick={() => answerInvite(inv._id, "decline")}>{t('shopDecline')}</Button>
               </div>
             </div>
           ))}
@@ -215,23 +217,22 @@ export default function ShopPage() {
 
       {!shop ? (
         <div className="bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-6">
-          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">Create a Shop</h2>
+          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">{t('shopCreateTitle')}</h2>
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
-            You're currently a solo barber — your existing public link keeps working exactly as before.
-            Creating a shop lets you invite other barbers to join under one name.
+            {t('shopCreateDesc')}
           </p>
           <div className="space-y-2">
-            <Label>Shop Name</Label>
+            <Label>{t('shopNameLabel')}</Label>
             <Input
               value={name}
               onChange={(e) => handleNameChange(e.target.value)}
-              placeholder="e.g. Rahul Hair Studio"
+              placeholder={t('shopNamePh')}
             />
           </div>
           <div className="space-y-2">
-            <Label>Shop URL</Label>
+            <Label>{t('shopUrlLabel')}</Label>
             <div className="flex items-center gap-2 text-sm text-zinc-500">
-              <span className="whitespace-nowrap">yoursite.com/s/</span>
+              <span className="whitespace-nowrap">{typeof window !== "undefined" ? window.location.host : ""}/s/</span>
               <Input
                 value={slug}
                 onChange={(e) => { setSlug(slugify(e.target.value)); setSlugTouched(true); }}
@@ -240,7 +241,7 @@ export default function ShopPage() {
             </div>
           </div>
           <Button onClick={handleCreate} disabled={creating || !name || !slug}>
-            {creating ? "Creating..." : "Create Shop"}
+            {creating ? t('shopCreating') : t('shopCreateBtn')}
           </Button>
         </div>
       ) : (
@@ -253,22 +254,22 @@ export default function ShopPage() {
                   className="text-sm text-blue-600 hover:underline"
                   onClick={() => {
                     navigator.clipboard.writeText(`${window.location.origin}/s/${shop.slug}`);
-                    toast.add({ title: "Copied", description: "Shop link copied to clipboard.", type: "success" });
+                    toast.add({ title: t('shopCopyTitle'), description: t('shopCopied'), type: "success" });
                   }}
                 >
-                  {typeof window !== "undefined" ? window.location.origin : ""}/s/{shop.slug} (copy)
+                  {typeof window !== "undefined" ? window.location.origin : ""}/s/{shop.slug} {t('shopCopyWord')}
                 </button>
               </div>
               {shop.isOwner && (
                 <Button variant="ghost" className="text-red-600 hover:text-red-700" onClick={handleDeleteShop} disabled={deleting}>
-                  {deleting ? "Deleting..." : "Delete Shop"}
+                  {deleting ? t('shopDeleting') : t('shopDelete')}
                 </Button>
               )}
             </div>
           </div>
 
           <div className="bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-4">
-            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">Members</h2>
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">{t('shopMembers')}</h2>
             <div className="divide-y divide-zinc-200 dark:divide-zinc-800">
               {shop.members.map((m) => {
                 const isOwnerRow = m._id === shop.ownerId;
@@ -282,7 +283,7 @@ export default function ShopPage() {
                   <div key={m._id} className="flex items-center justify-between py-3">
                     <div>
                       <p className="font-medium text-zinc-900 dark:text-zinc-100">
-                        {m.name} {isOwnerRow && <span className="text-xs text-zinc-500">(Owner)</span>}
+                        {m.name} {isOwnerRow && <span className="text-xs text-zinc-500">{t('shopOwner')}</span>}
                       </p>
                       <p className="text-xs text-zinc-500">{m.barberCode}</p>
                     </div>
@@ -294,7 +295,7 @@ export default function ShopPage() {
                         onClick={() => handleRemoveMember(m._id, isSelfRow)}
                         disabled={removingId === m._id}
                       >
-                        {isSelfRow ? "Leave" : "Remove"}
+                        {isSelfRow ? t('shopLeave') : t('shopRemove')}
                       </Button>
                     )}
                   </div>
@@ -304,11 +305,11 @@ export default function ShopPage() {
 
             {shop.isOwner && (shop.pendingInvites?.length ?? 0) > 0 && (
               <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800 space-y-2">
-                <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Waiting for a reply</h3>
+                <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">{t('shopWaiting')}</h3>
                 {shop.pendingInvites!.map((inv) => (
                   <div key={inv._id} className="flex items-center justify-between">
                     <p className="text-sm text-zinc-700 dark:text-zinc-300">{inv.name} <span className="text-xs text-zinc-500">{inv.barberCode}</span></p>
-                    <Button variant="ghost" size="sm" className="text-red-600" disabled={answeringId === inv._id} onClick={() => withdrawInvite(inv._id)}>Withdraw</Button>
+                    <Button variant="ghost" size="sm" className="text-red-600" disabled={answeringId === inv._id} onClick={() => withdrawInvite(inv._id)}>{t('shopWithdraw')}</Button>
                   </div>
                 ))}
               </div>
@@ -319,10 +320,10 @@ export default function ShopPage() {
                 <Input
                   value={newMemberCode}
                   onChange={(e) => setNewMemberCode(e.target.value)}
-                  placeholder="Barber code (e.g. b002)"
+                  placeholder={t('shopCodePh')}
                 />
                 <Button onClick={handleAddMember} disabled={addingMember || !newMemberCode.trim()}>
-                  {addingMember ? "Sending..." : "Invite"}
+                  {addingMember ? t('shopSending') : t('shopInvite')}
                 </Button>
               </div>
             )}

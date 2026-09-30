@@ -3,6 +3,7 @@ import mongoose, { Schema, Document } from "mongoose";
 export interface ICustomer extends Document {
   name: string;
   phone: string;
+  ownerBarberId?: mongoose.Types.ObjectId;
   email?: string;
   barberNotes?: { barberId: mongoose.Types.ObjectId; note: string }[];
   // Visits that were completed with a barber but whose booking records have since been cleaned up.
@@ -14,7 +15,9 @@ export interface ICustomer extends Document {
 const CustomerSchema: Schema = new Schema(
   {
     name: { type: String, required: true },
-    phone: { type: String, required: true, index: true },
+    // May be empty: a barber can record a customer who has no phone (then the customer belongs to that barber only).
+    phone: { type: String, default: "", index: true },
+    ownerBarberId: { type: Schema.Types.ObjectId, ref: "User", index: true },
     email: { type: String },
     barberStats: [
       {

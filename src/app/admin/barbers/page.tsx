@@ -102,7 +102,7 @@ export default function AdminBarbersPage() {
                     <td className="px-6 py-4 font-mono font-medium text-zinc-900 dark:text-zinc-100">{b.barberCode}</td>
                     <td className="px-6 py-4 text-zinc-900 dark:text-zinc-100 font-medium">{b.name}</td>
                     <td className="px-6 py-4">
-                      <div className="text-zinc-900 dark:text-zinc-100">{b.email}</div>
+                      <div className="text-zinc-900 dark:text-zinc-100">{b.email || "—"}</div>
                       <div className="text-zinc-500 text-xs">{b.phone || "No phone"}</div>
                     </td>
                     <td className="px-6 py-4">

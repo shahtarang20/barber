@@ -35,7 +35,7 @@ export default function PublicLinkPage() {
   };
 
   if (loading) {
-    return <div className="p-12 text-center text-zinc-500">Loading...</div>;
+    return <div className="p-12 text-center text-zinc-500">{t('loading')}</div>;
   }
 
   const publicUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/b/${profile?.slug}`;
@@ -51,8 +51,8 @@ export default function PublicLinkPage() {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: `Book an appointment with ${profile?.name}`,
-          text: 'Book your slot now!',
+          title: t('linkShareTitle').replace('{name}', profile?.name || ''),
+          text: t('linkShareText'),
           url: publicUrl,
         });
       } catch (err) {
@@ -80,41 +80,44 @@ export default function PublicLinkPage() {
       document.body.removeChild(a);
     } catch (error) {
       console.error("Failed to download QR code", error);
-      toast.add({ title: "Error", description: "Couldn't download the QR code right now. Please try again.", type: "error" });
+      toast.add({ title: t('error'), description: t('linkQrError'), type: "error" });
     }
   };
 
   return (
     <div className="space-y-8 max-w-2xl mx-auto">
       <div>
-        <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">Public Booking Link</h1>
+        <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">{t('linkTitle')}</h1>
         <p className="text-zinc-500 dark:text-zinc-400 mt-2">
-          Share this link with your customers so they can book appointments.
+          {t('linkSubtitle')}
         </p>
       </div>
 
       <div className="bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
-        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 mb-4">Your Link</h2>
+        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 mb-4">{t('linkYourLink')}</h2>
         <div className="flex flex-col sm:flex-row gap-3">
           <Input readOnly value={publicUrl} className="h-12 text-base bg-zinc-50 dark:bg-zinc-950 font-medium" />
           <Button onClick={handleCopy} className="h-12 w-full sm:w-auto shrink-0">
-            {copied ? "✓ Copied" : <><Copy className="w-4 h-4 mr-2" /> Copy Link</>}
+            {copied ? t('linkCopied') : <><Copy className="w-4 h-4 mr-2" /> {t('linkCopy')}</>}
           </Button>
         </div>
         <div className="mt-4 flex flex-wrap gap-3">
           <Button variant="outline" onClick={() => window.open(publicUrl, "_blank")}>
-            <ExternalLink className="w-4 h-4 mr-2" /> Open in new tab
+            <ExternalLink className="w-4 h-4 mr-2" /> {t('linkOpen')}
           </Button>
           <Button variant="outline" onClick={handleShare}>
-            <Share2 className="w-4 h-4 mr-2" /> Share
+            <Share2 className="w-4 h-4 mr-2" /> {t('linkShare')}
+          </Button>
+          <Button variant="outline" className="text-green-700 border-green-200" onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(t('linkWhatsAppText') + " " + publicUrl)}`, "_blank")}>
+            {t('linkWhatsApp')}
           </Button>
         </div>
       </div>
 
       <div className="bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col items-center">
-        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 mb-2 w-full text-left">Your QR Code</h2>
+        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 mb-2 w-full text-left">{t('linkQrTitle')}</h2>
         <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-8 w-full text-left">
-          Print this code and place it in your shop. Customers can scan it to book instantly.
+          {t('linkQrDesc')}
         </p>
         
         <div className="p-4 bg-white border border-zinc-200 rounded-xl shadow-sm mb-6">
@@ -122,7 +125,7 @@ export default function PublicLinkPage() {
         </div>
         
         <Button variant="outline" onClick={downloadQR} className="w-full sm:w-auto">
-          <Download className="w-4 h-4 mr-2" /> Download QR Code
+          <Download className="w-4 h-4 mr-2" /> {t('linkQrDownload')}
         </Button>
       </div>
 

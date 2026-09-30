@@ -1,17 +1,9 @@
 "use client";
 
-import { useI18nStore, useTranslation } from "@/lib/i18n";
-import { useEffect, useState } from "react";
+import { useTranslation } from "@/lib/i18n";
 
 export function LanguageSelector() {
   const { language, setLanguage } = useTranslation();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) return <div className="h-9 w-24"></div>;
 
   return (
     <select

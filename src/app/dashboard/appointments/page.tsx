@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { format, addDays } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/lib/i18n";
+import { useDateFormat } from "@/lib/dateLocale";
 import { toast } from "@/components/ui/toast";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { useRealtimeRefresh } from "@/lib/useRealtimeRefresh";
@@ -35,6 +36,7 @@ import {
 } from "@/components/ui/dialog";
 
 export default function AppointmentsPage() {
+  const fmt = useDateFormat();
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [filter, setFilter] = useState("TODAY");
@@ -62,7 +64,7 @@ export default function AppointmentsPage() {
   const [walkInDate, setWalkInDate] = useState(todayStr);
   const dayChoices = Array.from({ length: 14 }).map((_, i) => {
     const d = addDays(parseDateOnly(todayStr), i);
-    return { value: format(d, "yyyy-MM-dd"), label: `${i === 0 ? t('apptToday') + " · " : ""}${format(d, "EEE d MMM")}` };
+    return { value: format(d, "yyyy-MM-dd"), label: `${i === 0 ? t('apptToday') + " · " : ""}${fmt(d, "EEE d MMM")}` };
   });
   const { data: walkInSlotsData } = useSWR(walkInOpen ? `/api/barber/slots?date=${walkInDate}` : null, fetcher);
   const walkInSlots: { _id: string; startTime: string; endTime: string; status: string; bookingsCount: number; capacity: number }[] = walkInSlotsData?.success
@@ -128,7 +130,14 @@ export default function AppointmentsPage() {
     await processAction(id, action);
   };
 
+  // A booking being updated ignores further taps, so a double-tap never sends a second request.
+  const busyRef = useRef<Set<string>>(new Set());
+  const [busyIds, setBusyIds] = useState<string[]>([]);
+
   const processAction = async (id: string, action: "cancel" | "complete" | "no-show") => {
+    if (busyRef.current.has(id)) return;
+    busyRef.current.add(id);
+    setBusyIds([...busyRef.current]);
     try {
       const res = await fetch(`/api/bookings/${id}/${action}`, { method: "POST" });
       const data = await res.json();
@@ -142,11 +151,17 @@ export default function AppointmentsPage() {
           const prompt = t('cancelPrompt' as any).replace('{name}', name);
           setWhatsappPromptData({ phone, name, time, prompt, waitlistCustomers: data.data.waitlistCustomers, holdMinutes: data.data.holdMinutes });
         }
+      } else if (res.status === 400 && /^Cannot /.test(data.error?.message || "")) {
+        // Someone (or another phone) already changed it — just show the current state, no scary error.
+        mutateBookings();
       } else {
-        toast.add({ title: "Error", description: data.error?.message || `Failed to ${action} booking`, type: "error" });
+        toast.add({ title: t('error'), description: data.error?.message || t('genericError'), type: "error" });
       }
     } catch (error) {
       toast.add({ title: t('error'), description: t('genericError'), type: "error" });
+    } finally {
+      busyRef.current.delete(id);
+      setBusyIds([...busyRef.current]);
     }
   };
 
@@ -196,7 +211,7 @@ export default function AppointmentsPage() {
             <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">{b.startTime}</div>
             <div className="text-lg text-zinc-900 dark:text-zinc-100 truncate">{b.customerId?.name || "Unknown"}</div>
             <div className="text-sm text-zinc-500">
-              {b.date !== getTodayISTString() && <>{format(parseDateOnly(b.date), "MMM d")} · </>}{phone || "N/A"}
+              {b.date !== getTodayISTString() && <>{fmt(parseDateOnly(b.date), "d MMM")} · </>}{phone || t('custNoPhone')}
             </div>
           </div>
           <div className="flex flex-col items-end gap-1 shrink-0">
@@ -207,10 +222,10 @@ export default function AppointmentsPage() {
         {b.status === "CONFIRMED" && (
           <div className="space-y-2">
             <div className="grid grid-cols-2 gap-2">
-              <Button className="h-12 text-base bg-green-600 hover:bg-green-700 text-white" onClick={() => handleAction(b._id, "complete")}>
+              <Button className="h-12 text-base bg-green-600 hover:bg-green-700 text-white" disabled={busyIds.includes(b._id)} onClick={() => handleAction(b._id, "complete")}>
                 <Check className="w-5 h-5 mr-1" /> {t('done')}
               </Button>
-              <Button variant="outline" className="h-12 text-base" onClick={() => handleAction(b._id, "no-show")}>
+              <Button variant="outline" className="h-12 text-base" disabled={busyIds.includes(b._id)} onClick={() => handleAction(b._id, "no-show")}>
                 <X className="w-5 h-5 mr-1" /> {t('apptNoShow')}
               </Button>
             </div>
@@ -225,7 +240,7 @@ export default function AppointmentsPage() {
                   </a>
                 </>
               )}
-              <button onClick={() => handleAction(b._id, "cancel")} className="h-11 px-3 text-sm text-red-600">{t('cancel')}</button>
+              <button onClick={() => handleAction(b._id, "cancel")} disabled={busyIds.includes(b._id)} className="h-11 px-3 text-sm text-red-600 disabled:opacity-50">{t('cancel')}</button>
             </div>
           </div>
         )}
@@ -311,7 +326,7 @@ export default function AppointmentsPage() {
                     <td className="px-6 py-4 text-zinc-900 dark:text-zinc-100">{b.customerId?.name || "Unknown"}</td>
                     <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">{b.customerId?.phone || "N/A"}</td>
                     <td className="px-6 py-4 text-zinc-900 dark:text-zinc-100">
-                      {format(new Date(b.date), "MMM d, yyyy")} <span className="text-zinc-500 ml-2">{b.startTime}</span>
+                      {fmt(parseDateOnly(b.date), "d MMM yyyy")} <span className="text-zinc-500 ml-2">{b.startTime}</span>
                     </td>
                     <td className="px-6 py-4">
                       {b.status === "CONFIRMED" && <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">{t('apptConfirmed')}</span>}
@@ -323,9 +338,9 @@ export default function AppointmentsPage() {
                     <td className="px-6 py-4 text-right space-x-2 flex justify-end">
                       {b.status === "CONFIRMED" && (
                         <>
-                          <Button variant="outline" size="sm" onClick={() => handleAction(b._id, "complete")}>{t('apptComplete')}</Button>
-                          <Button variant="outline" size="sm" onClick={() => handleAction(b._id, "cancel")} className="text-red-600 hover:text-red-700 border-red-200 hover:bg-red-50">{t('cancel')}</Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleAction(b._id, "no-show")}>{t('apptNoShow')}</Button>
+                          <Button variant="outline" size="sm" disabled={busyIds.includes(b._id)} onClick={() => handleAction(b._id, "complete")}>{t('apptComplete')}</Button>
+                          <Button variant="outline" size="sm" disabled={busyIds.includes(b._id)} onClick={() => handleAction(b._id, "cancel")} className="text-red-600 hover:text-red-700 border-red-200 hover:bg-red-50">{t('cancel')}</Button>
+                          <Button variant="ghost" size="sm" disabled={busyIds.includes(b._id)} onClick={() => handleAction(b._id, "no-show")}>{t('apptNoShow')}</Button>
                         </>
                       )}
                       {b.status !== "CONFIRMED" && (
@@ -383,7 +398,7 @@ export default function AppointmentsPage() {
             />
             <input
               className="w-full h-12 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-base"
-              placeholder={t('yourPhone')}
+              placeholder={t('phoneOptional')}
               type="tel"
               inputMode="numeric"
               value={walkInPhone}
@@ -417,7 +432,7 @@ export default function AppointmentsPage() {
           <DialogFooter className="mt-2">
             <Button variant="ghost" onClick={() => setWalkInOpen(false)}>{t('apptClose')}</Button>
             <Button
-              disabled={walkInSaving || !selectedWalkInSlot || walkInName.trim().length < 2 || walkInPhone.replace(/\D/g, "").length < 10}
+              disabled={walkInSaving || !selectedWalkInSlot || walkInName.trim().length < 2 || !(walkInPhone.replace(/\D/g, "").length === 0 || walkInPhone.replace(/\D/g, "").length >= 10)}
               onClick={handleWalkIn}
             >
               {walkInSaving ? t('loading') : t('addBookingTitle')}

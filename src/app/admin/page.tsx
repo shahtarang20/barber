@@ -144,7 +144,7 @@ export default function AdminDashboard() {
                     <tr key={b._id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
                       <td className="px-6 py-4 font-mono font-medium text-zinc-900 dark:text-zinc-100">{b.barberCode}</td>
                       <td className="px-6 py-4 text-zinc-900 dark:text-zinc-100 font-medium">{b.name}</td>
-                      <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">{b.email}</td>
+                      <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">{b.email || "—"}</td>
                       <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">
                         <a href={`/b/${b.slug}`} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">/b/{b.slug}</a>
                       </td>

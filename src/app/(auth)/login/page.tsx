@@ -8,9 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff } from "lucide-react";
+import { useTranslation } from "@/lib/i18n";
 
 export default function LoginPage() {
   const hydrated = useHydrated();
+  const { t } = useTranslation();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -35,7 +37,7 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        setError(data.error?.message || "Login failed");
+        setError(data.error?.message || t('genericError'));
         setLoading(false);
         return;
       }
@@ -47,7 +49,7 @@ export default function LoginPage() {
       }
       router.refresh();
     } catch (err) {
-      setError("An unexpected error occurred.");
+      setError(t('genericError'));
       setLoading(false);
     }
   };
@@ -55,9 +57,9 @@ export default function LoginPage() {
   return (
     <div className="bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl shadow-sm border border-zinc-200 dark:border-zinc-800">
       <div className="mb-8 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">Welcome back</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">{t('authWelcomeBack')}</h1>
         <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-2">
-          Enter your email or barber code to access your dashboard
+          {t('authLoginDesc')}
         </p>
       </div>
 
@@ -69,11 +71,11 @@ export default function LoginPage() {
         )}
         
         <div className="space-y-2">
-          <Label htmlFor="barberCode">Email or Barber Code</Label>
+          <Label htmlFor="barberCode">{t('authCodeOrEmail')}</Label>
           <Input 
             id="barberCode" 
             name="barberCode" 
-            placeholder="e.g. john@example.com or b001" 
+            placeholder={t('authCodePlaceholder')} 
             required 
             autoComplete="username"
             className="h-11"
@@ -81,7 +83,7 @@ export default function LoginPage() {
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="password">Password</Label>
+          <Label htmlFor="password">{t('authPassword')}</Label>
           <div className="relative">
             <Input 
               id="password" 
@@ -90,30 +92,30 @@ export default function LoginPage() {
               placeholder="••••••••" 
               required 
               autoComplete="current-password"
-              className="h-11 pr-10"
+              className="h-11 pr-12"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 focus:outline-none"
+              className="absolute right-0 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 focus:outline-none"
             >
               {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
             </button>
           </div>
           <p className="text-xs text-zinc-500 dark:text-zinc-400">
-            Forgot password? Contact your admin.
+            {t('authForgot')}
           </p>
         </div>
 
         <Button type="submit" className="w-full h-11 mt-6" disabled={loading || !hydrated}>
-          {loading ? "Signing in..." : "Sign in"}
+          {loading ? t('authSigningIn') : t('authSignIn')}
         </Button>
       </form>
 
       <div className="mt-8 text-center text-sm text-zinc-500">
-        Don&apos;t have an account?{" "}
+        {t('authNoAccount')}{" "}
         <Link href="/register" className="font-medium text-zinc-900 dark:text-zinc-50 hover:underline">
-          Register here
+          {t('authRegisterHere')}
         </Link>
       </div>
     </div>

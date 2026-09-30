@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useTranslation } from "@/lib/i18n";
+import { useDateFormat } from "@/lib/dateLocale";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import useSWR from "swr";
 
@@ -36,6 +37,7 @@ interface BookingSuccessView {
 }
 
 export default function BarberBookingPage() {
+  const fmt = useDateFormat();
   const hydrated = useHydrated();
   const { slug } = useParams();
   const { t, language } = useTranslation();
@@ -63,6 +65,7 @@ export default function BarberBookingPage() {
   const [selectedSlot, setSelectedSlot] = useState<SlotView | null>(null);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingError, setBookingError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<{ name?: string; phone?: string }>({});
   const [bookingSuccess, setBookingSuccess] = useState<BookingSuccessView | null>(null);
 
   useEffect(() => {
@@ -76,12 +79,24 @@ export default function BarberBookingPage() {
   const handleBookingSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!selectedSlot) return;
-    setBookingLoading(true);
     setBookingError("");
 
     const formData = new FormData(e.currentTarget);
-    const name = formData.get("name") as string;
-    const phone = formData.get("phone") as string;
+    const name = (formData.get("name") as string) || "";
+    const phone = (formData.get("phone") as string) || "";
+
+    // Say exactly what is missing, next to the field, in the customer's language (not the browser's pop-up).
+    const digits = phone.replace(/\D/g, "");
+    const errors: { name?: string; phone?: string } = {};
+    if (name.trim().length < 2) errors.name = t("nameRequired");
+    if (digits.length === 0) errors.phone = t("phoneRequired");
+    else if (digits.length < 10) errors.phone = t("phoneInvalid");
+    setFieldErrors(errors);
+    if (errors.name || errors.phone) {
+      (e.currentTarget.elements.namedItem(errors.name ? "name" : "phone") as HTMLInputElement | null)?.focus();
+      return;
+    }
+    setBookingLoading(true);
 
     try {
       const endpoint = selectedSlot.isWaitlist ? "/api/public/waitlist" : "/api/public/bookings";
@@ -98,7 +113,12 @@ export default function BarberBookingPage() {
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        setBookingError(data.error?.code === "SEAT_HELD" ? t("seatHeld") : data.error?.message || "Operation failed");
+        setBookingError(
+          data.error?.code === "SEAT_HELD" ? t("seatHeld")
+          : res.status === 400 && /phone/i.test(data.error?.message || "") ? t("phoneInvalid")
+          : res.status === 400 && /name/i.test(data.error?.message || "") ? t("nameRequired")
+          : data.error?.message || t("genericError")
+        );
         setBookingLoading(false);
         // Refresh slots in case it was double booked
         mutateSlots();
@@ -193,7 +213,7 @@ export default function BarberBookingPage() {
               )}
               
               <div className="text-zinc-500">{t('date')}</div>
-              <div className="font-medium text-right">{format(new Date(bookingSuccess.date || selectedDate), "MMMM d, yyyy")}</div>
+              <div className="font-medium text-right">{fmt(new Date(bookingSuccess.date || selectedDate), "d MMMM yyyy")}</div>
               
               <div className="text-zinc-500">{t('time')}</div>
               <div className="font-medium text-right">{bookingSuccess.startTime || selectedSlot?.startTime}</div>
@@ -226,7 +246,7 @@ export default function BarberBookingPage() {
         </div>
         <h1 className="text-2xl font-bold text-zinc-900">{barber?.name || "Loading..."}</h1>
         <p className="text-zinc-500 mt-2 max-w-md mx-auto">
-          {barber?.bio || "Professional Haircut & Grooming"}
+          {barber?.bio || t("profBioDefault")}
         </p>
       </div>
 
@@ -249,9 +269,9 @@ export default function BarberBookingPage() {
                           : "bg-white border-zinc-200 text-zinc-600 hover:border-zinc-300"
                       }`}
                     >
-                      <span className={`text-xs ${isSelected ? "text-zinc-300" : "text-zinc-500"}`}>{format(date, "MMM")}</span>
+                      <span className={`text-xs ${isSelected ? "text-zinc-300" : "text-zinc-500"}`}>{fmt(date, "MMM")}</span>
                       <span className="text-xl font-bold mt-1">{format(date, "d")}</span>
-                      <span className={`text-xs mt-1 ${isSelected ? "text-zinc-300" : "text-zinc-500"}`}>{format(date, "EEE")}</span>
+                      <span className={`text-xs mt-1 ${isSelected ? "text-zinc-300" : "text-zinc-500"}`}>{fmt(date, "EEE")}</span>
                     </button>
                   );
                 })}
@@ -328,12 +348,12 @@ export default function BarberBookingPage() {
             <div className="bg-zinc-50 p-4 rounded-xl mb-8 flex justify-between items-center border border-zinc-100">
               <div>
                 <p className="text-sm text-zinc-500">{t('time')}</p>
-                <p className="font-semibold text-zinc-900 mt-1">{format(selectedDate, "MMM d, yyyy")} at {selectedSlot.startTime}</p>
+                <p className="font-semibold text-zinc-900 mt-1">{fmt(selectedDate, "d MMM yyyy")} at {selectedSlot.startTime}</p>
               </div>
               <button onClick={() => setSelectedSlot(null)} className="text-blue-600 text-sm font-medium">{t('cancel')}</button>
             </div>
 
-            <form method="post" onSubmit={handleBookingSubmit} className="space-y-5">
+            <form method="post" noValidate onSubmit={handleBookingSubmit} className="space-y-5">
               {bookingError && (
                 <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm border border-red-100">
                   {bookingError}
@@ -342,12 +362,14 @@ export default function BarberBookingPage() {
               
               <div className="space-y-2">
                 <Label htmlFor="name">{t('yourName')}</Label>
-                <Input id="name" name="name" placeholder="Tarang" required className="h-12 text-base" />
+                <Input id="name" name="name" placeholder="Tarang" autoComplete="name" aria-invalid={!!fieldErrors.name} aria-describedby={fieldErrors.name ? "name-error" : undefined} onChange={() => fieldErrors.name && setFieldErrors((x) => ({ ...x, name: undefined }))} className={`h-12 text-base ${fieldErrors.name ? "border-red-500" : ""}`} />
+                {fieldErrors.name && <p id="name-error" role="alert" className="text-sm font-medium text-red-600">{fieldErrors.name}</p>}
               </div>
               
               <div className="space-y-2">
                 <Label htmlFor="phone">{t('yourPhone')}</Label>
-                <Input id="phone" name="phone" type="tel" placeholder="98XXXXXXXX" required className="h-12 text-base" />
+                <Input id="phone" name="phone" type="tel" inputMode="numeric" autoComplete="tel" placeholder="98XXXXXXXX" aria-invalid={!!fieldErrors.phone} aria-describedby={fieldErrors.phone ? "phone-error" : undefined} onChange={() => fieldErrors.phone && setFieldErrors((x) => ({ ...x, phone: undefined }))} className={`h-12 text-base ${fieldErrors.phone ? "border-red-500" : ""}`} />
+                {fieldErrors.phone && <p id="phone-error" role="alert" className="text-sm font-medium text-red-600">{fieldErrors.phone}</p>}
               </div>
 
               <Button type="submit" className="w-full h-12 text-base mt-4" disabled={bookingLoading || !hydrated}>

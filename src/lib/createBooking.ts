@@ -25,9 +25,12 @@ export async function createConfirmedBooking(slot: ClaimedSlot, name: string, ph
 
   // Exact, case-insensitive match via collation — never build a RegExp from
   // user input. Phone + name lets a family share one number.
-  let customer = await Customer.findOne({ phone: normalizedPhone, name: cleanName })
+  // With no phone number, the customer belongs to this barber alone (so two barbers' "Ramu" never merge).
+  const noPhone = normalizedPhone === "";
+  const scope = noPhone ? { ownerBarberId: slot.barberId } : {};
+  let customer = await Customer.findOne({ phone: normalizedPhone, name: cleanName, ...scope })
     .collation({ locale: "en", strength: 2 });
-  if (!customer) customer = await new Customer({ name: cleanName, phone: normalizedPhone }).save();
+  if (!customer) customer = await new Customer({ name: cleanName, phone: normalizedPhone, ...scope }).save();
 
   const counter = await Counter.findByIdAndUpdate(
     { _id: "bookingNumber" },

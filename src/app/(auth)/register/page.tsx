@@ -8,9 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff } from "lucide-react";
+import { useTranslation } from "@/lib/i18n";
 
 export default function RegisterPage() {
   const hydrated = useHydrated();
+  const { t } = useTranslation();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -39,7 +41,7 @@ export default function RegisterPage() {
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        setError(data.error?.message || "Registration failed");
+        setError(data.error?.message || t('genericError'));
         setLoading(false);
         return;
       }
@@ -48,7 +50,7 @@ export default function RegisterPage() {
       setLoading(false);
       
     } catch (err) {
-      setError("An unexpected error occurred.");
+      setError(t('genericError'));
       setLoading(false);
     }
   };
@@ -63,18 +65,19 @@ export default function RegisterPage() {
             </svg>
           </div>
         </div>
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 mb-2">Registration Successful</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 mb-2">{t('authRegSuccess')}</h1>
         <p className="text-zinc-500 dark:text-zinc-400 mb-6">
-          Your unique Barber Code has been generated. You will use this code to log in.
+          {t('authCodeGenerated')}
         </p>
         
         <div className="bg-zinc-100 dark:bg-zinc-950 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 mb-8">
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-1">Your Barber Code</p>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-1">{t('authYourCode')}</p>
           <p className="text-3xl font-mono font-bold text-blue-600 dark:text-blue-400">{successCode}</p>
         </div>
+        <p className="text-sm font-medium text-orange-600 dark:text-orange-400 -mt-4 mb-6">{t('authWriteCode')}</p>
 
         <Button onClick={() => router.push("/login")} className="w-full h-11">
-          Continue to Login
+          {t('authContinueLogin')}
         </Button>
       </div>
     );
@@ -83,9 +86,9 @@ export default function RegisterPage() {
   return (
     <div className="bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl shadow-sm border border-zinc-200 dark:border-zinc-800">
       <div className="mb-8 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">Create an account</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">{t('authCreateTitle')}</h1>
         <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-2">
-          Enter your details below to create your barber profile
+          {t('authCreateDesc')}
         </p>
       </div>
 
@@ -97,7 +100,7 @@ export default function RegisterPage() {
         )}
         
         <div className="space-y-2">
-          <Label htmlFor="name">Full Name</Label>
+          <Label htmlFor="name">{t('authFullName')}</Label>
           <Input 
             id="name" 
             name="name" 
@@ -109,35 +112,34 @@ export default function RegisterPage() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="email">{t('authEmailOptional')}</Label>
           <Input 
             id="email" 
             name="email" 
             type="email" 
             placeholder="m@example.com" 
-            required 
             autoComplete="email"
             className="h-11"
           />
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="password">Password</Label>
+          <Label htmlFor="password">{t('authPassword')}</Label>
           <div className="relative">
             <Input 
               id="password" 
               name="password" 
               type={showPassword ? "text" : "password"} 
-              placeholder="Create a strong password" 
+              placeholder={t('authPasswordHint')} 
               required 
               autoComplete="new-password"
-              className="h-11 pr-10"
+              className="h-11 pr-12"
               minLength={6}
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 focus:outline-none"
+              className="absolute right-0 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 focus:outline-none"
             >
               {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
             </button>
@@ -145,14 +147,14 @@ export default function RegisterPage() {
         </div>
 
         <Button type="submit" className="w-full h-11 mt-6" disabled={loading || !hydrated}>
-          {loading ? "Creating account..." : "Create account"}
+          {loading ? t('authCreating') : t('authCreateBtn')}
         </Button>
       </form>
 
       <div className="mt-8 text-center text-sm text-zinc-500">
-        Already have an account?{" "}
+        {t('authHaveAccount')}{" "}
         <Link href="/login" className="font-medium text-zinc-900 dark:text-zinc-50 hover:underline">
-          Sign in
+          {t('authSignIn')}
         </Link>
       </div>
     </div>

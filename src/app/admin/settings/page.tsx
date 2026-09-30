@@ -164,7 +164,7 @@ export default function AdminSettingsPage() {
               <div key={a._id} className="flex items-center justify-between p-3">
                 <div>
                   <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{a.name}</p>
-                  <p className="text-xs text-zinc-500">{a.barberCode} &middot; {a.email}</p>
+                  <p className="text-xs text-zinc-500">{a.barberCode} &middot; {a.email || "—"}</p>
                 </div>
                 <Button variant="outline" size="sm" onClick={() => setResetTarget(a)}>
                   Reset Password

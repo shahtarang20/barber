@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/toast";
 import { useTranslation } from "@/lib/i18n";
+import { useDateFormat } from "@/lib/dateLocale";
 import { getTodayISTString, minutesUntilSlotEnd } from "@/lib/istTime";
 import { parseDateOnly, timeStringToMinutes } from "@/lib/timeSort";
 
@@ -18,6 +19,7 @@ interface ShopSlot { _id: string; startTime: string; endTime: string; status: st
 /** Shop front desk: the owner books a customer with any barber of the shop (phone call or walk-in). */
 export function FrontDeskBooking({ shopSlug, members, onBooked }: { shopSlug: string; members: Member[]; onBooked?: () => void }) {
   const { t } = useTranslation();
+  const fmt = useDateFormat();
   const today = getTodayISTString();
   const [date, setDate] = useState(today);
   const [barberId, setBarberId] = useState("ANY");
@@ -37,7 +39,7 @@ export function FrontDeskBooking({ shopSlug, members, onBooked }: { shopSlug: st
 
   const days = Array.from({ length: 14 }).map((_, i) => {
     const d = addDays(parseDateOnly(today), i);
-    return { value: format(d, "yyyy-MM-dd"), label: `${i === 0 ? t("apptToday") + " · " : ""}${format(d, "EEE d MMM")}` };
+    return { value: format(d, "yyyy-MM-dd"), label: `${i === 0 ? t("apptToday") + " · " : ""}${fmt(d, "EEE d MMM")}` };
   });
 
   const book = async () => {
@@ -100,9 +102,9 @@ export function FrontDeskBooking({ shopSlug, members, onBooked }: { shopSlug: st
       </div>
       <div className="grid sm:grid-cols-2 gap-3">
         <Input placeholder={t("yourName")} value={name} onChange={(e) => setName(e.target.value)} className="h-12" />
-        <Input placeholder={t("yourPhone")} type="tel" inputMode="numeric" value={phone} onChange={(e) => setPhone(e.target.value)} className="h-12" />
+        <Input placeholder={t("phoneOptional")} type="tel" inputMode="numeric" value={phone} onChange={(e) => setPhone(e.target.value)} className="h-12" />
       </div>
-      <Button className="h-12 w-full sm:w-auto px-8" disabled={saving || !chosen || name.trim().length < 2 || phone.replace(/\D/g, "").length < 10} onClick={book}>
+      <Button className="h-12 w-full sm:w-auto px-8" disabled={saving || !chosen || name.trim().length < 2 || !(phone.replace(/\D/g, "").length === 0 || phone.replace(/\D/g, "").length >= 10)} onClick={book}>
         {saving ? t("loading") : t("shopBookTitle")}
       </Button>
     </div>

@@ -12,7 +12,7 @@ export interface IWorkingHours {
 export interface IUser extends Document {
   name: string;
   barberCode: string; // Auto-generated b001
-  email: string;
+  email?: string;
   phone?: string;
   passwordHash: string;
   role: "BARBER" | "ADMIN";
@@ -48,7 +48,8 @@ const UserSchema: Schema = new Schema(
   {
     name: { type: String, required: true },
     barberCode: { type: String, unique: true },
-    email: { type: String, required: true, unique: true },
+    // Optional: a barber can sign up with just a name and password and log in with his Barber Code.
+    email: { type: String, trim: true },
     phone: { type: String },
     passwordHash: { type: String, required: true },
     role: { type: String, enum: ["BARBER", "ADMIN"], default: "BARBER" },
@@ -95,5 +96,7 @@ UserSchema.pre("save", async function () {
 });
 
 UserSchema.index({ role: 1, isActive: 1 });
+// Emails stay unique, but only when one was given (many barbers can have none).
+UserSchema.index({ email: 1 }, { unique: true, partialFilterExpression: { email: { $type: "string" } } });
 
 export const User = mongoose.models.User || mongoose.model<IUser>("User", UserSchema);

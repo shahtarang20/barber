@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { format, addDays, subDays, parse, isAfter } from "date-fns";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useTranslation } from "@/lib/i18n";
+import { useDateFormat } from "@/lib/dateLocale";
+import { getISTNow } from "@/lib/istTime";
 import { toast } from "@/components/ui/toast";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import { useRealtimeRefresh } from "@/lib/useRealtimeRefresh";
@@ -24,6 +26,7 @@ interface SlotView {
 
 export default function DashboardPage() {
   const { t } = useTranslation();
+  const fmt = useDateFormat();
   const [profile, setProfile] = useState<any>(null);
   const [showPremiumPopup, setShowPremiumPopup] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -65,11 +68,22 @@ export default function DashboardPage() {
       return next;
     });
 
+  // A booking being updated ignores further taps, so a double-tap never sends a second request.
+  const busyRef = useRef<Set<string>>(new Set());
+  const [busyIds, setBusyIds] = useState<string[]>([]);
+
   const handleBookingAction = async (id: string, action: "complete" | "no-show") => {
+    if (busyRef.current.has(id)) return;
+    busyRef.current.add(id);
+    setBusyIds([...busyRef.current]);
     try {
       const res = await fetch(`/api/bookings/${id}/${action}`, { method: "POST" });
       const data = await res.json();
       if (data.success) {
+        mutateDayBookings();
+        mutateSlots();
+      } else if (res.status === 400 && /^Cannot /.test(data.error?.message || "")) {
+        // Already changed (another phone, or an earlier tap) — show the current state without an error.
         mutateDayBookings();
         mutateSlots();
       } else {
@@ -77,6 +91,9 @@ export default function DashboardPage() {
       }
     } catch {
       toast.add({ title: t('error'), description: t('genericError'), type: "error" });
+    } finally {
+      busyRef.current.delete(id);
+      setBusyIds([...busyRef.current]);
     }
   };
 
@@ -91,6 +108,9 @@ export default function DashboardPage() {
 
   // Settings' working hours are the source of truth for which days are open.
   const selectedDayName = format(selectedDate, "EEEE");
+  // Greeting follows India time of day.
+  const istHour = getISTNow().getUTCHours();
+  const greetKey = istHour < 12 ? "greetMorning" : istHour < 17 ? "greetAfternoon" : "greetEvening";
   const dayConfig = profile?.workingHours?.find((h: { day: string }) => h.day === selectedDayName);
   const isClosedDay = !!profile && (!dayConfig || dayConfig.isClosed);
 
@@ -322,10 +342,10 @@ export default function DashboardPage() {
       <div className="flex justify-between items-start">
         <div>
           <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">
-            Good morning, {profile?.name.split(" ")[0] || "Barber"} 👋
+            {t(greetKey).replace('{name}', profile?.name.split(" ")[0] || "")} 👋
           </h1>
           <p className="text-zinc-500 dark:text-zinc-400 mt-2">
-            Here is your schedule for today.
+            {t('schedSubtitle')}
           </p>
         </div>
         <LanguageSelector />
@@ -353,7 +373,7 @@ export default function DashboardPage() {
               {format(selectedDate, "yyyy-MM-dd") !== format(new Date(), "yyyy-MM-dd") && (
                 <button onClick={() => setSelectedDate(subDays(selectedDate, 1))} className="min-w-11 min-h-11 flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-md">←</button>
               )}
-              <span className="whitespace-nowrap">{format(selectedDate, "EEE, MMM d, yyyy")}</span>
+              <span className="whitespace-nowrap">{fmt(selectedDate, "EEE, d MMM yyyy")}</span>
               <button onClick={() => setSelectedDate(addDays(selectedDate, 1))} className="min-w-11 min-h-11 flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-md">→</button>
             </h2>
           </div>
@@ -391,7 +411,7 @@ export default function DashboardPage() {
               </div>
               {isClosedDay ? (
                 <>
-                  <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">{t('scheduleClosedDay').replace('{day}', selectedDayName)}</h3>
+                  <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">{t('scheduleClosedDay').replace('{day}', fmt(selectedDate, 'EEEE'))}</h3>
                   <p className="text-zinc-500 dark:text-zinc-400 mt-1 max-w-sm">{t('scheduleClosedDayDesc')}</p>
                   <Link href="/dashboard/settings" className="mt-6 underline text-sm text-zinc-700 dark:text-zinc-300">{t('settings')}</Link>
                 </>
@@ -524,8 +544,8 @@ export default function DashboardPage() {
                         </div>
                         {b.status === "CONFIRMED" && (
                           <div className="grid grid-cols-2 gap-2">
-                            <Button className="h-11 bg-green-600 hover:bg-green-700 text-white" onClick={() => handleBookingAction(b._id, "complete")}>✓ {t('done')}</Button>
-                            <Button variant="outline" className="h-11" onClick={() => handleBookingAction(b._id, "no-show")}>{t('apptNoShow')}</Button>
+                            <Button className="h-11 bg-green-600 hover:bg-green-700 text-white" disabled={busyIds.includes(b._id)} onClick={() => handleBookingAction(b._id, "complete")}>✓ {t('done')}</Button>
+                            <Button variant="outline" className="h-11" disabled={busyIds.includes(b._id)} onClick={() => handleBookingAction(b._id, "no-show")}>{t('apptNoShow')}</Button>
                           </div>
                         )}
                       </div>
@@ -638,6 +658,7 @@ export default function DashboardPage() {
                     <p className="text-xs text-zinc-500 line-through inline-block mr-2">{c.oldTime}</p>
                     <p className="text-sm text-orange-600 font-medium inline-block">{t('nowLabel')} {c.newTime}</p>
                   </div>
+                  {c.phone && (
                   <Button 
                     variant="outline"
                     size="sm"
@@ -648,8 +669,9 @@ export default function DashboardPage() {
                       window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msgStr)}`, '_blank');
                     }}
                   >
-                    WhatsApp
+                    {t('whatsappLabel')}
                   </Button>
+                  )}
                 </div>
               ))}
             </div>

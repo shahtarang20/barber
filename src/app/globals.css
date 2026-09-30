@@ -128,3 +128,26 @@
     @apply font-sans;
   }
 }
+
+/* On a slow phone the page shows up before its JavaScript has loaded; taps do nothing for a few seconds.
+   Until <html> gets the "hydrated" class, show a moving bar and dim the buttons so that's obvious. */
+html:not(.hydrated)::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: -40%;
+  height: 3px;
+  width: 40%;
+  background: #18181b;
+  z-index: 9999;
+  animation: loadbar 1.1s ease-in-out infinite;
+}
+@keyframes loadbar {
+  0% { left: -40%; }
+  100% { left: 100%; }
+}
+html:not(.hydrated) button,
+html:not(.hydrated) select {
+  opacity: 0.55;
+  cursor: progress;
+}
