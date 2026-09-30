@@ -144,6 +144,12 @@ export default function SettingsPage() {
   const handleWorkingHourChange = (index: number, field: string, value: any) => {
     const updated = [...workingHours];
     updated[index] = { ...updated[index], [field]: value };
+    // Opening a day that was closed: start from the same hours as another open day
+    if (field === "isClosed" && value === false && !updated[index].startTime) {
+      const ref = workingHours.find((wh) => !wh.isClosed && wh.startTime);
+      updated[index].startTime = ref?.startTime || "10:00 AM";
+      updated[index].endTime = ref?.endTime || "08:00 PM";
+    }
     setWorkingHours(updated);
   };
 
