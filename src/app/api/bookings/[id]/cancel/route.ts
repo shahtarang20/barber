@@ -52,7 +52,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (!cancelled) {
       return NextResponse.json({ success: false, error: { message: "This booking was already changed." } }, { status: 409 });
     }
-    const { booking: cancelledBooking, waitlist: waitlistToNotify, slotTime } = cancelled;
+    const { booking: cancelledBooking, waitlist: waitlistToNotify, slotTime, holdMinutes } = cancelled;
 
     const { Customer } = await import("@/models/Customer");
     const customer = await Customer.findById(cancelledBooking.customerId);
@@ -66,6 +66,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         booking: cancelledBooking,
         customer: customer ? { name: customer.name, phone: customer.phone } : null,
         waitlistCustomers: waitlistToNotify,
+        holdMinutes,
         slotTime
       } 
     });

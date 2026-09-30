@@ -64,6 +64,7 @@ export async function POST(req: Request) {
       phone: customer.phone,
       time: cancelled.slotTime,
       waitlistCustomers: cancelled.waitlist,
+      holdMinutes: cancelled.holdMinutes,
     });
 
     await pushToBarber(booking.barberId.toString(), {

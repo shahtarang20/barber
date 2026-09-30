@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { timeStringToMinutes } from "@/lib/timeSort";
 import { requireAuth } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import { Slot } from "@/models/Slot";
@@ -67,6 +68,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         customerId: customer._id,
         date: slot.date,
         startTime: slot.startTime,
+        startMinutes: timeStringToMinutes(slot.startTime),
         endTime: slot.endTime,
         status: "CONFIRMED",
       });

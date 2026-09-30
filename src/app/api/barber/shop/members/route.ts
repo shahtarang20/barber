@@ -3,6 +3,7 @@ import { requireAuth } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import { Shop } from "@/models/Shop";
 import { User } from "@/models/User";
+import { ShopInvite } from "@/models/ShopInvite";
 import { z } from "zod";
 
 const addMemberSchema = z.object({
@@ -48,13 +49,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: { message: `${target.name} already belongs to a shop.` } }, { status: 400 });
     }
 
-    target.shopId = shop._id;
-    await target.save();
+    // Not added directly: the barber has to accept first.
+    try {
+      await ShopInvite.create({ shopId: shop._id, barberId: target._id, invitedBy: owner._id });
+    } catch (err) {
+      if ((err as { code?: number }).code === 11000) {
+        return NextResponse.json({ success: false, error: { message: `You already invited ${target.name}. They haven't answered yet.` } }, { status: 400 });
+      }
+      throw err;
+    }
 
-    shop.barberIds = [...shop.barberIds.filter((id: any) => id.toString() !== target._id.toString()), target._id];
-    await shop.save();
-
-    return NextResponse.json({ success: true, data: { message: `${target.name} added to your shop.` } });
+    return NextResponse.json({ success: true, data: { message: `Invitation sent to ${target.name}. They'll join once they accept.` } });
   } catch (error) {
     console.error("Add shop member error:", error);
     return NextResponse.json({ success: false, error: { message: "Internal server error" } }, { status: 500 });

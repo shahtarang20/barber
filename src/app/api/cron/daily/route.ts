@@ -6,6 +6,8 @@ import { Slot } from "@/models/Slot";
 import { CronState } from "@/models/CronState";
 import { autoGenerateFutureSlots } from "@/lib/slotGenerator";
 import { autoCompleteStaleBookings } from "@/lib/bookingMaintenance";
+import { Booking } from "@/models/Booking";
+import { timeStringToMinutes } from "@/lib/timeSort";
 import { refreshAdminStats } from "@/lib/adminStats";
 import { getTodayISTString } from "@/lib/istTime";
 import { parseDateOnly } from "@/lib/timeSort";
@@ -95,6 +97,11 @@ export async function GET(req: Request) {
       const deleted = await Slot.deleteMany({ date: { $lt: cutoff }, bookingsCount: 0 });
       const autoCompleted = await autoCompleteStaleBookings();
       await refreshAdminStats();
+      // One-off catch-up for bookings made before time-of-day sorting existed.
+      const missing = await Booking.find({ startMinutes: { $exists: false } }).select("startTime").limit(5000);
+      if (missing.length) {
+        await Booking.bulkWrite(missing.map((b) => ({ updateOne: { filter: { _id: b._id }, update: { $set: { startMinutes: timeStringToMinutes(b.startTime) } } } })));
+      }
       cleanup = { oldSlotsDeleted: deleted.deletedCount, autoCompleted };
     }
 

@@ -25,6 +25,7 @@ interface SlotView {
 }
 
 interface BookingSuccessView {
+  queueNumber?: number;
   bookingNumber: string;
   date: string;
   startTime: string;
@@ -95,7 +96,7 @@ export default function BarberBookingPage() {
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        setBookingError(data.error?.message || "Operation failed");
+        setBookingError(data.error?.code === "SEAT_HELD" ? t("seatHeld") : data.error?.message || "Operation failed");
         setBookingLoading(false);
         // Refresh slots in case it was double booked
         mutateSlots();
@@ -176,6 +177,12 @@ export default function BarberBookingPage() {
           
           <div className="bg-zinc-50 rounded-xl p-6 mb-8 text-left border border-zinc-100">
             <div className="grid grid-cols-2 gap-4 text-sm">
+              {!bookingSuccess.isWaitlist && bookingSuccess.queueNumber && (
+                <>
+                  <div className="text-zinc-500">{t('yourTurn')}</div>
+                  <div className="font-bold text-right">#{bookingSuccess.queueNumber}</div>
+                </>
+              )}
               {!bookingSuccess.isWaitlist && (
                 <>
                   <div className="text-zinc-500">{t('bookingId')}</div>

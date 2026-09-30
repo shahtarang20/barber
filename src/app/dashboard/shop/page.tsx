@@ -24,6 +24,13 @@ interface ShopData {
   isOwner: boolean;
   viewerId: string;
   members: ShopMember[];
+  pendingInvites?: { _id: string; name?: string; barberCode?: string }[];
+}
+
+interface MyInvite {
+  _id: string;
+  shopName: string;
+  invitedBy?: string;
 }
 
 function slugify(input: string): string {
@@ -38,6 +45,44 @@ function slugify(input: string): string {
 export default function ShopPage() {
   const { data, isLoading, mutate } = useSWR("/api/barber/shop", fetcher);
   const shop: ShopData | null = data?.success ? data.data : null;
+  const { data: invitesData, mutate: mutateInvites } = useSWR("/api/barber/shop/invites", fetcher);
+  const myInvites: MyInvite[] = invitesData?.success ? invitesData.data : [];
+  const [answeringId, setAnsweringId] = useState<string | null>(null);
+
+  const answerInvite = async (id: string, action: "accept" | "decline") => {
+    setAnsweringId(id);
+    try {
+      const res = await fetch(`/api/barber/shop/invites/${id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      const result = await res.json();
+      toast.add({
+        title: result.success ? "Done" : "Error",
+        description: result.success ? result.data.message : result.error?.message || "Something went wrong",
+        type: result.success ? "success" : "error",
+      });
+      mutate();
+      mutateInvites();
+    } catch {
+      toast.add({ title: "Error", description: "Something went wrong", type: "error" });
+    } finally {
+      setAnsweringId(null);
+    }
+  };
+
+  const withdrawInvite = async (id: string) => {
+    setAnsweringId(id);
+    try {
+      const res = await fetch(`/api/barber/shop/invites/${id}`, { method: "DELETE" });
+      const result = await res.json();
+      if (!result.success) toast.add({ title: "Error", description: result.error?.message || "Something went wrong", type: "error" });
+      mutate();
+    } finally {
+      setAnsweringId(null);
+    }
+  };
 
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
@@ -148,6 +193,24 @@ export default function ShopPage() {
         </p>
       </div>
 
+      {!shop && myInvites.length > 0 && (
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-900 rounded-2xl p-6 space-y-4">
+          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">You've been invited to a shop</h2>
+          {myInvites.map((inv) => (
+            <div key={inv._id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <p className="text-zinc-800 dark:text-zinc-200">
+                <span className="font-semibold">{inv.shopName}</span>
+                {inv.invitedBy ? <span className="text-sm text-zinc-500"> — invited by {inv.invitedBy}</span> : null}
+              </p>
+              <div className="flex gap-2">
+                <Button className="h-11 px-5" disabled={answeringId === inv._id} onClick={() => answerInvite(inv._id, "accept")}>Accept</Button>
+                <Button variant="outline" className="h-11 px-5" disabled={answeringId === inv._id} onClick={() => answerInvite(inv._id, "decline")}>Decline</Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {!shop ? (
         <div className="bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-6">
           <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">Create a Shop</h2>
@@ -237,6 +300,18 @@ export default function ShopPage() {
               })}
             </div>
 
+            {shop.isOwner && (shop.pendingInvites?.length ?? 0) > 0 && (
+              <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800 space-y-2">
+                <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Waiting for a reply</h3>
+                {shop.pendingInvites!.map((inv) => (
+                  <div key={inv._id} className="flex items-center justify-between">
+                    <p className="text-sm text-zinc-700 dark:text-zinc-300">{inv.name} <span className="text-xs text-zinc-500">{inv.barberCode}</span></p>
+                    <Button variant="ghost" size="sm" className="text-red-600" disabled={answeringId === inv._id} onClick={() => withdrawInvite(inv._id)}>Withdraw</Button>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {shop.isOwner && (
               <div className="flex items-center gap-2 pt-4 border-t border-zinc-200 dark:border-zinc-800">
                 <Input
@@ -245,7 +320,7 @@ export default function ShopPage() {
                   placeholder="Barber code (e.g. b002)"
                 />
                 <Button onClick={handleAddMember} disabled={addingMember || !newMemberCode.trim()}>
-                  {addingMember ? "Adding..." : "Add"}
+                  {addingMember ? "Sending..." : "Invite"}
                 </Button>
               </div>
             )}

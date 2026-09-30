@@ -10,6 +10,7 @@ export interface IBooking extends Document {
   endTime: string;
   status: "CONFIRMED" | "COMPLETED" | "CANCELLED" | "NO_SHOW";
   notes?: string;
+  startMinutes?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -30,11 +31,14 @@ const BookingSchema: Schema = new Schema(
       index: true,
     },
     notes: { type: String },
+    // startTime as minutes since midnight, so lists sort chronologically ("9:00 AM" before "10:00 AM").
+    startMinutes: { type: Number },
   },
   { timestamps: true }
 );
 
 BookingSchema.index({ barberId: 1, date: 1 });
+BookingSchema.index({ barberId: 1, date: 1, startMinutes: 1 });
 BookingSchema.index({ barberId: 1, status: 1, date: 1 });
 BookingSchema.index({ slotId: 1, status: 1 });
 BookingSchema.index({ status: 1, date: 1 });

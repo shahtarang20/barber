@@ -59,11 +59,17 @@ export async function GET(req: Request) {
     const pastConfirmed = await Booking.find({ ...base, status: "CONFIRMED", date: { $lte: todayStr } }).select("date endTime");
     const needsAction = pastConfirmed.filter((b) => minutesUntilSlotEnd(b.date, b.endTime) < 0).length;
 
+    // Coming-up views read chronologically (date, then real time of day); history reads newest day first.
+    const historyView = ["COMPLETED", "CANCELLED", "NO_SHOW"].includes(filter);
+    const sort: Record<string, 1 | -1> = historyView
+      ? { date: -1, startMinutes: 1, createdAt: 1 }
+      : { date: 1, startMinutes: 1, createdAt: 1 };
+
     const total = await Booking.countDocuments(query);
 
     const bookings = await Booking.find(query)
       .populate({ path: 'customerId', model: Customer, select: 'name phone' })
-      .sort({ date: -1, startTime: 1 })
+      .sort(sort)
       .skip(skip)
       .limit(limit);
 

@@ -1,5 +1,6 @@
 import { Booking } from "@/models/Booking";
 import { Slot } from "@/models/Slot";
+import { holdSeatForWaitlist, HOLD_MINUTES } from "@/lib/waitlistHold";
 
 /**
  * The one place a booking gets cancelled and its slot freed — used by both the
@@ -17,8 +18,8 @@ export async function cancelBookingAndFreeSlot(bookingId: string) {
   );
   if (!booking) return null;
 
-  const { waitlist, slotTime } = await freeSlotSeat(booking.slotId, booking.startTime);
-  return { booking, waitlist, slotTime };
+  const { waitlist, slotTime, holdMinutes } = await freeSlotSeat(booking.slotId, booking.startTime);
+  return { booking, waitlist, slotTime, holdMinutes };
 }
 
 /**
@@ -34,10 +35,9 @@ export async function freeSlotSeat(slotId: unknown, fallbackTime = "") {
     { new: true }
   ) ?? (await Slot.findById(slotId));
 
-  const hasRoom = !!slot && slot.bookingsCount < slot.capacity;
-  const waitlist: { name: string; phone: string }[] = hasRoom
-    ? (slot!.waitlist || []).slice(0, 3).map((w: { name: string; phone: string }) => ({ name: w.name, phone: w.phone }))
-    : [];
+  // A seat opened: hold it for the first waitlisted customer instead of leaving it for whoever clicks first.
+  const holder = await holdSeatForWaitlist(slotId);
+  const waitlist: { name: string; phone: string }[] = holder ? [{ name: holder.name, phone: holder.phone }] : [];
 
-  return { waitlist, slotTime: slot?.startTime ?? fallbackTime };
+  return { waitlist, slotTime: slot?.startTime ?? fallbackTime, holdMinutes: HOLD_MINUTES };
 }

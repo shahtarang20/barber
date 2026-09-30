@@ -14,6 +14,7 @@ export interface ISlot extends Document {
     joinedAt: Date;
   }[];
   isCustomCapacity?: boolean;
+  holds?: { phone: string; name: string; until: Date }[];
   shiftedAt?: Date; // set when the barber shifted the day ("running late"); auto-reconcile leaves that date alone
   createdAt: Date;
   updatedAt: Date;
@@ -36,6 +37,8 @@ const SlotSchema: Schema = new Schema(
       },
     ],
     isCustomCapacity: { type: Boolean, default: false },
+    // A freed seat is held for the first waitlisted customer for a few minutes.
+    holds: [{ phone: { type: String, required: true }, name: { type: String, required: true }, until: { type: Date, required: true }, _id: false }],
     shiftedAt: { type: Date },
   },
   { timestamps: true }

@@ -48,6 +48,7 @@ export default function AppointmentsPage() {
     prompt: string;
     waitlistCustomers?: { name: string, phone: string }[];
     byCustomer?: boolean;
+    holdMinutes?: number;
   } | null>(null);
 
   const [walkInOpen, setWalkInOpen] = useState(false);
@@ -97,11 +98,12 @@ export default function AppointmentsPage() {
   useRealtimeRefresh((event) => {
     mutateBookings();
     if (event?.type === "BOOKING_CANCELLED_BY_CUSTOMER" && event.data) {
-      const { name, phone, time, waitlistCustomers } = event.data;
+      const { name, phone, time, waitlistCustomers, holdMinutes } = event.data;
       setWhatsappPromptData({
         phone, name, time,
         prompt: `${name} cancelled their ${time} booking. The slot is open again.`,
         waitlistCustomers,
+        holdMinutes,
         byCustomer: true,
       });
     }
@@ -130,7 +132,7 @@ export default function AppointmentsPage() {
           const time = data.data.booking.startTime;
           
           const prompt = t('cancelPrompt' as any).replace('{name}', name);
-          setWhatsappPromptData({ phone, name, time, prompt, waitlistCustomers: data.data.waitlistCustomers });
+          setWhatsappPromptData({ phone, name, time, prompt, waitlistCustomers: data.data.waitlistCustomers, holdMinutes: data.data.holdMinutes });
         }
       } else {
         toast.add({ title: "Error", description: data.error?.message || `Failed to ${action} booking`, type: "error" });
@@ -430,7 +432,7 @@ export default function AppointmentsPage() {
                     className="w-full justify-start mb-2 border-green-200 bg-green-50 text-green-700 hover:bg-green-100" 
                     onClick={() => {
                       const cleanPhone = getWhatsAppNumber(wc.phone);
-                      const msgStr = t('apptWaitlistMessage').replace('{name}', wc.name).replace('{time}', whatsappPromptData.time).replace('{link}', window.location.origin);
+                      const msgStr = t('apptWaitlistMessage').replace('{name}', wc.name).replace('{time}', whatsappPromptData.time).replace('{mins}', String(whatsappPromptData.holdMinutes ?? 15)).replace('{link}', window.location.origin);
                       window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msgStr)}`, '_blank');
                     }}
                   >

@@ -35,6 +35,7 @@ interface ShopSlot {
 }
 
 interface BookingSuccessView {
+  queueNumber?: number;
   bookingNumber: string;
   date: string;
   startTime: string;
@@ -66,6 +67,20 @@ export default function ShopBookingPage() {
   const shopError = shopLoadError || (shopData && !shopData.success);
   const allSlots: ShopSlot[] = slotsData?.success ? slotsData.data : [];
   const slots = selectedBarberId === "ANY" ? allSlots : allSlots.filter((s) => s.barberId === selectedBarberId);
+
+  // "Any available barber": show each time once (not once per barber). Pick the barber with the most free seats
+  // for that time, and remember how many barbers still have room.
+  const hasRoom = (x: ShopSlot) => x.status === "AVAILABLE" || (x.capacity > 1 && x.bookingsCount < x.capacity);
+  const bestByTime = new Map<string, ShopSlot>();
+  const freeBarbersByTime = new Map<string, number>();
+  for (const sl of slots) {
+    if (hasRoom(sl)) freeBarbersByTime.set(sl.startTime, (freeBarbersByTime.get(sl.startTime) || 0) + 1);
+    const cur = bestByTime.get(sl.startTime);
+    const better = !cur
+      || (hasRoom(sl) && !hasRoom(cur))
+      || (hasRoom(sl) === hasRoom(cur) && sl.capacity - sl.bookingsCount > cur.capacity - cur.bookingsCount);
+    if (better) bestByTime.set(sl.startTime, sl);
+  }
   const loading = shopLoading || (slotsLoading && !slotsData);
 
   const [selectedSlot, setSelectedSlot] = useState<ShopSlot | null>(null);
@@ -102,7 +117,7 @@ export default function ShopBookingPage() {
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        setBookingError(data.error?.message || "Operation failed");
+        setBookingError(data.error?.code === "SEAT_HELD" ? t("seatHeld") : data.error?.message || "Operation failed");
         setBookingLoading(false);
         mutateSlots();
         return;
@@ -167,6 +182,12 @@ export default function ShopBookingPage() {
 
           <div className="bg-zinc-50 rounded-xl p-6 mb-8 text-left border border-zinc-100">
             <div className="grid grid-cols-2 gap-4 text-sm">
+              {!bookingSuccess.isWaitlist && bookingSuccess.queueNumber && (
+                <>
+                  <div className="text-zinc-500">{t("yourTurn")}</div>
+                  <div className="font-bold text-right">#{bookingSuccess.queueNumber}</div>
+                </>
+              )}
               {!bookingSuccess.isWaitlist && (
                 <>
                   <div className="text-zinc-500">{t("bookingId")}</div>
@@ -288,6 +309,7 @@ export default function ShopBookingPage() {
                         return true;
                       }
                     })
+                    .filter((slot) => selectedBarberId !== "ANY" || bestByTime.get(slot.startTime)?._id === slot._id)
                     .map((slot) => {
                       const isAvailable = slot.status === "AVAILABLE" || (slot.capacity && slot.capacity > 1 && slot.bookingsCount < slot.capacity);
                       const isFull = !isAvailable && slot.status !== "BLOCKED";
@@ -309,7 +331,11 @@ export default function ShopBookingPage() {
                         >
                           <span>{slot.startTime}</span>
                           {selectedBarberId === "ANY" && (
-                            <span className="text-[10px] text-zinc-500 mt-0.5">{slot.barberName}</span>
+                            <span className="text-[10px] text-zinc-500 mt-0.5">
+                              {(freeBarbersByTime.get(slot.startTime) || 0) > 0
+                                ? t("barbersFree").replace("{n}", String(freeBarbersByTime.get(slot.startTime)))
+                                : slot.barberName}
+                            </span>
                           )}
                           {isFull && <span className="text-[10px] uppercase font-bold mt-1 tracking-wider opacity-80">{t("waitlist" as any) || "Waitlist"}</span>}
                         </button>

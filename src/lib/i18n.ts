@@ -170,9 +170,15 @@ const translations = {
     apptClose: "Close",
     apptCancelledOk: "Cancellation Successful",
     apptMessageCustomer: "Message {name} (Cancelled)",
-    apptWaitlistTitle: "Waitlist Customers (Slot now open)",
-    apptWaitlistMessage: "Hi {name}! A slot just opened up at {time}. Tap here to claim it: {link}",
-    apptMessagePerson: "Message {name} ({phone})"
+    apptWaitlistTitle: "First on the waitlist (seat held for them)",
+    apptWaitlistMessage: "Hi {name}! A seat just opened at {time}. We're holding it for you for {mins} minutes — tap here to book it: {link}",
+    apptMessagePerson: "Message {name} ({phone})",
+    turnNumber: "Turn number (first come, first served)",
+    hideFinished: "Fold this time slot",
+    yourTurn: "Your turn",
+    yourTurnHint: "Customers in the same time are served in booking order.",
+    seatHeld: "This last seat is being held for someone on the waitlist for a few minutes. Please pick another time or try again shortly.",
+    barbersFree: "{n} barbers free"
   },
   hi: {
     loading: "लोड हो रहा है...",
@@ -318,9 +324,15 @@ const translations = {
     apptClose: "बंद करा",
     apptCancelledOk: "रद्द झाले",
     apptMessageCustomer: "{name} ला संदेश पाठवा (रद्द)",
-    apptWaitlistTitle: "प्रतीक्षा यादीतील ग्राहक (स्लॉट आता रिकामा)",
-    apptWaitlistMessage: "नमस्कार {name}! {time} वाजता एक स्लॉट रिकामा झाला आहे. बुक करण्यासाठी येथे टॅप करा: {link}",
-    apptMessagePerson: "{name} ला संदेश पाठवा ({phone})"
+    apptWaitlistTitle: "प्रतीक्षा यादीत पहिले (जागा त्यांच्यासाठी राखलेली)",
+    apptWaitlistMessage: "नमस्कार {name}! {time} वाजता एक जागा रिकामी झाली आहे. आम्ही ती तुमच्यासाठी {mins} मिनिटे राखून ठेवली आहे — बुक करण्यासाठी येथे टॅप करा: {link}",
+    apptMessagePerson: "{name} ला संदेश पाठवा ({phone})",
+    turnNumber: "क्रमांक (आधी आला, आधी सेवा)",
+    hideFinished: "ही वेळ आटोपा",
+    yourTurn: "तुमचा क्रमांक",
+    yourTurnHint: "एकाच वेळेतील ग्राहकांना बुकिंगच्या क्रमाने सेवा दिली जाते.",
+    seatHeld: "ही शेवटची जागा काही मिनिटांसाठी प्रतीक्षा यादीतील एका ग्राहकासाठी राखून ठेवली आहे. कृपया दुसरी वेळ निवडा किंवा थोड्या वेळाने पुन्हा प्रयत्न करा.",
+    barbersFree: "{n} न्हावी उपलब्ध"
   },
   gu: {
     loading: "લોડ થઈ રહ્યું છે...",
@@ -466,9 +478,15 @@ const translations = {
     apptClose: "બંધ કરો",
     apptCancelledOk: "રદ થઈ ગયું",
     apptMessageCustomer: "{name} ને સંદેશ મોકલો (રદ)",
-    apptWaitlistTitle: "પ્રતીક્ષા યાદીના ગ્રાહકો (સ્લોટ હવે ખાલી)",
-    apptWaitlistMessage: "નમસ્તે {name}! {time} વાગ્યે એક સ્લોટ ખાલી થયો છે. બુક કરવા અહીં ટૅપ કરો: {link}",
-    apptMessagePerson: "{name} ને સંદેશ મોકલો ({phone})"
+    apptWaitlistTitle: "પ્રતીક્ષા યાદીમાં પહેલા (બેઠક તેમના માટે રાખેલી)",
+    apptWaitlistMessage: "નમસ્તે {name}! {time} વાગ્યે એક બેઠક ખાલી થઈ છે. અમે તે તમારા માટે {mins} મિનિટ રાખી છે — બુક કરવા અહીં ટૅપ કરો: {link}",
+    apptMessagePerson: "{name} ને સંદેશ મોકલો ({phone})",
+    turnNumber: "નંબર (પહેલા આવો, પહેલા મેળવો)",
+    hideFinished: "આ સમય સંકેલો",
+    yourTurn: "તમારો નંબર",
+    yourTurnHint: "એક જ સમયના ગ્રાહકોને બુકિંગના ક્રમમાં સેવા મળે છે.",
+    seatHeld: "આ છેલ્લી બેઠક થોડી મિનિટ માટે પ્રતીક્ષા યાદીના કોઈ ગ્રાહક માટે રાખવામાં આવી છે. કૃપા કરીને બીજો સમય પસંદ કરો અથવા થોડીવાર પછી ફરી પ્રયાસ કરો.",
+    barbersFree: "{n} બાર્બર ઉપલબ્ધ"
   },
   mr: {
     loading: "लोड होत आहे...",
@@ -614,9 +632,15 @@ const translations = {
     apptClose: "बंद करें",
     apptCancelledOk: "रद्द हो गई",
     apptMessageCustomer: "{name} को संदेश भेजें (रद्द)",
-    apptWaitlistTitle: "प्रतीक्षा सूची के ग्राहक (स्लॉट अब खाली)",
-    apptWaitlistMessage: "नमस्ते {name}! {time} पर एक स्लॉट खाली हुआ है। बुक करने के लिए यहाँ टैप करें: {link}",
-    apptMessagePerson: "{name} को संदेश भेजें ({phone})"
+    apptWaitlistTitle: "प्रतीक्षा सूची में पहले (सीट उनके लिए रोकी गई)",
+    apptWaitlistMessage: "नमस्ते {name}! {time} पर एक सीट खाली हुई है। हम इसे आपके लिए {mins} मिनट रोक रहे हैं — बुक करने के लिए यहाँ टैप करें: {link}",
+    apptMessagePerson: "{name} को संदेश भेजें ({phone})",
+    turnNumber: "नंबर (पहले आओ, पहले पाओ)",
+    hideFinished: "इस समय को समेटें",
+    yourTurn: "आपका नंबर",
+    yourTurnHint: "एक ही समय के ग्राहकों को बुकिंग के क्रम में सेवा दी जाती है।",
+    seatHeld: "यह आख़िरी सीट कुछ मिनट के लिए प्रतीक्षा सूची के किसी ग्राहक के लिए रोकी गई है। कृपया दूसरा समय चुनें या थोड़ी देर बाद फिर कोशिश करें।",
+    barbersFree: "{n} नाई उपलब्ध"
   }
 };
 

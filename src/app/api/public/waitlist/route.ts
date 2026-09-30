@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import { Slot } from "@/models/Slot";
 import { z } from "zod";
+import { activeHoldCount } from "@/lib/waitlistHold";
 import mongoose from "mongoose";
 import { rateLimit, getClientIp } from "@/lib/rateLimit";
 import { notifyBarber } from "@/lib/realtime";
@@ -48,8 +49,9 @@ export async function POST(req: Request) {
     }
 
     // A waitlist is only for full slots — if there's still room, book it directly.
-    const target = await Slot.findById(slotId).select("status bookingsCount capacity");
-    if (target && target.status === "AVAILABLE" && target.bookingsCount < target.capacity) {
+    const target = await Slot.findById(slotId).select("status bookingsCount capacity holds");
+    // Seats being held for other waitlisted customers count as taken.
+    if (target && target.status === "AVAILABLE" && target.bookingsCount + activeHoldCount(target) < target.capacity) {
       return NextResponse.json({ success: false, error: { message: "This time is still open — please book it directly." } }, { status: 409 });
     }
 

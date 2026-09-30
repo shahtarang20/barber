@@ -53,8 +53,17 @@ export default function DashboardPage() {
     `/api/barber/bookings?filter=DATE&date=${formattedDate}&limit=100`,
     fetcher
   );
-  const dayBookings: { _id: string; slotId: string; status: string; customerId?: { name?: string; phone?: string } }[] =
+  const dayBookings: { _id: string; slotId: string; status: string; createdAt?: string; customerId?: { name?: string; phone?: string } }[] =
     dayBookingsData?.success ? dayBookingsData.data : [];
+
+  // Finished slots (everyone served) fold into one line so a busy day stays short; tap to open.
+  const [expandedSlots, setExpandedSlots] = useState<Set<string>>(new Set());
+  const toggleSlot = (id: string) =>
+    setExpandedSlots((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
 
   const handleBookingAction = async (id: string, action: "complete" | "no-show") => {
     try {
@@ -441,7 +450,25 @@ export default function DashboardPage() {
                 );
               }
 
-              return visibleSlots.map((slot) => (
+              return visibleSlots.map((slot) => {
+                // First come, first served: the order people booked this time slot in.
+                const slotBookings = dayBookings
+                  .filter((b) => String(b.slotId) === String(slot._id))
+                  .sort((x, y) => new Date(x.createdAt || 0).getTime() - new Date(y.createdAt || 0).getTime());
+                const finished = slotBookings.length > 0 && slotBookings.every((b) => b.status === "COMPLETED");
+                if (finished && !expandedSlots.has(slot._id)) {
+                  return (
+                    <button
+                      key={slot._id}
+                      onClick={() => toggleSlot(slot._id)}
+                      className="w-full p-4 sm:px-6 flex items-center justify-between text-left hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
+                    >
+                      <span className="text-base font-semibold text-zinc-900 dark:text-zinc-50">{slot.startTime}</span>
+                      <span className="text-sm font-medium text-green-600 dark:text-green-400">✓ {slotBookings.length} {t('apptCompleted')} ▾</span>
+                    </button>
+                  );
+                }
+                return (
                 <div key={slot._id}>
                 <div className="p-4 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors gap-4 sm:gap-0">
                   <div className="flex items-center gap-3 sm:gap-6 w-full sm:w-auto justify-between sm:justify-start">
@@ -479,28 +506,38 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 </div>
-                {dayBookings.filter((b) => String(b.slotId) === String(slot._id)).length > 0 && (
+                {slotBookings.length > 0 && (
                   <div className="px-4 sm:px-6 pb-4 space-y-2">
-                    {dayBookings.filter((b) => String(b.slotId) === String(slot._id)).map((b) => (
-                      <div key={b._id} className="flex items-center justify-between gap-2 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 p-3">
-                        <div className="min-w-0">
-                          <div className="font-medium text-zinc-900 dark:text-zinc-100 truncate">{b.customerId?.name || "—"}</div>
-                          {b.customerId?.phone && <a href={`tel:${b.customerId.phone}`} className="text-sm text-zinc-500">{b.customerId.phone}</a>}
-                        </div>
-                        {b.status === "CONFIRMED" ? (
-                          <div className="flex gap-2 shrink-0">
-                            <Button className="h-11 px-4 bg-green-600 hover:bg-green-700 text-white" onClick={() => handleBookingAction(b._id, "complete")}>✓ {t('done')}</Button>
-                            <Button variant="outline" className="h-11 px-3" onClick={() => handleBookingAction(b._id, "no-show")}>{t('apptNoShow')}</Button>
+                    {slotBookings.map((b, idx) => (
+                      <div key={b._id} className="rounded-xl bg-zinc-50 dark:bg-zinc-800/50 p-3 space-y-2">
+                        <div className="flex items-start gap-3">
+                          <span className="shrink-0 mt-0.5 w-8 h-8 rounded-full bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 text-sm font-bold flex items-center justify-center" title={t('turnNumber')}>
+                            {idx + 1}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <div className="font-medium text-zinc-900 dark:text-zinc-100 break-words">{b.customerId?.name || "—"}</div>
+                            {b.customerId?.phone && <a href={`tel:${b.customerId.phone}`} className="text-sm text-zinc-500">{b.customerId.phone}</a>}
                           </div>
-                        ) : (
-                          <span className="text-sm font-medium text-green-600 dark:text-green-400 shrink-0">✓ {t('apptCompleted')}</span>
+                          {b.status !== "CONFIRMED" && (
+                            <span className="text-sm font-medium text-green-600 dark:text-green-400 shrink-0">✓ {t('apptCompleted')}</span>
+                          )}
+                        </div>
+                        {b.status === "CONFIRMED" && (
+                          <div className="grid grid-cols-2 gap-2">
+                            <Button className="h-11 bg-green-600 hover:bg-green-700 text-white" onClick={() => handleBookingAction(b._id, "complete")}>✓ {t('done')}</Button>
+                            <Button variant="outline" className="h-11" onClick={() => handleBookingAction(b._id, "no-show")}>{t('apptNoShow')}</Button>
+                          </div>
                         )}
                       </div>
                     ))}
+                    {finished && (
+                      <button onClick={() => toggleSlot(slot._id)} className="text-sm text-zinc-500 underline">{t('hideFinished')}</button>
+                    )}
                   </div>
                 )}
                 </div>
-              ));
+                );
+              });
             })()
           )}
         </div>

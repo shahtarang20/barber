@@ -90,6 +90,7 @@ export async function POST(req: Request) {
         const bookings = await Booking.find({ slotId: slot._id, status: "CONFIRMED" });
         for (const booking of bookings) {
           booking.startTime = newStartTimeStr;
+          booking.startMinutes = timeStringToMinutes(newStartTimeStr);
           booking.endTime = newEndTimeStr;
           await booking.save();
 

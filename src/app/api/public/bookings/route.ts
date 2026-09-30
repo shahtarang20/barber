@@ -2,11 +2,13 @@ import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import { Slot } from "@/models/Slot";
 import { createConfirmedBooking } from "@/lib/createBooking";
+import { Booking } from "@/models/Booking";
 import { z } from "zod";
 import mongoose from "mongoose";
 import { rateLimit, getClientIp } from "@/lib/rateLimit";
 import { notifyBarber } from "@/lib/realtime";
 import { pushToBarber } from "@/lib/push";
+import { heldByOthersExpr, activeHoldCount } from "@/lib/waitlistHold";
 import { normalizePhone } from "@/lib/phone";
 import { User } from "@/models/User";
 import { minutesUntilSlot } from "@/lib/istTime";
@@ -52,13 +54,28 @@ export async function POST(req: Request) {
     }
 
     // ATOMIC OPERATION: Check if bookingsCount < capacity and increment in one step.
+    const normalizedPhone = normalizePhone(phone);
+    const now = new Date();
+    // Claim a seat — but never one that's being held for a waitlisted customer (unless this IS that customer).
     const slot = await Slot.findOneAndUpdate(
-      { _id: slotId, status: "AVAILABLE", $expr: { $lt: ["$bookingsCount", "$capacity"] } },
-      { $inc: { bookingsCount: 1 } },
+      {
+        _id: slotId,
+        status: "AVAILABLE",
+        $expr: { $lt: ["$bookingsCount", { $subtract: ["$capacity", heldByOthersExpr(normalizedPhone, now)] }] },
+      },
+      { $inc: { bookingsCount: 1 }, $pull: { holds: { phone: normalizedPhone } } },
       { new: true }
     );
 
     if (!slot) {
+      const probe = await Slot.findById(slotId).select("status bookingsCount capacity holds");
+      const heldForOthers = !!probe && probe.status === "AVAILABLE" && probe.bookingsCount < probe.capacity && activeHoldCount(probe, now) > 0;
+      if (heldForOthers) {
+        return NextResponse.json({
+          success: false,
+          error: { code: "SEAT_HELD", message: "This last seat is being held for someone on the waitlist for a few minutes. Please pick another time or try again shortly." },
+        }, { status: 409 });
+      }
       return NextResponse.json({
         success: false,
         error: { code: "SLOT_ALREADY_BOOKED", message: "Sorry, this slot is fully booked or unavailable. Please choose another time." }
@@ -102,9 +119,17 @@ export async function POST(req: Request) {
         body: `${customer.name} booked ${newBooking.startTime} on ${newBooking.date}`,
       });
 
+      // First-come position within this time slot (cancelled bookings don't count).
+      const queueNumber = await Booking.countDocuments({
+        slotId: slot._id,
+        status: { $in: ["CONFIRMED", "COMPLETED"] },
+        createdAt: { $lte: newBooking.createdAt },
+      });
+
       return NextResponse.json({
         success: true, 
         data: { 
+          queueNumber,
           bookingNumber: newBooking.bookingNumber,
           date: newBooking.date,
           startTime: newBooking.startTime,

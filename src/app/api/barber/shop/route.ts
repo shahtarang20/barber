@@ -3,6 +3,7 @@ import { requireAuth } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import { Shop } from "@/models/Shop";
 import { User } from "@/models/User";
+import { ShopInvite } from "@/models/ShopInvite";
 import { z } from "zod";
 
 const createShopSchema = z.object({
@@ -34,6 +35,9 @@ export async function GET(req: Request) {
     }
 
     const members = await User.find({ shopId: shop._id }).select("name barberCode slug profileImage");
+    const isOwner = shop.ownerId.toString() === payload.userId;
+    const pending = isOwner ? await ShopInvite.find({ shopId: shop._id, status: "PENDING" }).populate("barberId", "name barberCode") : [];
+    const pendingInvites = pending.map((i: any) => ({ _id: i._id, name: i.barberId?.name, barberCode: i.barberId?.barberCode }));
 
     return NextResponse.json({
       success: true,
@@ -45,6 +49,7 @@ export async function GET(req: Request) {
         isOwner: shop.ownerId.toString() === payload.userId,
         viewerId: payload.userId,
         members,
+        pendingInvites,
       },
     });
   } catch (error) {

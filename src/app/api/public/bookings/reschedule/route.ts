@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { timeStringToMinutes } from "@/lib/timeSort";
 import { z } from "zod";
 import mongoose from "mongoose";
 import connectToDatabase from "@/lib/mongodb";
@@ -11,6 +12,7 @@ import { notifyBarber } from "@/lib/realtime";
 import { pushToBarber } from "@/lib/push";
 import { findOwnBooking } from "@/lib/ownBooking";
 import { freeSlotSeat } from "@/lib/cancelBooking";
+import { heldByOthersExpr } from "@/lib/waitlistHold";
 
 // Same cutoff as cancelling: too close to the start, contact the barber instead.
 const CHANGE_CUTOFF_MINUTES = 30;
@@ -57,9 +59,15 @@ export async function POST(req: Request) {
     }
 
     // 1. Claim the new seat first (same barber only), so the customer never ends up with no slot.
+    const phoneNorm = normalizePhone(phone);
     const newSlot = await Slot.findOneAndUpdate(
-      { _id: newSlotId, barberId: booking.barberId, status: "AVAILABLE", $expr: { $lt: ["$bookingsCount", "$capacity"] } },
-      { $inc: { bookingsCount: 1 } },
+      {
+        _id: newSlotId,
+        barberId: booking.barberId,
+        status: "AVAILABLE",
+        $expr: { $lt: ["$bookingsCount", { $subtract: ["$capacity", heldByOthersExpr(phoneNorm)] }] },
+      },
+      { $inc: { bookingsCount: 1 }, $pull: { holds: { phone: phoneNorm } } },
       { new: true }
     );
     if (!newSlot) {
@@ -80,7 +88,7 @@ export async function POST(req: Request) {
     const oldSlotId = booking.slotId;
     const moved = await Booking.findOneAndUpdate(
       { _id: booking._id, status: "CONFIRMED", slotId: oldSlotId },
-      { $set: { slotId: newSlot._id, date: newSlot.date, startTime: newSlot.startTime, endTime: newSlot.endTime } },
+      { $set: { slotId: newSlot._id, date: newSlot.date, startTime: newSlot.startTime, startMinutes: timeStringToMinutes(newSlot.startTime), endTime: newSlot.endTime } },
       { new: true }
     );
     if (!moved) {
@@ -95,6 +103,7 @@ export async function POST(req: Request) {
       phone: customer.phone,
       time: freed.slotTime,
       waitlistCustomers: freed.waitlist,
+      holdMinutes: freed.holdMinutes,
     });
 
     await pushToBarber(booking.barberId.toString(), {

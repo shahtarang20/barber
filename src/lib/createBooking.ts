@@ -2,6 +2,7 @@ import { Customer } from "@/models/Customer";
 import { Booking } from "@/models/Booking";
 import { Counter } from "@/models/Counter";
 import { normalizePhone } from "@/lib/phone";
+import { timeStringToMinutes } from "@/lib/timeSort";
 
 interface ClaimedSlot {
   _id: unknown;
@@ -43,6 +44,7 @@ export async function createConfirmedBooking(slot: ClaimedSlot, name: string, ph
     customerId: customer._id,
     date: slot.date,
     startTime: slot.startTime,
+    startMinutes: timeStringToMinutes(slot.startTime),
     endTime: slot.endTime,
     status: "CONFIRMED",
     notes,
