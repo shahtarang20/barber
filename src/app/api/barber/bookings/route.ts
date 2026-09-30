@@ -3,7 +3,8 @@ import { requireAuth } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import { Booking } from "@/models/Booking";
 import { Customer } from "@/models/Customer";
-import { format } from "date-fns";
+import { getTodayISTString } from "@/lib/istTime";
+import { autoCompleteStaleBookings } from "@/lib/bookingMaintenance";
 
 export async function GET(req: Request) {
   try {
@@ -19,8 +20,15 @@ export async function GET(req: Request) {
 
     await connectToDatabase();
     
-    const todayStr = format(new Date(), "yyyy-MM-dd");
-    const query = { barberId: payload.userId, date: { $gte: todayStr } };
+    const todayStr = getTodayISTString();
+
+    await autoCompleteStaleBookings(payload.userId);
+
+    // Upcoming bookings plus any past ones still awaiting Complete / No Show.
+    const query = {
+      barberId: payload.userId,
+      $or: [{ date: { $gte: todayStr } }, { status: "CONFIRMED" }],
+    };
 
     const total = await Booking.countDocuments(query);
 

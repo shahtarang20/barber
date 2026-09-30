@@ -1,5 +1,6 @@
+import { getTodayISTString } from "@/lib/istTime";
 import { Slot } from "@/models/Slot";
-import { format, addDays, parse, isValid, addMinutes, startOfDay } from "date-fns";
+import { format, addDays, parse, isValid, addMinutes } from "date-fns";
 import { parseDateOnly } from "@/lib/timeSort";
 
 /**
@@ -25,8 +26,9 @@ export async function autoGenerateFutureSlots(
   slotDuration: number,
   capacity: number = 1
 ) {
-  const today = startOfDay(new Date());
-  const todayStr = format(today, "yyyy-MM-dd");
+  // "Today" is always the IST calendar date, not the server's (UTC on Vercel).
+  const todayStr = getTodayISTString();
+  const today = parseDateOnly(todayStr);
 
   const existingSlots = await Slot.find({
     barberId,

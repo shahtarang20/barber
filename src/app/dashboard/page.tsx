@@ -8,6 +8,7 @@ import { useTranslation } from "@/lib/i18n";
 import { toast } from "@/components/ui/toast";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import { useRealtimeRefresh } from "@/lib/useRealtimeRefresh";
+import { getWhatsAppNumber } from "@/lib/phone";
 import useSWR from "swr";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
@@ -144,7 +145,7 @@ export default function DashboardPage() {
            setShowBlockModal(null);
            if (data.cancelledCustomers.length > 0) {
              const cust = data.cancelledCustomers[0];
-             const cleanPhone = cust.phone.replace(/\D/g, "");
+             const cleanPhone = getWhatsAppNumber(cust.phone);
              const slotTime = slots.find((s: SlotView) => s._id === id)?.startTime || "your slot";
              const msgStr = t('cancelMessage' as any).replace('{name}', cust.name).replace('{time}', slotTime);
              window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msgStr)}`, '_blank');
@@ -201,7 +202,7 @@ export default function DashboardPage() {
         mutateSlots();
         if (data.waitlistCustomer) {
            const cust = data.waitlistCustomer;
-           const cleanPhone = cust.phone.replace(/\D/g, "");
+           const cleanPhone = getWhatsAppNumber(cust.phone);
            const slotTime = slots.find((s: SlotView) => s._id === id)?.startTime || "your slot";
 
            const msgStr = data.autoBooking
@@ -549,7 +550,7 @@ export default function DashboardPage() {
                     size="sm"
                     className="border-green-200 text-green-700 hover:bg-green-50 shrink-0"
                     onClick={() => {
-                      const cleanPhone = c.phone.replace(/\D/g, "");
+                      const cleanPhone = getWhatsAppNumber(c.phone);
                       const msgStr = `Hi ${c.name}, I am running a bit late today! Your appointment has been shifted from ${c.oldTime} to ${c.newTime}. See you then!`;
                       window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msgStr)}`, '_blank');
                     }}

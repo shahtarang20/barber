@@ -168,6 +168,11 @@ export default function BarberBookingPage() {
               ? (t('waitlistSuccess' as any) || "You will be notified via WhatsApp if a spot opens up!") 
               : `${t('bookingSuccess')} ${barber?.name}.`}
           </p>
+          {!bookingSuccess.isWaitlist && (
+            <p className="text-sm text-zinc-500 -mt-6 mb-8">
+              Can't make it? <a href="/cancel" className="underline">Cancel your booking</a> with your Booking ID.
+            </p>
+          )}
           
           <div className="bg-zinc-50 rounded-xl p-6 mb-8 text-left border border-zinc-100">
             <div className="grid grid-cols-2 gap-4 text-sm">

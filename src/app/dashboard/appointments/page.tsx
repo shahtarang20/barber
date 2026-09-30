@@ -7,7 +7,9 @@ import { useTranslation } from "@/lib/i18n";
 import { toast } from "@/components/ui/toast";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { useRealtimeRefresh } from "@/lib/useRealtimeRefresh";
+import { getWhatsAppNumber } from "@/lib/phone";
 import useSWR from "swr";
+import { minutesUntilSlot } from "@/lib/istTime";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -16,6 +18,7 @@ interface BookingView {
   bookingNumber: string;
   date: string;
   startTime: string;
+  endTime?: string;
   status: string;
   customerId?: { name?: string; phone?: string };
 }
@@ -42,6 +45,7 @@ export default function AppointmentsPage() {
     time: string;
     prompt: string;
     waitlistCustomers?: { name: string, phone: string }[];
+    byCustomer?: boolean;
   } | null>(null);
 
   const { data: bookingsData, isLoading: loading, mutate: mutateBookings } = useSWR(
@@ -49,7 +53,18 @@ export default function AppointmentsPage() {
     fetcher
   );
 
-  useRealtimeRefresh(() => mutateBookings());
+  useRealtimeRefresh((event) => {
+    mutateBookings();
+    if (event?.type === "BOOKING_CANCELLED_BY_CUSTOMER" && event.data) {
+      const { name, phone, time, waitlistCustomers } = event.data;
+      setWhatsappPromptData({
+        phone, name, time,
+        prompt: `${name} cancelled their ${time} booking. The slot is open again.`,
+        waitlistCustomers,
+        byCustomer: true,
+      });
+    }
+  });
 
   const bookings: BookingView[] = bookingsData?.success ? bookingsData.data : [];
   const pagination = bookingsData?.success ? bookingsData.pagination : null;
@@ -94,7 +109,7 @@ export default function AppointmentsPage() {
   const handleSendWhatsApp = () => {
     if (!whatsappPromptData) return;
     const { phone, name, time } = whatsappPromptData;
-    const cleanPhone = phone.replace(/\D/g, "");
+    const cleanPhone = getWhatsAppNumber(phone);
     const msgStr = t('cancelMessage' as any).replace('{name}', name).replace('{time}', time);
     const msg = encodeURIComponent(msgStr);
     window.open(`https://wa.me/${cleanPhone}?text=${msg}`, '_blank');
@@ -167,6 +182,7 @@ export default function AppointmentsPage() {
                     </td>
                     <td className="px-6 py-4">
                       {b.status === "CONFIRMED" && <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">Confirmed</span>}
+                      {b.status === "CONFIRMED" && b.endTime && minutesUntilSlot(b.date, b.endTime) < 0 && <span className="ml-2 px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">Needs action</span>}
                       {b.status === "COMPLETED" && <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">Completed</span>}
                       {b.status === "CANCELLED" && <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">Cancelled</span>}
                       {b.status === "NO_SHOW" && <span className="px-2 py-1 rounded-full text-xs font-medium bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">No Show</span>}
@@ -219,15 +235,17 @@ export default function AppointmentsPage() {
       <Dialog open={!!whatsappPromptData} onOpenChange={(open) => !open && setWhatsappPromptData(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Cancellation Successful</DialogTitle>
+            <DialogTitle>{whatsappPromptData?.byCustomer ? "Customer Cancelled" : "Cancellation Successful"}</DialogTitle>
             <DialogDescription>
               {whatsappPromptData?.prompt}
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-2 mt-2">
-            <Button variant="default" onClick={handleSendWhatsApp}>
-              Message {whatsappPromptData?.name} (Cancelled)
-            </Button>
+            {!whatsappPromptData?.byCustomer && (
+              <Button variant="default" onClick={handleSendWhatsApp}>
+                Message {whatsappPromptData?.name} (Cancelled)
+              </Button>
+            )}
             
             {whatsappPromptData?.waitlistCustomers && whatsappPromptData.waitlistCustomers.length > 0 && (
               <div className="mt-4 border-t pt-4">
@@ -238,7 +256,7 @@ export default function AppointmentsPage() {
                     variant="outline" 
                     className="w-full justify-start mb-2 border-green-200 bg-green-50 text-green-700 hover:bg-green-100" 
                     onClick={() => {
-                      const cleanPhone = wc.phone.replace(/\D/g, "");
+                      const cleanPhone = getWhatsAppNumber(wc.phone);
                       const msgStr = `Hi ${wc.name}! A slot just opened up at ${whatsappPromptData.time}. Click here to claim it: ${window.location.origin}`;
                       window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msgStr)}`, '_blank');
                     }}

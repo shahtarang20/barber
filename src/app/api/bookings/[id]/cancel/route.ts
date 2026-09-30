@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import { Booking } from "@/models/Booking";
-import { Slot } from "@/models/Slot";
+import { cancelBookingAndFreeSlot } from "@/lib/cancelBooking";
 import { notifyBarber } from "@/lib/realtime";
 import { minutesUntilSlot } from "@/lib/istTime";
 
@@ -44,28 +44,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       }, { status: 400 });
     }
 
-    // Update booking status
-    booking.status = "CANCELLED";
-    await booking.save();
-
-    // Free up the slot
-    const slot = await Slot.findById(booking.slotId);
-    let waitlistToNotify = [];
-    if (slot) {
-      const newCount = Math.max(0, slot.bookingsCount - 1);
-      slot.bookingsCount = newCount;
-      if (newCount < slot.capacity) {
-        slot.status = "AVAILABLE";
-        // Grab up to 3 people to notify about the new opening
-        if (slot.waitlist && slot.waitlist.length > 0) {
-          waitlistToNotify = slot.waitlist.slice(0, 3);
-        }
-      }
-      await slot.save();
+    const cancelled = await cancelBookingAndFreeSlot(bookingId);
+    if (!cancelled) {
+      return NextResponse.json({ success: false, error: { message: "This booking was already changed." } }, { status: 409 });
     }
+    const { booking: cancelledBooking, waitlist: waitlistToNotify, slotTime } = cancelled;
 
     const { Customer } = await import("@/models/Customer");
-    const customer = await Customer.findById(booking.customerId);
+    const customer = await Customer.findById(cancelledBooking.customerId);
 
     notifyBarber(booking.barberId.toString(), "BOOKINGS_UPDATED");
 
@@ -73,10 +59,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       success: true, 
       data: { 
         message: "Booking cancelled successfully", 
-        booking,
+        booking: cancelledBooking,
         customer: customer ? { name: customer.name, phone: customer.phone } : null,
         waitlistCustomers: waitlistToNotify,
-        slotTime: slot ? slot.startTime : ""
+        slotTime
       } 
     });
   } catch (error) {

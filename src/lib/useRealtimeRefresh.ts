@@ -10,7 +10,7 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json());
  * Opens a Pusher connection and calls `onUpdate` whenever the server 
  * triggers an event on the barber's channel.
  */
-export function useRealtimeRefresh(onUpdate: () => void, fallbackIntervalMs = 30000) {
+export function useRealtimeRefresh(onUpdate: (event?: { type: string; data?: any }) => void, fallbackIntervalMs = 30000) {
   const onUpdateRef = useRef(onUpdate);
   onUpdateRef.current = onUpdate;
 
@@ -64,8 +64,8 @@ export function useRealtimeRefresh(onUpdate: () => void, fallbackIntervalMs = 30
       });
 
       const channel = pusher.subscribe(channelName);
-      channel.bind("update", () => {
-        onUpdateRef.current();
+      channel.bind("update", (event?: { type: string; data?: any }) => {
+        onUpdateRef.current(event);
       });
       channel.bind("pusher:subscription_error", () => {
         startFallback();

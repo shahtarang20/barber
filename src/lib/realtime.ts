@@ -31,14 +31,14 @@ export function barberChannel(barberId: string): string {
  * Notify every connected dashboard tab for this barber that their data
  * changed, so the client re-fetches.
  */
-export async function notifyBarber(barberId: string, type: string) {
+export async function notifyBarber(barberId: string, type: string, data?: Record<string, unknown>) {
   if (!pusher) {
     console.warn("Pusher is not configured. Realtime updates disabled.");
     return;
   }
 
   try {
-    await pusher.trigger(barberChannel(barberId), "update", { type });
+    await pusher.trigger(barberChannel(barberId), "update", { type, data });
   } catch (error) {
     console.error("Failed to trigger Pusher event:", error);
   }

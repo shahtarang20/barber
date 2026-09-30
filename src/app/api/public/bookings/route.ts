@@ -95,10 +95,10 @@ export async function POST(req: Request) {
       const normalizedPhone = normalizePhone(phone);
 
       // Find customer by BOTH phone and name (case-insensitive) to support families sharing a phone
-      let customer = await Customer.findOne({ 
-        phone: normalizedPhone,
-        name: { $regex: new RegExp(`^${name}$`, 'i') } 
-      });
+      // Exact, case-insensitive match via collation — never build a RegExp
+      // from user input (names like "Raj (Jr)" or "A+B" would break it).
+      let customer = await Customer.findOne({ phone: normalizedPhone, name: name.trim() })
+        .collation({ locale: "en", strength: 2 });
 
       if (!customer) {
         // Create a distinct customer record for this family member
