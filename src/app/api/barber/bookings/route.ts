@@ -33,6 +33,15 @@ export async function GET(req: Request) {
       case "TODAY":
         query = { ...base, status: "CONFIRMED", date: todayStr };
         break;
+      case "DATE": {
+        // One day's live bookings (confirmed + completed) — used by the Schedule page.
+        const date = searchParams.get("date") || "";
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+          return NextResponse.json({ success: false, error: { message: "A valid date is required." } }, { status: 400 });
+        }
+        query = { ...base, date, status: { $in: ["CONFIRMED", "COMPLETED"] } };
+        break;
+      }
       case "UPCOMING":
         query = { ...base, status: "CONFIRMED", date: { $gte: todayStr } };
         break;

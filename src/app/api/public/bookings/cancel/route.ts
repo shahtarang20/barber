@@ -7,6 +7,7 @@ import { rateLimit, getClientIp } from "@/lib/rateLimit";
 import { normalizePhone } from "@/lib/phone";
 import { minutesUntilSlot } from "@/lib/istTime";
 import { notifyBarber } from "@/lib/realtime";
+import { pushToBarber } from "@/lib/push";
 
 // Same cutoff the barber-side cancel uses.
 const CANCELLATION_CUTOFF_MINUTES = 30;
@@ -63,6 +64,11 @@ export async function POST(req: Request) {
       phone: customer.phone,
       time: cancelled.slotTime,
       waitlistCustomers: cancelled.waitlist,
+    });
+
+    await pushToBarber(booking.barberId.toString(), {
+      title: "Booking cancelled",
+      body: `${customer.name} cancelled ${cancelled.slotTime}${cancelled.waitlist.length ? " — people are on the waitlist" : ""}`,
     });
 
     return NextResponse.json({ success: true, data: { message: "Your booking has been cancelled." } });

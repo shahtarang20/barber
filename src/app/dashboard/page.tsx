@@ -49,8 +49,31 @@ export default function DashboardPage() {
     fetcher
   );
 
+  const { data: dayBookingsData, mutate: mutateDayBookings } = useSWR(
+    `/api/barber/bookings?filter=DATE&date=${formattedDate}&limit=100`,
+    fetcher
+  );
+  const dayBookings: { _id: string; slotId: string; status: string; customerId?: { name?: string; phone?: string } }[] =
+    dayBookingsData?.success ? dayBookingsData.data : [];
+
+  const handleBookingAction = async (id: string, action: "complete" | "no-show") => {
+    try {
+      const res = await fetch(`/api/bookings/${id}/${action}`, { method: "POST" });
+      const data = await res.json();
+      if (data.success) {
+        mutateDayBookings();
+        mutateSlots();
+      } else {
+        toast.add({ title: t('error'), description: data.error?.message || t('genericError'), type: "error" });
+      }
+    } catch {
+      toast.add({ title: t('error'), description: t('genericError'), type: "error" });
+    }
+  };
+
   useRealtimeRefresh((event) => {
     mutateSlots();
+    mutateDayBookings();
     // Settings changed on another device: re-read working hours and default capacity.
     if (event?.type === "SETTINGS_UPDATED") fetchProfile();
   });
@@ -131,7 +154,7 @@ export default function DashboardPage() {
         toast.add({ title: "Error", description: message, type: "error" });
       }
     } catch (error) {
-      toast.add({ title: "Error", description: "An unexpected error occurred", type: "error" });
+      toast.add({ title: t('error'), description: t('genericError'), type: "error" });
     } finally {
       setGenerating(false);
     }
@@ -170,7 +193,7 @@ export default function DashboardPage() {
         toast.add({ title: "Error", description: data.error?.message || "Failed to block slot", type: "error" });
       }
     } catch (error) {
-      toast.add({ title: "Error", description: "Error blocking slot", type: "error" });
+      toast.add({ title: t('error'), description: t('genericError'), type: "error" });
     }
   };
 
@@ -198,7 +221,7 @@ export default function DashboardPage() {
         toast.add({ title: "Error", description: data.error?.message, type: "error" });
       }
     } catch (e) {
-      toast.add({ title: "Error", description: "Failed to shift schedule.", type: "error" });
+      toast.add({ title: t('error'), description: t('genericError'), type: "error" });
     }
     setShifting(false);
   };
@@ -230,7 +253,7 @@ export default function DashboardPage() {
         toast.add({ title: "Error", description: data.error?.message || "Failed to unblock slot", type: "error" });
       }
     } catch (error) {
-      toast.add({ title: "Error", description: "Error unblocking slot", type: "error" });
+      toast.add({ title: t('error'), description: t('genericError'), type: "error" });
     }
   };
 
@@ -248,7 +271,7 @@ export default function DashboardPage() {
         toast.add({ title: "Error", description: data.error?.message || "Failed to update capacity", type: "error" });
       }
     } catch (error) {
-      toast.add({ title: "Error", description: "Error updating capacity", type: "error" });
+      toast.add({ title: t('error'), description: t('genericError'), type: "error" });
     }
   };
 
@@ -327,24 +350,21 @@ export default function DashboardPage() {
           </div>
           {!(isClosedDay && slots.length === 0) && (
           <div className="flex flex-wrap items-center gap-2 sm:gap-4 w-full md:w-auto justify-start sm:justify-end mt-2 md:mt-0">
-            <div className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-800/50 p-1 rounded-lg border border-zinc-200 dark:border-zinc-800">
-              <label className="text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 hidden sm:block pl-2">Capacity:</label>
-              <input type="number" min="1" max="50" value={capacity || ""} onChange={(e) => setCapacity(e.target.value === "" ? 0 : Number(e.target.value))} className="w-12 sm:w-14 h-8 rounded-md border border-zinc-300 px-2 text-sm dark:border-zinc-700 dark:bg-zinc-900" />
-            </div>
-            {slots.length > 0 && (
-              <Button variant="outline" size="sm" className="h-9 px-3 text-orange-600 border-orange-200 hover:bg-orange-50 dark:hover:bg-orange-950/30" onClick={() => setShiftModal(true)}>
-                <svg className="w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                Run Late
-              </Button>
-            )}
             {slots.length > 0 ? (
-              <Button variant="default" size="sm" className="h-9 px-4" onClick={generateSlots} disabled={generating}>
-                {generating ? "..." : "Sync Schedule"}
+              <Button variant="outline" className="h-11 px-4 text-orange-600 border-orange-200 hover:bg-orange-50 dark:hover:bg-orange-950/30" onClick={() => setShiftModal(true)}>
+                <svg className="w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                {t('runLate')}
               </Button>
             ) : (
-              <Button variant="outline" size="sm" className="sm:size-default" onClick={generateSlots} disabled={generating}>
-                {generating ? t('loading') : t('generateSlots')}
-              </Button>
+              <>
+                <div className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-800/50 p-1 rounded-lg border border-zinc-200 dark:border-zinc-800">
+                  <label className="text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 hidden sm:block pl-2">{t('capacityLabel')}</label>
+                  <input type="number" min="1" max="50" value={capacity || ""} onChange={(e) => setCapacity(e.target.value === "" ? 0 : Number(e.target.value))} className="w-14 h-10 rounded-md border border-zinc-300 px-2 text-base dark:border-zinc-700 dark:bg-zinc-900" />
+                </div>
+                <Button variant="outline" className="h-11 px-4" onClick={generateSlots} disabled={generating}>
+                  {generating ? t('loading') : t('generateSlots')}
+                </Button>
+              </>
             )}
           </div>
           )}
@@ -422,7 +442,8 @@ export default function DashboardPage() {
               }
 
               return visibleSlots.map((slot) => (
-                <div key={slot._id} className="p-4 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors gap-4 sm:gap-0">
+                <div key={slot._id}>
+                <div className="p-4 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors gap-4 sm:gap-0">
                   <div className="flex items-center gap-3 sm:gap-6 w-full sm:w-auto justify-between sm:justify-start">
                     <div className="text-base sm:text-lg font-semibold w-20 sm:w-24 text-zinc-900 dark:text-zinc-50">
                       {slot.startTime}
@@ -453,15 +474,31 @@ export default function DashboardPage() {
                       />
                     </div>
                     <div className="flex items-center gap-2">
-                      {slot.status === "AVAILABLE" && <Button variant="outline" size="sm" className="font-medium shadow-sm hover:bg-zinc-50 text-xs sm:text-sm h-7 sm:h-8" onClick={() => handleBlockSlot(slot._id)}>{t('blockSlot')}</Button>}
-                      {(slot.status === "BOOKED" || slot.bookingsCount > 0) && (
-                        <Link href="/dashboard/appointments" className="inline-block">
-                          <Button variant="secondary" size="sm" className="font-medium shadow-sm text-xs sm:text-sm h-7 sm:h-8">{t('viewDetails')}</Button>
-                        </Link>
-                      )}
-                      {slot.status === "BLOCKED" && <Button variant="outline" size="sm" className="font-medium shadow-sm hover:bg-zinc-50 text-xs sm:text-sm h-7 sm:h-8" onClick={() => handleUnblockSlot(slot._id)}>{t('unblock')}</Button>}
+                      {slot.status === "AVAILABLE" && <Button variant="outline" size="sm" className="font-medium shadow-sm hover:bg-zinc-50 text-sm h-11 px-4" onClick={() => handleBlockSlot(slot._id)}>{t('blockSlot')}</Button>}
+                      {slot.status === "BLOCKED" && <Button variant="outline" size="sm" className="font-medium shadow-sm hover:bg-zinc-50 text-sm h-11 px-4" onClick={() => handleUnblockSlot(slot._id)}>{t('unblock')}</Button>}
                     </div>
                   </div>
+                </div>
+                {dayBookings.filter((b) => String(b.slotId) === String(slot._id)).length > 0 && (
+                  <div className="px-4 sm:px-6 pb-4 space-y-2">
+                    {dayBookings.filter((b) => String(b.slotId) === String(slot._id)).map((b) => (
+                      <div key={b._id} className="flex items-center justify-between gap-2 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 p-3">
+                        <div className="min-w-0">
+                          <div className="font-medium text-zinc-900 dark:text-zinc-100 truncate">{b.customerId?.name || "—"}</div>
+                          {b.customerId?.phone && <a href={`tel:${b.customerId.phone}`} className="text-sm text-zinc-500">{b.customerId.phone}</a>}
+                        </div>
+                        {b.status === "CONFIRMED" ? (
+                          <div className="flex gap-2 shrink-0">
+                            <Button className="h-11 px-4 bg-green-600 hover:bg-green-700 text-white" onClick={() => handleBookingAction(b._id, "complete")}>✓ {t('done')}</Button>
+                            <Button variant="outline" className="h-11 px-3" onClick={() => handleBookingAction(b._id, "no-show")}>{t('apptNoShow')}</Button>
+                          </div>
+                        ) : (
+                          <span className="text-sm font-medium text-green-600 dark:text-green-400 shrink-0">✓ {t('apptCompleted')}</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
                 </div>
               ));
             })()
@@ -520,9 +557,9 @@ export default function DashboardPage() {
             <div className="w-16 h-16 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mx-auto mb-4">
               <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
             </div>
-            <h2 className="text-2xl font-bold text-zinc-900 mb-2">Running Late?</h2>
+            <h2 className="text-2xl font-bold text-zinc-900 mb-2">{t('runLateTitle')}</h2>
             <p className="text-zinc-600 mb-6 text-sm">
-              Push all remaining slots today down by a set amount of time. You will be able to message affected customers.
+              {t('runLateDesc')}
             </p>
             <div className="flex justify-center gap-3 mb-8">
               {[15, 30, 45, 60].map(mins => (
@@ -540,7 +577,7 @@ export default function DashboardPage() {
               ))}
             </div>
             <Button className="w-full h-12 text-lg font-bold bg-orange-600 hover:bg-orange-700 text-white" onClick={handleShiftSchedule} disabled={shifting}>
-              {shifting ? "Shifting..." : `Shift Schedule by ${shiftMinutes} mins`}
+              {shifting ? t('loading') : t('shiftBy').replace('{mins}', String(shiftMinutes))}
             </Button>
           </div>
         </div>
@@ -552,9 +589,9 @@ export default function DashboardPage() {
             <button onClick={() => setAffectedCustomers(null)} className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-900">
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
-            <h2 className="text-xl font-bold text-zinc-900 mb-2">Schedule Shifted!</h2>
+            <h2 className="text-xl font-bold text-zinc-900 mb-2">{t('shiftedTitle')}</h2>
             <p className="text-zinc-600 text-sm mb-4">
-              Your schedule has been successfully updated. The following {affectedCustomers.length} customers have been delayed. Click to notify them:
+              {t('shiftedDesc').replace('{count}', String(affectedCustomers.length))}
             </p>
             <div className="flex-1 overflow-y-auto min-h-0 mb-4 border border-zinc-200 rounded-xl divide-y divide-zinc-100">
               {affectedCustomers.map((c, i) => (
@@ -562,7 +599,7 @@ export default function DashboardPage() {
                   <div>
                     <p className="font-semibold text-zinc-900">{c.name}</p>
                     <p className="text-xs text-zinc-500 line-through inline-block mr-2">{c.oldTime}</p>
-                    <p className="text-sm text-orange-600 font-medium inline-block">Now: {c.newTime}</p>
+                    <p className="text-sm text-orange-600 font-medium inline-block">{t('nowLabel')} {c.newTime}</p>
                   </div>
                   <Button 
                     variant="outline"
@@ -570,7 +607,7 @@ export default function DashboardPage() {
                     className="border-green-200 text-green-700 hover:bg-green-50 shrink-0"
                     onClick={() => {
                       const cleanPhone = getWhatsAppNumber(c.phone);
-                      const msgStr = `Hi ${c.name}, I am running a bit late today! Your appointment has been shifted from ${c.oldTime} to ${c.newTime}. See you then!`;
+                      const msgStr = t('lateMessage').replace('{name}', c.name).replace('{old}', c.oldTime).replace('{new}', c.newTime);
                       window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msgStr)}`, '_blank');
                     }}
                   >
@@ -636,16 +673,16 @@ function CapacityEditor({ slot, onSave }: { slot: SlotView, onSave: (val: number
             handleSave();
           }
         }}
-        className="w-8 sm:w-10 h-5 sm:h-6 bg-transparent text-xs sm:text-sm font-bold text-zinc-700 dark:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-400/50 rounded text-center transition-all"
+        className="w-11 h-9 bg-transparent text-base font-bold text-zinc-700 dark:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-400/50 rounded text-center transition-all"
       />
       {isChanged && (
         <button
           onClick={handleSave}
           onMouseDown={(e) => e.preventDefault()}
-          className="ml-1 bg-zinc-900 text-white rounded p-0.5 hover:bg-zinc-800 transition-colors"
+          className="ml-1 bg-zinc-900 text-white rounded-lg p-2 hover:bg-zinc-800 transition-colors"
           title="Save Capacity"
         >
-          <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
         </button>

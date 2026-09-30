@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { QrCode } from "lucide-react";
+import { EnableNotifications } from "./EnableNotifications";
 
 export function Header() {
   const pathname = usePathname();
@@ -12,6 +13,8 @@ export function Header() {
     <div className="flex items-center justify-between p-4 md:px-8 md:py-5 bg-white dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800">
       <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-50 md:hidden">BarberSaaS</h1>
       <div className="hidden md:block" />
+      <div className="flex items-center gap-1">
+      <EnableNotifications />
       <Link
         href="/dashboard/link"
         title="Your booking link & QR code"
@@ -24,6 +27,7 @@ export function Header() {
         <QrCode className="w-5 h-5" />
         <span className="hidden sm:inline">Link & QR</span>
       </Link>
+      </div>
     </div>
   );
 }

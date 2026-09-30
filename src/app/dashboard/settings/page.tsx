@@ -90,6 +90,9 @@ export default function SettingsPage() {
   const [workingHours, setWorkingHours] = useState<any[]>([]);
   const [slotDuration, setSlotDuration] = useState(30);
   const [defaultCapacity, setDefaultCapacity] = useState(1);
+  // What's typed in the capacity box. Kept as text so the field can be emptied
+  // while typing (a number state snaps an empty box straight back to 1).
+  const [capacityText, setCapacityText] = useState("1");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -111,6 +114,7 @@ export default function SettingsPage() {
         setWorkingHours(data.data.workingHours || []);
         setSlotDuration(data.data.slotDuration || 30);
         setDefaultCapacity(data.data.defaultCapacity || 1);
+        setCapacityText(String(data.data.defaultCapacity || 1));
       }
     } catch (error) {
       console.error("Failed to fetch profile");
@@ -263,8 +267,14 @@ export default function SettingsPage() {
               type="number"
               min={1}
               max={50}
-              value={defaultCapacity}
-              onChange={(e) => setDefaultCapacity(Number(e.target.value) || 1)}
+              value={capacityText}
+              onChange={(e) => {
+                const text = e.target.value.replace(/\D/g, "").slice(0, 2);
+                setCapacityText(text);
+                const n = Number(text);
+                if (n >= 1 && n <= 50) setDefaultCapacity(n);
+              }}
+              onBlur={() => setCapacityText(String(defaultCapacity))}
               className="w-20 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 py-2 text-sm"
             />
             <p className="text-xs text-zinc-500">

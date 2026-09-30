@@ -6,6 +6,7 @@ import { z } from "zod";
 import mongoose from "mongoose";
 import { rateLimit, getClientIp } from "@/lib/rateLimit";
 import { notifyBarber } from "@/lib/realtime";
+import { pushToBarber } from "@/lib/push";
 import { normalizePhone } from "@/lib/phone";
 import { User } from "@/models/User";
 import { minutesUntilSlot } from "@/lib/istTime";
@@ -96,6 +97,10 @@ export async function POST(req: Request) {
       const { booking: newBooking, customer } = await createConfirmedBooking(slot, name, phone, notes);
 
       notifyBarber(slot.barberId.toString(), "BOOKINGS_UPDATED");
+      await pushToBarber(slot.barberId.toString(), {
+        title: "New booking",
+        body: `${customer.name} booked ${newBooking.startTime} on ${newBooking.date}`,
+      });
 
       return NextResponse.json({
         success: true, 

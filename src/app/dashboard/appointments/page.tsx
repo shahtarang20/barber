@@ -83,7 +83,7 @@ export default function AppointmentsPage() {
         toast.add({ title: "Error", description: data.error?.message || "Failed to add walk-in", type: "error" });
       }
     } catch {
-      toast.add({ title: "Error", description: "Failed to add walk-in", type: "error" });
+      toast.add({ title: t('error'), description: t('genericError'), type: "error" });
     } finally {
       setWalkInSaving(false);
     }
@@ -136,7 +136,7 @@ export default function AppointmentsPage() {
         toast.add({ title: "Error", description: data.error?.message || `Failed to ${action} booking`, type: "error" });
       }
     } catch (error) {
-      toast.add({ title: "Error", description: `Error updating booking`, type: "error" });
+      toast.add({ title: t('error'), description: t('genericError'), type: "error" });
     }
   };
 
@@ -235,8 +235,8 @@ export default function AppointmentsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">Appointments</h1>
-        <p className="text-zinc-500 dark:text-zinc-400 mt-2">Manage your customer bookings and history.</p>
+        <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">{t('appointments')}</h1>
+        <p className="text-zinc-500 dark:text-zinc-400 mt-2">{t('apptSubtitle')}</p>
         <Button className="mt-4 h-12 text-base w-full sm:w-auto" onClick={() => setWalkInOpen(true)}>
           <UserPlus className="w-5 h-5 mr-2" /> {t('addWalkIn')}
         </Button>
@@ -276,9 +276,9 @@ export default function AppointmentsPage() {
 
       <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
         {loading ? (
-          <div className="p-12 text-center text-zinc-500">Loading appointments...</div>
+          <div className="p-12 text-center text-zinc-500">{t('loading')}</div>
         ) : filteredBookings.length === 0 ? (
-          <div className="p-12 text-center text-zinc-500">No appointments found.</div>
+          <div className="p-12 text-center text-zinc-500">{t('apptNone')}</div>
         ) : (
           <>
           <div className="md:hidden p-3 space-y-3">
@@ -288,11 +288,11 @@ export default function AppointmentsPage() {
             <table className="w-full text-left text-sm whitespace-nowrap">
               <thead className="bg-zinc-50 dark:bg-zinc-900/50 text-zinc-500 dark:text-zinc-400 border-b border-zinc-200 dark:border-zinc-800">
                 <tr>
-                  <th className="px-6 py-4 font-medium">Customer</th>
-                  <th className="px-6 py-4 font-medium">Phone</th>
-                  <th className="px-6 py-4 font-medium">Date & Time</th>
-                  <th className="px-6 py-4 font-medium">Status</th>
-                  <th className="px-6 py-4 font-medium text-right">Actions</th>
+                  <th className="px-6 py-4 font-medium">{t('customer')}</th>
+                  <th className="px-6 py-4 font-medium">{t('yourPhone')}</th>
+                  <th className="px-6 py-4 font-medium">{t('apptColDateTime')}</th>
+                  <th className="px-6 py-4 font-medium">{t('apptColStatus')}</th>
+                  <th className="px-6 py-4 font-medium text-right">{t('apptColActions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
@@ -304,22 +304,22 @@ export default function AppointmentsPage() {
                       {format(new Date(b.date), "MMM d, yyyy")} <span className="text-zinc-500 ml-2">{b.startTime}</span>
                     </td>
                     <td className="px-6 py-4">
-                      {b.status === "CONFIRMED" && <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">Confirmed</span>}
+                      {b.status === "CONFIRMED" && <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">{t('apptConfirmed')}</span>}
                       {b.status === "CONFIRMED" && b.endTime && minutesUntilSlotEnd(b.date, b.endTime) < 0 && <span className="ml-2 px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">{t('apptNeedsAction')}</span>}
-                      {b.status === "COMPLETED" && <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">Completed</span>}
-                      {b.status === "CANCELLED" && <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">Cancelled</span>}
-                      {b.status === "NO_SHOW" && <span className="px-2 py-1 rounded-full text-xs font-medium bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">No Show</span>}
+                      {b.status === "COMPLETED" && <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">{t('apptCompleted')}</span>}
+                      {b.status === "CANCELLED" && <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">{t('apptCancelled')}</span>}
+                      {b.status === "NO_SHOW" && <span className="px-2 py-1 rounded-full text-xs font-medium bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">{t('apptNoShow')}</span>}
                     </td>
                     <td className="px-6 py-4 text-right space-x-2 flex justify-end">
                       {b.status === "CONFIRMED" && (
                         <>
-                          <Button variant="outline" size="sm" onClick={() => handleAction(b._id, "complete")}>Complete</Button>
-                          <Button variant="outline" size="sm" onClick={() => handleAction(b._id, "cancel")} className="text-red-600 hover:text-red-700 border-red-200 hover:bg-red-50">Cancel</Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleAction(b._id, "no-show")}>No Show</Button>
+                          <Button variant="outline" size="sm" onClick={() => handleAction(b._id, "complete")}>{t('apptComplete')}</Button>
+                          <Button variant="outline" size="sm" onClick={() => handleAction(b._id, "cancel")} className="text-red-600 hover:text-red-700 border-red-200 hover:bg-red-50">{t('cancel')}</Button>
+                          <Button variant="ghost" size="sm" onClick={() => handleAction(b._id, "no-show")}>{t('apptNoShow')}</Button>
                         </>
                       )}
                       {b.status !== "CONFIRMED" && (
-                        <span className="text-zinc-400 text-xs italic">No actions</span>
+                        <span className="text-zinc-400 text-xs italic">{t('apptNoActions')}</span>
                       )}
                     </td>
                   </tr>
@@ -342,14 +342,14 @@ export default function AppointmentsPage() {
       <Dialog open={!!cancelBookingId} onOpenChange={(open) => !open && setCancelBookingId(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Cancel Booking</DialogTitle>
+            <DialogTitle>{t('apptCancelTitle')}</DialogTitle>
             <DialogDescription>
-              Are you sure you want to cancel this booking? This action cannot be undone.
+              {t('apptCancelDesc')}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => setCancelBookingId(null)}>
-              No, keep it
+              {t('apptKeepIt')}
             </Button>
             <Button variant="default" className="bg-red-600 hover:bg-red-700 text-white" onClick={executeCancel}>
               Yes, cancel booking
@@ -394,7 +394,7 @@ export default function AppointmentsPage() {
             )}
           </div>
           <DialogFooter className="mt-2">
-            <Button variant="ghost" onClick={() => setWalkInOpen(false)}>Close</Button>
+            <Button variant="ghost" onClick={() => setWalkInOpen(false)}>{t('apptClose')}</Button>
             <Button
               disabled={walkInSaving || !selectedWalkInSlot || walkInName.trim().length < 2 || walkInPhone.replace(/\D/g, "").length < 10}
               onClick={handleWalkIn}
@@ -408,7 +408,7 @@ export default function AppointmentsPage() {
       <Dialog open={!!whatsappPromptData} onOpenChange={(open) => !open && setWhatsappPromptData(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{whatsappPromptData?.byCustomer ? t('customerCancelledTitle') : "Cancellation Successful"}</DialogTitle>
+            <DialogTitle>{whatsappPromptData?.byCustomer ? t('customerCancelledTitle') : t('apptCancelledOk')}</DialogTitle>
             <DialogDescription>
               {whatsappPromptData?.prompt}
             </DialogDescription>
@@ -416,13 +416,13 @@ export default function AppointmentsPage() {
           <div className="flex flex-col gap-2 mt-2">
             {!whatsappPromptData?.byCustomer && (
               <Button variant="default" onClick={handleSendWhatsApp}>
-                Message {whatsappPromptData?.name} (Cancelled)
+                {t('apptMessageCustomer').replace('{name}', whatsappPromptData?.name || '')}
               </Button>
             )}
             
             {whatsappPromptData?.waitlistCustomers && whatsappPromptData.waitlistCustomers.length > 0 && (
               <div className="mt-4 border-t pt-4">
-                <h4 className="text-sm font-semibold mb-2">Waitlist Customers (Slot now open)</h4>
+                <h4 className="text-sm font-semibold mb-2">{t('apptWaitlistTitle')}</h4>
                 {whatsappPromptData.waitlistCustomers.map((wc, i) => (
                   <Button 
                     key={i} 
@@ -430,11 +430,11 @@ export default function AppointmentsPage() {
                     className="w-full justify-start mb-2 border-green-200 bg-green-50 text-green-700 hover:bg-green-100" 
                     onClick={() => {
                       const cleanPhone = getWhatsAppNumber(wc.phone);
-                      const msgStr = `Hi ${wc.name}! A slot just opened up at ${whatsappPromptData.time}. Click here to claim it: ${window.location.origin}`;
+                      const msgStr = t('apptWaitlistMessage').replace('{name}', wc.name).replace('{time}', whatsappPromptData.time).replace('{link}', window.location.origin);
                       window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msgStr)}`, '_blank');
                     }}
                   >
-                    Message {wc.name} ({wc.phone})
+                    {t('apptMessagePerson').replace('{name}', wc.name).replace('{phone}', wc.phone)}
                   </Button>
                 ))}
               </div>
@@ -442,7 +442,7 @@ export default function AppointmentsPage() {
           </div>
           <DialogFooter className="mt-2">
             <Button variant="ghost" onClick={() => setWhatsappPromptData(null)}>
-              Close
+              {t('apptClose')}
             </Button>
           </DialogFooter>
         </DialogContent>
