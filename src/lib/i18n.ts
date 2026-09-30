@@ -81,7 +81,16 @@ const translations = {
     waitlistConfirmed: "Waitlist Confirmed",
     waitlistSuccess: "You will be notified via WhatsApp if a spot opens up!",
     waitlistNotifyMessage: "Hi {name}, a spot just opened up at {time}! Book it now before someone else takes it: {link}",
-    waitlistAutoBookedMessage: "Hi {name}, great news! We've confirmed your booking at {time} from the waitlist. Booking ID: {bookingId}. See you then!"
+    waitlistAutoBookedMessage: "Hi {name}, great news! We've confirmed your booking at {time} from the waitlist. Booking ID: {bookingId}. See you then!",
+    settingsWarningTitle: "Action Required: Existing Bookings",
+    settingsWarningDesc: "{count} existing booking(s) fall outside your new hours and were not removed automatically. Please review and cancel them manually from your Appointments tab.",
+    settingsSuccessTitle: "Success",
+    settingsSuccessRemovedDesc: "Settings saved. {count} empty slot(s) outside your new hours were removed from the schedule.",
+    settingsSuccessDesc: "Settings saved! If you expanded your hours, don't forget to generate new slots on your Schedule.",
+    error: "Error",
+    settingsSaving: "Saving...",
+    settingsSaveChanges: "Save Changes",
+    settingsSaveFailed: "Failed to save settings"
   },
   hi: {
     loading: "लोड हो रहा है...",
@@ -138,7 +147,16 @@ const translations = {
     waitlistConfirmed: "प्रतीक्षा सूची की पुष्टि हुई",
     waitlistSuccess: "जगह खाली होने पर आपको व्हाट्सएप के माध्यम से सूचित किया जाएगा!",
     waitlistNotifyMessage: "नमस्ते {name}, {time} पर अभी एक जगह खाली हुई है! इसे अभी बुक करें: {link}",
-    waitlistAutoBookedMessage: "नमस्ते {name}, बढ़िया खबर! हमने प्रतीक्षा सूची से आपकी {time} की बुकिंग की पुष्टि कर दी है। बुकिंग आईडी: {bookingId}। मिलते हैं!"
+    waitlistAutoBookedMessage: "नमस्ते {name}, बढ़िया खबर! हमने प्रतीक्षा सूची से आपकी {time} की बुकिंग की पुष्टि कर दी है। बुकिंग आईडी: {bookingId}। मिलते हैं!",
+    settingsWarningTitle: "कार्रवाई आवश्यक: मौजूदा बुकिंग",
+    settingsWarningDesc: "{count} मौजूदा बुकिंग आपके नए घंटों के बाहर हैं और स्वचालित रूप से नहीं हटाई गईं। कृपया उनकी समीक्षा करें और अपॉइंटमेंट टैब से उन्हें मैन्युअल रूप से रद्द करें।",
+    settingsSuccessTitle: "सफलता",
+    settingsSuccessRemovedDesc: "सेटिंग्स सहेजी गईं। आपके नए घंटों के बाहर {count} खाली स्लॉट अनुसूची से हटा दिए गए।",
+    settingsSuccessDesc: "सेटिंग्स सहेजी गईं! यदि आपने अपने घंटे बढ़ाए हैं, तो अपनी अनुसूची पर नए स्लॉट उत्पन्न करना न भूलें।",
+    error: "त्रुटि",
+    settingsSaving: "सहेजा जा रहा है...",
+    settingsSaveChanges: "परिवर्तन सहेजें",
+    settingsSaveFailed: "सेटिंग्स सहेजने में विफल"
   },
   gu: {
     loading: "લોડ થઈ રહ્યું છે...",
@@ -195,7 +213,16 @@ const translations = {
     waitlistConfirmed: "પ્રતીક્ષા સૂચિની પુષ્ટિ થઈ",
     waitlistSuccess: "જો કોઈ જગ્યા ખાલી થશે તો તમને વોટ્સએપ દ્વારા જાણ કરવામાં આવશે!",
     waitlistNotifyMessage: "નમસ્તે {name}, {time} વાગ્યે એક જગ્યા ખાલી થઈ છે! અત્યારે જ બુક કરો: {link}",
-    waitlistAutoBookedMessage: "નમસ્તે {name}, સારા સમાચાર! અમે તમારી પ્રતીક્ષા યાદીની {time} ની બુકિંગ કન્ફર્મ કરી દીધી છે. બુકિંગ ID: {bookingId}. મળીશું!"
+    waitlistAutoBookedMessage: "નમસ્તે {name}, સારા સમાચાર! અમે તમારી પ્રતીક્ષા યાદીની {time} ની બુકિંગ કન્ફર્મ કરી દીધી છે. બુકિંગ ID: {bookingId}. મળીશું!",
+    settingsWarningTitle: "કાર્યવાહી જરૂરી: હાલના બુકિંગ",
+    settingsWarningDesc: "{count} હાલના બુકિંગ તમારા નવા સમયની બહાર છે અને આપમેળે કાઢી નાખવામાં આવ્યા નથી. કૃપા કરીને તેમની સમીક્ષા કરો અને એપોઇન્ટમેન્ટ ટૅબમાંથી તેમને મેન્યુઅલી રદ કરો.",
+    settingsSuccessTitle: "સફળતા",
+    settingsSuccessRemovedDesc: "સેટિંગ્સ સાચવવામાં આવી. તમારા નવા કલાકોની બહારના {count} ખાલી સ્લોટ શેડ્યૂલમાંથી દૂર કરવામાં આવ્યા છે.",
+    settingsSuccessDesc: "સેટિંગ્સ સાચવવામાં આવી! જો તમે તમારા કલાકો વધાર્યા હોય, તો તમારા શેડ્યૂલ પર નવા સ્લોટ્સ જનરેટ કરવાનું ભૂલશો નહીં.",
+    error: "ભૂલ",
+    settingsSaving: "સાચવી રહ્યું છે...",
+    settingsSaveChanges: "ફેરફારો સાચવો",
+    settingsSaveFailed: "સેટિંગ્સ સાચવવામાં નિષ્ફળ"
   },
   mr: {
     loading: "लोड होत आहे...",
@@ -252,7 +279,16 @@ const translations = {
     waitlistConfirmed: "प्रतीक्षा यादी निश्चित",
     waitlistSuccess: "जागा मोकळी झाल्यास तुम्हाला व्हॉट्सअॅपद्वारे सूचित केले जाईल!",
     waitlistNotifyMessage: "नमस्कार {name}, {time} वाजता एक जागा मोकळी झाली आहे! आता बुक करा: {link}",
-    waitlistAutoBookedMessage: "नमस्कार {name}, आनंदाची बातमी! आम्ही प्रतीक्षा यादीतून तुमची {time} ची बुकिंग निश्चित केली आहे. बुकिंग आयडी: {bookingId}. भेटूया!"
+    waitlistAutoBookedMessage: "नमस्कार {name}, आनंदाची बातमी! आम्ही प्रतीक्षा यादीतून तुमची {time} ची बुकिंग निश्चित केली आहे. बुकिंग आयडी: {bookingId}. भेटूया!",
+    settingsWarningTitle: "कृती आवश्यक: विद्यमान बुकिंग",
+    settingsWarningDesc: "{count} विद्यमान बुकिंग तुमच्या नवीन तासांच्या बाहेर आहेत आणि स्वयंचलितपणे काढले गेले नाहीत. कृपया त्यांचे पुनरावलोकन करा आणि अपॉइंटमेंट टॅबवरून त्यांना स्वहस्ते रद्द करा.",
+    settingsSuccessTitle: "यशस्वी",
+    settingsSuccessRemovedDesc: "सेटिंग्ज जतन केल्या. तुमच्या नवीन तासांच्या बाहेरील {count} रिक्त स्लॉट वेळापत्रकातून काढले गेले.",
+    settingsSuccessDesc: "सेटिंग्ज जतन केल्या! तुम्ही तुमचे तास वाढवल्यास, तुमच्या वेळापत्रकावर नवीन स्लॉट तयार करायला विसरू नका.",
+    error: "त्रुटी",
+    settingsSaving: "जतन करत आहे...",
+    settingsSaveChanges: "बदल जतन करा",
+    settingsSaveFailed: "सेटिंग्ज जतन करण्यात अयशस्वी"
   }
 };
 

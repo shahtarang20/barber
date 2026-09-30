@@ -150,7 +150,6 @@ export default function AppointmentsPage() {
             <table className="w-full text-left text-sm whitespace-nowrap">
               <thead className="bg-zinc-50 dark:bg-zinc-900/50 text-zinc-500 dark:text-zinc-400 border-b border-zinc-200 dark:border-zinc-800">
                 <tr>
-                  <th className="px-6 py-4 font-medium">Booking ID</th>
                   <th className="px-6 py-4 font-medium">Customer</th>
                   <th className="px-6 py-4 font-medium">Phone</th>
                   <th className="px-6 py-4 font-medium">Date & Time</th>
@@ -161,7 +160,6 @@ export default function AppointmentsPage() {
               <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
                 {filteredBookings.map((b) => (
                   <tr key={b._id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
-                    <td className="px-6 py-4 font-mono font-medium text-zinc-900 dark:text-zinc-100">{b.bookingNumber}</td>
                     <td className="px-6 py-4 text-zinc-900 dark:text-zinc-100">{b.customerId?.name || "Unknown"}</td>
                     <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">{b.customerId?.phone || "N/A"}</td>
                     <td className="px-6 py-4 text-zinc-900 dark:text-zinc-100">

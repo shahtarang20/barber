@@ -6,6 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/toast";
+import { useTranslation } from "@/lib/i18n";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { AlertTriangle } from "lucide-react";
 
 const formatTimeInput = (input: string, isEndTime: boolean): string => {
   if (!input) return "";
@@ -58,6 +61,10 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  const [warningCount, setWarningCount] = useState(0);
+  const [showWarningModal, setShowWarningModal] = useState(false);
+  const { t } = useTranslation();
+
   useEffect(() => {
     fetchProfile();
   }, []);
@@ -105,29 +112,26 @@ export default function SettingsPage() {
       if (data.success) {
         const { removedSlots, slotsNeedingManualCancellation } = data.data;
         if (slotsNeedingManualCancellation > 0) {
-          toast.add({
-            title: "Settings saved — action needed",
-            description: `${slotsNeedingManualCancellation} existing booking(s) fall outside your new hours and weren't removed automatically. Please cancel them manually from Appointments.`,
-            type: "error",
-          });
+          setWarningCount(slotsNeedingManualCancellation);
+          setShowWarningModal(true);
         } else if (removedSlots > 0) {
           toast.add({
-            title: "Success",
-            description: `Settings saved. ${removedSlots} slot(s) outside your new hours were removed from the schedule.`,
+            title: t('settingsSuccessTitle'),
+            description: t('settingsSuccessRemovedDesc').replace('{count}', removedSlots.toString()),
             type: "success",
           });
         } else {
           toast.add({ 
-            title: "Success", 
-            description: "Settings saved! If you expanded your hours, don't forget to click 'Sync Schedule' on your Dashboard.", 
+            title: t('settingsSuccessTitle'), 
+            description: t('settingsSuccessDesc'), 
             type: "success" 
           });
         }
       } else {
-        toast.add({ title: "Error", description: data.error?.message || "Failed to save settings", type: "error" });
+        toast.add({ title: t('error'), description: data.error?.message || t('settingsSaveFailed'), type: "error" });
       }
     } catch (error) {
-      toast.add({ title: "Error", description: "Error saving settings", type: "error" });
+      toast.add({ title: t('error'), description: t('settingsSaveFailed'), type: "error" });
     } finally {
       setSaving(false);
     }
@@ -281,9 +285,28 @@ export default function SettingsPage() {
 
       <div className="flex justify-end">
         <Button size="lg" onClick={handleSave} disabled={saving} className="px-8">
-          {saving ? "Saving..." : "Save Changes"}
+          {saving ? t('settingsSaving') : t('settingsSaveChanges')}
         </Button>
       </div>
+
+      <Dialog open={showWarningModal} onOpenChange={setShowWarningModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-orange-600">
+              <AlertTriangle className="w-5 h-5" />
+              {t('settingsWarningTitle')}
+            </DialogTitle>
+            <DialogDescription className="text-zinc-600 dark:text-zinc-400 pt-2 text-base leading-relaxed">
+              {t('settingsWarningDesc').replace('{count}', warningCount.toString())}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-6 flex gap-3 sm:justify-end">
+            <Button variant="default" onClick={() => setShowWarningModal(false)} className="w-full sm:w-auto">
+              {t('done')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
