@@ -94,14 +94,15 @@ export async function POST(req: Request) {
     try {
       const normalizedPhone = normalizePhone(phone);
 
-      // Find or create customer
-      let customer = await Customer.findOne({ phone: normalizedPhone });
+      // Find customer by BOTH phone and name (case-insensitive) to support families sharing a phone
+      let customer = await Customer.findOne({ 
+        phone: normalizedPhone,
+        name: { $regex: new RegExp(`^${name}$`, 'i') } 
+      });
+
       if (!customer) {
+        // Create a distinct customer record for this family member
         customer = new Customer({ name, phone: normalizedPhone });
-        await customer.save();
-      } else if (customer.name !== name) {
-        // Update the name if they changed it
-        customer.name = name;
         await customer.save();
       }
 
