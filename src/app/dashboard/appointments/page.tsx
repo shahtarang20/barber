@@ -66,12 +66,16 @@ export default function AppointmentsPage() {
     const d = addDays(parseDateOnly(todayStr), i);
     return { value: format(d, "yyyy-MM-dd"), label: `${i === 0 ? t('apptToday') + " · " : ""}${fmt(d, "EEE d MMM")}` };
   });
-  const { data: walkInSlotsData } = useSWR(walkInOpen ? `/api/barber/slots?date=${walkInDate}` : null, fetcher);
+  const { data: walkInSlotsData, isLoading: walkInSlotsLoading, mutate: mutateWalkInSlots } = useSWR(walkInOpen ? `/api/barber/slots?date=${walkInDate}` : null, fetcher);
   const walkInSlots: { _id: string; startTime: string; endTime: string; status: string; bookingsCount: number; capacity: number }[] = walkInSlotsData?.success
     ? walkInSlotsData.data.filter((sl: { status: string; endTime: string; bookingsCount: number; capacity: number }) =>
         sl.status === "AVAILABLE" && sl.bookingsCount < sl.capacity && minutesUntilSlotEnd(walkInDate, sl.endTime) > 0)
     : [];
-  const selectedWalkInSlot = walkInSlotId || walkInSlots[0]?._id || "";
+  // Use the chosen time only while it is still open; otherwise fall back to the first open time.
+  const selectedWalkInSlot = walkInSlots.some((sl) => sl._id === walkInSlotId) ? walkInSlotId : walkInSlots[0]?._id || "";
+  const walkInDigits = walkInPhone.replace(/\D/g, "");
+  const walkInNameBad = walkInName.trim().length > 0 && walkInName.trim().length < 2;
+  const walkInPhoneBad = walkInDigits.length > 0 && walkInDigits.length < 10;
 
   const handleWalkIn = async () => {
     setWalkInSaving(true);
@@ -90,7 +94,11 @@ export default function AppointmentsPage() {
         setWalkInSlotId("");
         setWalkInDate(todayStr);
         mutateBookings();
+        mutateWalkInSlots();
       } else {
+        // Most likely someone else took the time meanwhile: refresh the list so a free time can be picked.
+        mutateWalkInSlots();
+        setWalkInSlotId("");
         toast.add({ title: "Error", description: data.error?.message || "Failed to add walk-in", type: "error" });
       }
     } catch {
@@ -101,7 +109,7 @@ export default function AppointmentsPage() {
   };
 
   const { data: bookingsData, isLoading: loading, mutate: mutateBookings } = useSWR(
-    `/api/barber/bookings?filter=${filter}&page=${page}&limit=${filter === "TODAY" ? 100 : limit}`,
+    `/api/barber/bookings?filter=${filter}&page=${page}&limit=${limit}`,
     fetcher
   );
 
@@ -355,13 +363,11 @@ export default function AppointmentsPage() {
           </>
         )}
         
-        {filter !== "TODAY" && (
-          <PaginationControls
-            pagination={pagination}
-            onPageChange={setPage}
-            onLimitChange={(l) => { setLimit(l); setPage(1); }}
-          />
-        )}
+        <PaginationControls
+          pagination={pagination}
+          onPageChange={setPage}
+          onLimitChange={(l) => { setLimit(l); setPage(1); }}
+        />
       </div>
 
       <Dialog open={!!cancelBookingId} onOpenChange={(open) => !open && setCancelBookingId(null)}>
@@ -396,6 +402,7 @@ export default function AppointmentsPage() {
               value={walkInName}
               onChange={(e) => setWalkInName(e.target.value)}
             />
+            {walkInNameBad && <p className="text-sm text-red-600">{t('nameRequired')}</p>}
             <input
               className="w-full h-12 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-base"
               placeholder={t('phoneOptional')}
@@ -404,6 +411,7 @@ export default function AppointmentsPage() {
               value={walkInPhone}
               onChange={(e) => setWalkInPhone(e.target.value)}
             />
+            {walkInPhoneBad && <p className="text-sm text-red-600">{t('phoneInvalid')}</p>}
             <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">{t('chooseDay')}</label>
             <select
               className="w-full h-12 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-base"
@@ -412,7 +420,9 @@ export default function AppointmentsPage() {
             >
               {dayChoices.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
             </select>
-            {walkInSlots.length === 0 ? (
+            {walkInSlotsLoading ? (
+              <p className="text-sm text-zinc-500">{t('loading')}</p>
+            ) : walkInSlots.length === 0 ? (
               <p className="text-sm text-zinc-500">{t('noOpenSlots')}</p>
             ) : (
               <>
@@ -432,7 +442,7 @@ export default function AppointmentsPage() {
           <DialogFooter className="mt-2">
             <Button variant="ghost" onClick={() => setWalkInOpen(false)}>{t('apptClose')}</Button>
             <Button
-              disabled={walkInSaving || !selectedWalkInSlot || walkInName.trim().length < 2 || !(walkInPhone.replace(/\D/g, "").length === 0 || walkInPhone.replace(/\D/g, "").length >= 10)}
+              disabled={walkInSaving || !selectedWalkInSlot || walkInName.trim().length < 2 || walkInPhoneBad}
               onClick={handleWalkIn}
             >
               {walkInSaving ? t('loading') : t('addBookingTitle')}

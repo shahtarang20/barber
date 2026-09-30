@@ -310,17 +310,6 @@ export default function SettingsPage() {
           </div>
         </details>
 
-        <Button
-          variant="outline"
-          onClick={() => {
-            const first = workingHours.find((wh) => !wh.isClosed);
-            if (!first) return;
-            setWorkingHours(workingHours.map((wh) => (wh.isClosed ? wh : { ...wh, startTime: first.startTime, endTime: first.endTime })));
-          }}
-        >
-          {t('settingsCopyHours')}
-        </Button>
-
         <div className="space-y-4">
           {workingHours.map((wh, index) => (
             <div key={wh.day} className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/50">

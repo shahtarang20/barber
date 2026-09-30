@@ -373,7 +373,7 @@ export default function BarberBookingPage() {
               </div>
 
               <Button type="submit" className="w-full h-12 text-base mt-4" disabled={bookingLoading || !hydrated}>
-                {bookingLoading ? t('loading') : t('confirmBooking')}
+                {bookingLoading ? t('loading') : selectedSlot.isWaitlist ? t('joinWaitlist') : t('confirmBooking')}
               </Button>
             </form>
           </div>

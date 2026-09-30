@@ -153,7 +153,7 @@ export default function RegisterPage() {
 
       <div className="mt-8 text-center text-sm text-zinc-500">
         {t('authHaveAccount')}{" "}
-        <Link href="/login" className="font-medium text-zinc-900 dark:text-zinc-50 hover:underline">
+        <Link href="/login" className="font-medium text-zinc-900 dark:text-zinc-50 hover:underline inline-flex items-center min-h-11 px-1">
           {t('authSignIn')}
         </Link>
       </div>

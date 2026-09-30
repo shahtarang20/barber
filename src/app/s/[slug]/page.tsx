@@ -226,7 +226,7 @@ export default function ShopBookingPage() {
               <div className="font-medium text-right">{fmt(new Date(bookingSuccess.date || selectedDate), "d MMMM yyyy")}</div>
               <div className="text-zinc-500">{t("time")}</div>
               <div className="font-medium text-right">{bookingSuccess.startTime || selectedSlot?.startTime}</div>
-              <div className="text-zinc-500">Barber</div>
+              <div className="text-zinc-500">{t("barberLabel")}</div>
               <div className="font-medium text-right">{bookedBarber?.name || selectedSlot?.barberName}</div>
               <div className="text-zinc-500">{t("customer")}</div>
               <div className="font-medium text-right">{bookingSuccess.customerName || bookingSuccess.name}</div>
@@ -252,9 +252,9 @@ export default function ShopBookingPage() {
         <div className="w-20 h-20 bg-zinc-200 rounded-full mx-auto mb-4 overflow-hidden border-4 border-white shadow-sm flex items-center justify-center text-2xl font-bold text-zinc-400">
           {shop?.name?.charAt(0)}
         </div>
-        <h1 className="text-2xl font-bold text-zinc-900">{shop?.name || "Loading..."}</h1>
+        <h1 className="text-2xl font-bold text-zinc-900">{shop?.name || t("loading")}</h1>
         <p className="text-zinc-500 mt-2 max-w-md mx-auto">
-          {shop?.barbers?.length || 0} barber{shop?.barbers?.length === 1 ? "" : "s"} available
+          {shop?.barbers?.length === 1 ? t("shopBarberOne") : t("shopBarbersN").replace("{n}", String(shop?.barbers?.length || 0))}
         </p>
       </div>
 
@@ -263,7 +263,7 @@ export default function ShopBookingPage() {
           <>
             {/* Barber Selection */}
             <div className="mb-8">
-              <h2 className="text-lg font-semibold text-zinc-900 mb-4">Choose a Barber</h2>
+              <h2 className="text-lg font-semibold text-zinc-900 mb-4">{t("chooseBarber")}</h2>
               <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
                 <button
                   onClick={() => setSelectedBarberId("ANY")}
@@ -273,7 +273,7 @@ export default function ShopBookingPage() {
                       : "bg-white border-zinc-200 text-zinc-600 hover:border-zinc-300"
                   }`}
                 >
-                  Any Available Barber
+                  {t("anyBarber")}
                 </button>
                 {shop?.barbers?.map((b: ShopBarber) => (
                   <button
@@ -378,7 +378,7 @@ export default function ShopBookingPage() {
           <div className="bg-white p-6 sm:p-8 rounded-2xl border border-zinc-200 shadow-sm">
             <div className="flex items-center justify-between mb-8">
               <h2 className="text-xl font-semibold text-zinc-900">
-                {selectedSlot.isWaitlist ? "Join Waitlist" : t("confirmBooking")}
+                {selectedSlot.isWaitlist ? t("joinWaitlist") : t("confirmBooking")}
               </h2>
               <button onClick={() => setSelectedSlot(null)} className="text-sm text-zinc-500 hover:text-zinc-900">
                 {t("cancel")}
@@ -415,7 +415,7 @@ export default function ShopBookingPage() {
               </div>
 
               <Button type="submit" className="w-full h-12 text-base mt-4" disabled={bookingLoading || !hydrated}>
-                {bookingLoading ? t("loading") : t("confirmBooking")}
+                {bookingLoading ? t("loading") : selectedSlot.isWaitlist ? t("joinWaitlist") : t("confirmBooking")}
               </Button>
             </form>
           </div>

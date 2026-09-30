@@ -251,7 +251,7 @@ export default function ShopPage() {
               <div>
                 <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">{shop.name}</h2>
                 <button
-                  className="text-sm text-blue-600 hover:underline"
+                  className="text-sm text-blue-600 hover:underline min-h-11 text-left break-all"
                   onClick={() => {
                     navigator.clipboard.writeText(`${window.location.origin}/s/${shop.slug}`);
                     toast.add({ title: t('shopCopyTitle'), description: t('shopCopied'), type: "success" });

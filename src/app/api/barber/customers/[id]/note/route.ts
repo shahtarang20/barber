@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import { Customer } from "@/models/Customer";
+import { Booking } from "@/models/Booking";
 import mongoose from "mongoose";
 import { z } from "zod";
 import { notifyBarber } from "@/lib/realtime";
@@ -36,6 +37,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     const customer = await Customer.findById(customerId);
     if (!customer) {
+      return NextResponse.json({ success: false, error: { message: "Customer not found" } }, { status: 404 });
+    }
+
+    // A barber can only keep notes on people who have actually booked with them.
+    // (Old bookings may have been cleaned up; the kept visit history counts too.)
+    const inHistory = (customer.barberStats || []).some((st: any) => st.barberId?.toString() === barberId.toString());
+    const served = inHistory || (await Booking.exists({ barberId, customerId: customer._id }));
+    if (!served) {
       return NextResponse.json({ success: false, error: { message: "Customer not found" } }, { status: 404 });
     }
 

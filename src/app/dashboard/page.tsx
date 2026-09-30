@@ -676,7 +676,7 @@ export default function DashboardPage() {
               ))}
             </div>
             <Button className="w-full" onClick={() => setAffectedCustomers(null)}>
-              Done
+              {t('done')}
             </Button>
           </div>
         </div>

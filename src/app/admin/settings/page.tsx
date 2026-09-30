@@ -21,7 +21,18 @@ interface AuditEntry {
   action: string;
   actorName: string;
   targetName?: string;
+  metadata?: { bookingsDeleted?: number; after?: { enabled?: boolean; months?: number } };
   createdAt: string;
+}
+
+function describeAudit(entry: AuditEntry) {
+  if (entry.action === "RETENTION_SETTINGS_CHANGED") {
+    const a = entry.metadata?.after;
+    return a ? `changed old-booking cleanup (${a.enabled ? `on, keep ${a.months} months` : "off"})` : "changed old-booking cleanup settings";
+  }
+  if (entry.action === "RETENTION_RUN_MANUALLY") return `ran cleanup now (${entry.metadata?.bookingsDeleted ?? 0} bookings removed)`;
+  if (entry.action === "ADMIN_PASSWORD_RESET") return `reset the password for ${entry.targetName ?? "an admin"}`;
+  return entry.action.toLowerCase().replace(/_/g, " ");
 }
 
 export default function AdminSettingsPage() {
@@ -185,7 +196,7 @@ export default function AdminSettingsPage() {
             {auditLog.map((entry) => (
               <div key={entry._id} className="py-2 text-sm flex justify-between">
                 <span className="text-zinc-700 dark:text-zinc-300">
-                  <span className="font-medium">{entry.actorName}</span> reset the password for <span className="font-medium">{entry.targetName}</span>
+                  <span className="font-medium">{entry.actorName}</span> {describeAudit(entry)}
                 </span>
                 <span className="text-zinc-400 text-xs whitespace-nowrap ml-4">{format(new Date(entry.createdAt), "MMM d, h:mm a")}</span>
               </div>

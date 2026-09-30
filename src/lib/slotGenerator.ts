@@ -58,6 +58,7 @@ export async function autoGenerateFutureSlots(
   }
 
   let capacityKeptCount = 0;
+  const staleLengthIds: any[] = [];
   const validKeys = new Set<string>();
   const newSlots: any[] = [];
   const toUpdateCapacity: { _id: any; capacity: number; status: string }[] = [];
@@ -111,7 +112,20 @@ export async function autoGenerateFutureSlots(
         const key = `${dateStr}_${startTimeStr}`;
         validKeys.add(key);
 
-        const existing = existingMap.get(key);
+        let existing = existingMap.get(key);
+        // Same start but a different length (slot duration was changed): an
+        // untouched old slot is replaced so it can't overlap the new grid.
+        // Slots with bookings, holds or a waitlist are kept as they are.
+        if (
+          existing &&
+          existing.endTime !== endTimeStr &&
+          !(existing.bookingsCount > 0) &&
+          !(existing.holds?.length > 0) &&
+          !(existing.waitlist?.length > 0)
+        ) {
+          staleLengthIds.push(existing._id);
+          existing = undefined;
+        }
         if (!existing) {
           // Don't create slots for times that have already passed today —
           // nobody can book them. (validKeys above still keeps existing ones.)
@@ -169,6 +183,7 @@ export async function autoGenerateFutureSlots(
     toDelete.push(slot._id);
   }
 
+  toDelete.push(...staleLengthIds);
   if (toDelete.length > 0) {
     await Slot.deleteMany({ _id: { $in: toDelete } });
     deletedCount = toDelete.length;
