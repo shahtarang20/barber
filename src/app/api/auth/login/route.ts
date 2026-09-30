@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
+import { verifyPassword, hashPassword } from "@/lib/password";
 import connectToDatabase from "@/lib/mongodb";
 import { User } from "@/models/User";
 import { z } from "zod";
@@ -51,10 +51,17 @@ export async function POST(req: Request) {
     }
     
     // Verify password
-    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+    const check = await verifyPassword(password, user.passwordHash);
+    const isPasswordValid = check.ok;
     
     if (!isPasswordValid) {
       return NextResponse.json({ success: false, error: { message: "Invalid barber code or password" } }, { status: 401 });
+    }
+
+    // Quietly move an old bcrypt password to the faster format the first time they log in.
+    if (check.needsUpgrade) {
+      user.passwordHash = await hashPassword(password);
+      await user.save();
     }
 
     if (user.isActive === false) {

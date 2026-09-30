@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
+import { hashPassword, verifyPassword } from "@/lib/password";
 import connectToDatabase from "@/lib/mongodb";
 import { User } from "@/models/User";
 import { z } from "zod";
@@ -34,7 +34,7 @@ export async function POST(req: Request) {
     }
     
     // Hash password
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await hashPassword(password);
     
     // Default working hours
     const defaultWorkingHours = [

@@ -3,7 +3,7 @@ import { requireAuth } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import { User } from "@/models/User";
 import { AuditLog } from "@/models/AuditLog";
-import bcrypt from "bcryptjs";
+import { hashPassword, verifyPassword } from "@/lib/password";
 import crypto from "crypto";
 import { z } from "zod";
 
@@ -44,7 +44,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       return NextResponse.json({ success: false, error: { message: "Your account could not be verified." } }, { status: 401 });
     }
 
-    const isValid = await bcrypt.compare(result.data.actingAdminPassword, actingAdmin.passwordHash);
+    const isValid = (await verifyPassword(result.data.actingAdminPassword, actingAdmin.passwordHash)).ok;
     if (!isValid) {
       return NextResponse.json({ success: false, error: { message: "Your password is incorrect." } }, { status: 401 });
     }
@@ -55,7 +55,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     }
 
     const tempPassword = generateTempPassword();
-    targetAdmin.passwordHash = await bcrypt.hash(tempPassword, 10);
+    targetAdmin.passwordHash = await hashPassword(tempPassword);
     targetAdmin.tokenVersion = (targetAdmin.tokenVersion || 0) + 1;
     await targetAdmin.save();
 

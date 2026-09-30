@@ -331,18 +331,18 @@ export default function DashboardPage() {
         <LanguageSelector />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
-        <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
-          <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">{t('appointments')}</p>
-          <p className="text-2xl sm:text-3xl font-bold mt-2 text-zinc-900 dark:text-zinc-50">{slots.length}</p>
+      <div className="grid grid-cols-3 gap-2 sm:gap-4 md:gap-6">
+        <div className="bg-white dark:bg-zinc-900 p-3 sm:p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
+          <p className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">{t('appointments')}</p>
+          <p className="text-xl sm:text-3xl font-bold mt-1 sm:mt-2 text-zinc-900 dark:text-zinc-50">{slots.length}</p>
         </div>
-        <div className="bg-green-50 dark:bg-green-950/20 p-4 sm:p-6 rounded-2xl border border-green-100 dark:border-green-900/30 shadow-sm">
-          <p className="text-sm font-medium text-green-600 dark:text-green-500">{t('available')}</p>
-          <p className="text-2xl sm:text-3xl font-bold mt-2 text-green-700 dark:text-green-400">{availableSlots}</p>
+        <div className="bg-green-50 dark:bg-green-950/20 p-3 sm:p-6 rounded-2xl border border-green-100 dark:border-green-900/30 shadow-sm">
+          <p className="text-xs sm:text-sm font-medium text-green-600 dark:text-green-500">{t('available')}</p>
+          <p className="text-xl sm:text-3xl font-bold mt-1 sm:mt-2 text-green-700 dark:text-green-400">{availableSlots}</p>
         </div>
-        <div className="bg-red-50 dark:bg-red-950/20 p-4 sm:p-6 rounded-2xl border border-red-100 dark:border-red-900/30 shadow-sm sm:col-span-2 md:col-span-1">
-          <p className="text-sm font-medium text-red-600 dark:text-red-500">{t('booked')}</p>
-          <p className="text-2xl sm:text-3xl font-bold mt-2 text-red-700 dark:text-red-400">{bookedSlots}</p>
+        <div className="bg-red-50 dark:bg-red-950/20 p-3 sm:p-6 rounded-2xl border border-red-100 dark:border-red-900/30 shadow-sm">
+          <p className="text-xs sm:text-sm font-medium text-red-600 dark:text-red-500">{t('booked')}</p>
+          <p className="text-xl sm:text-3xl font-bold mt-1 sm:mt-2 text-red-700 dark:text-red-400">{bookedSlots}</p>
         </div>
       </div>
 

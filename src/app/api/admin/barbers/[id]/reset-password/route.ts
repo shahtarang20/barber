@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import { User } from "@/models/User";
-import bcrypt from "bcryptjs";
+import { hashPassword, verifyPassword } from "@/lib/password";
 import crypto from "crypto";
 
 function generateTempPassword(): string {
@@ -27,7 +27,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     }
 
     const tempPassword = generateTempPassword();
-    user.passwordHash = await bcrypt.hash(tempPassword, 10);
+    user.passwordHash = await hashPassword(tempPassword);
     // Invalidate any session the barber currently has open — a password
     // reset should force re-login everywhere, not leave old tokens valid.
     user.tokenVersion = (user.tokenVersion || 0) + 1;

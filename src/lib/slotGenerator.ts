@@ -1,6 +1,13 @@
 import { getTodayISTString, minutesUntilSlot } from "@/lib/istTime";
 import { Slot } from "@/models/Slot";
 import { confirmedCountBySlot } from "@/lib/openBookings";
+
+/**
+ * How many days ahead a barber's schedule is kept created. Customers can only pick from the next
+ * 7 days, so a month is plenty; the daily job tops it up every day. (Was 90 — 3x the storage and a
+ * slow first save.) Override with SLOT_WINDOW_DAYS (7–90).
+ */
+export const SLOT_WINDOW_DAYS = Math.min(90, Math.max(7, Number(process.env.SLOT_WINDOW_DAYS) || 30));
 import { format, addDays, parse, isValid, addMinutes } from "date-fns";
 import { parseDateOnly, timeStringToMinutes } from "@/lib/timeSort";
 
@@ -31,9 +38,12 @@ export async function autoGenerateFutureSlots(
   const todayStr = getTodayISTString();
   const today = parseDateOnly(todayStr);
 
+  // Only the window we manage. Slots further out (made back when 90 days were created) are
+  // left alone and get reconciled once they come inside the window.
+  const windowEnd = format(addDays(today, SLOT_WINDOW_DAYS - 1), "yyyy-MM-dd");
   const existingSlots = await Slot.find({
     barberId,
-    date: { $gte: todayStr },
+    date: { $gte: todayStr, $lte: windowEnd },
   });
 
   // A day the barber shifted ("running late") is deliberately off the normal
@@ -74,7 +84,7 @@ export async function autoGenerateFutureSlots(
     throw new Error(`Unable to parse time: ${timeStr}`);
   };
 
-  for (let i = 0; i < 90; i++) {
+  for (let i = 0; i < SLOT_WINDOW_DAYS; i++) {
     const currentDate = addDays(today, i);
     const dateStr = format(currentDate, "yyyy-MM-dd");
     if (shiftedDates.has(dateStr)) continue;

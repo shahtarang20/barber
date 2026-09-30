@@ -6,6 +6,8 @@ import connectToDatabase from "@/lib/mongodb";
 import { Slot } from "@/models/Slot";
 import { createConfirmedBooking } from "@/lib/createBooking";
 import { minutesUntilSlotEnd } from "@/lib/istTime";
+import { normalizePhone } from "@/lib/phone";
+import { heldByOthersExpr, activeHoldCount } from "@/lib/waitlistHold";
 import { notifyBarber } from "@/lib/realtime";
 
 const schema = z.object({
@@ -35,13 +37,25 @@ export async function POST(req: Request) {
 
     // Atomic claim, restricted to this barber's own slot. A walk-in may take the
     // slot that's in progress, so only a slot that has already ended is refused.
+    // A seat held for a waitlisted customer stays theirs — the barber is shown the reason instead of quietly taking it.
+    const phoneNorm = normalizePhone(phone);
     const slot = await Slot.findOneAndUpdate(
-      { _id: slotId, barberId: payload.userId, status: "AVAILABLE", $expr: { $lt: ["$bookingsCount", "$capacity"] } },
-      { $inc: { bookingsCount: 1 } },
+      {
+        _id: slotId,
+        barberId: payload.userId,
+        status: "AVAILABLE",
+        $expr: { $lt: ["$bookingsCount", { $subtract: ["$capacity", heldByOthersExpr(phoneNorm)] }] },
+      },
+      { $inc: { bookingsCount: 1 }, $pull: { holds: { phone: phoneNorm } } },
       { new: true }
     );
     if (!slot) {
-      return NextResponse.json({ success: false, error: { message: "That slot is no longer available." } }, { status: 409 });
+      const probe = await Slot.findOne({ _id: slotId, barberId: payload.userId }).select("status bookingsCount capacity holds");
+      const held = !!probe && probe.status === "AVAILABLE" && probe.bookingsCount < probe.capacity && activeHoldCount(probe) > 0;
+      return NextResponse.json({
+        success: false,
+        error: { message: held ? "The last seat in this time is being held for a waitlisted customer for a few minutes. Pick another time, or try again shortly." : "That slot is no longer available." },
+      }, { status: 409 });
     }
 
     const release = () =>

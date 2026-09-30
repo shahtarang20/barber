@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import { User } from "@/models/User";
-import bcrypt from "bcryptjs";
+import { hashPassword, verifyPassword } from "@/lib/password";
 import { z } from "zod";
 
 const changePasswordSchema = z.object({
@@ -33,12 +33,12 @@ export async function PUT(req: Request) {
       return NextResponse.json({ success: false, error: { message: "User not found" } }, { status: 404 });
     }
 
-    const isValid = await bcrypt.compare(currentPassword, user.passwordHash);
+    const isValid = (await verifyPassword(currentPassword, user.passwordHash)).ok;
     if (!isValid) {
       return NextResponse.json({ success: false, error: { message: "Current password is incorrect" } }, { status: 401 });
     }
 
-    user.passwordHash = await bcrypt.hash(newPassword, 10);
+    user.passwordHash = await hashPassword(newPassword);
     // Force re-login everywhere else — a password change should invalidate
     // any other session that might be using the old credentials.
     user.tokenVersion = (user.tokenVersion || 0) + 1;
