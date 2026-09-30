@@ -9,7 +9,8 @@ import { toast } from "@/components/ui/toast";
 import { useTranslation } from "@/lib/i18n";
 import { useDateFormat } from "@/lib/dateLocale";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, LogOut } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 const formatTimeInput = (input: string, isEndTime: boolean): string => {
   if (!input) return "";
@@ -100,6 +101,18 @@ export default function SettingsPage() {
   const [warningCount, setWarningCount] = useState(0);
   const [showWarningModal, setShowWarningModal] = useState(false);
   const { t } = useTranslation();
+  const router = useRouter();
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } finally {
+      router.push("/login");
+      router.refresh();
+    }
+  };
   const fmt = useDateFormat();
   // Monday..Sunday in the chosen language (2024-01-01 was a Monday).
   const ORDER = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -345,6 +358,12 @@ export default function SettingsPage() {
       <div className="flex justify-end">
         <Button size="lg" onClick={handleSave} disabled={saving} className="px-8">
           {saving ? t('settingsSaving') : t('settingsSaveChanges')}
+        </Button>
+      </div>
+
+      <div className="flex justify-center pt-2">
+        <Button variant="outline" onClick={handleLogout} disabled={loggingOut} className="h-12 px-8 text-red-600 border-red-200 hover:bg-red-50 dark:hover:bg-red-950/30">
+          <LogOut className="w-5 h-5 mr-2" /> {t('logout')}
         </Button>
       </div>
 
