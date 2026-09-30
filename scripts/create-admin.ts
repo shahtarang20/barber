@@ -18,7 +18,7 @@ async function createAdmin() {
     await mongoose.connect(MONGODB_URI);
     console.log("Connected!");
 
-    const adminCode = "admin";
+    const adminCode = "Tarang";
     const existingAdmin = await User.findOne({ barberCode: adminCode });
 
     if (existingAdmin) {
@@ -27,13 +27,13 @@ async function createAdmin() {
     }
 
     console.log("Creating super admin...");
-    const passwordHash = await bcrypt.hash("AdminSecret123!", 10);
+    const passwordHash = await bcrypt.hash("Tarang@2003", 10);
 
     await User.create({
-      name: "Super Admin",
+      name: "Tarang",
       barberCode: adminCode, // The login username
-      email: "admin@barbersaas.com",
-      slug: "super-admin", // Admins don't have public pages, but schema requires it
+      email: "tarang@barbersaas.com",
+      slug: "tarang-admin", // Admins don't have public pages, but schema requires it
       passwordHash,
       role: "ADMIN",
       bio: "System Administrator",
@@ -43,8 +43,8 @@ async function createAdmin() {
     console.log("\n✅ Admin Account Created Successfully!");
     console.log("-----------------------------------------");
     console.log("Login URL:    http://localhost:3000/login");
-    console.log("Admin Code:   admin");
-    console.log("Password:     AdminSecret123!");
+    console.log("Admin Code:   Tarang");
+    console.log("Password:     Tarang@2003");
     console.log("-----------------------------------------\n");
 
     process.exit(0);
