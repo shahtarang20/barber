@@ -46,5 +46,6 @@ const SlotSchema: Schema = new Schema(
 // existence check before either has inserted; only a DB constraint can
 // actually prevent the resulting duplicate, independently-bookable slot.
 SlotSchema.index({ barberId: 1, date: 1, startTime: 1 }, { unique: true });
+SlotSchema.index({ date: 1, bookingsCount: 1 }); // daily cleanup of old unbooked slots
 
 export const Slot = mongoose.models.Slot || mongoose.model<ISlot>("Slot", SlotSchema);

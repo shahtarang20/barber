@@ -22,6 +22,10 @@ async function connectToDatabase() {
   if (!cached.promise) {
     const opts = {
       bufferCommands: false,
+      // Serverless spins up many instances; a small pool each keeps the total under the database's connection limit.
+      maxPoolSize: 10,
+      maxIdleTimeMS: 30_000,
+      serverSelectionTimeoutMS: 10_000,
     };
 
     cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {

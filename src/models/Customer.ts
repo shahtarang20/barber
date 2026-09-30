@@ -24,5 +24,7 @@ const CustomerSchema: Schema = new Schema(
   { timestamps: true }
 );
 
+CustomerSchema.index({ phone: 1, name: 1 });
+
 export const Customer =
   mongoose.models.Customer || mongoose.model<ICustomer>("Customer", CustomerSchema);

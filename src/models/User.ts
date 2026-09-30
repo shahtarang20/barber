@@ -94,4 +94,6 @@ UserSchema.pre("save", async function () {
   }
 });
 
+UserSchema.index({ role: 1, isActive: 1 });
+
 export const User = mongoose.models.User || mongoose.model<IUser>("User", UserSchema);

@@ -34,5 +34,10 @@ const BookingSchema: Schema = new Schema(
   { timestamps: true }
 );
 
+BookingSchema.index({ barberId: 1, date: 1 });
+BookingSchema.index({ barberId: 1, status: 1, date: 1 });
+BookingSchema.index({ slotId: 1, status: 1 });
+BookingSchema.index({ status: 1, date: 1 });
+
 export const Booking =
   mongoose.models.Booking || mongoose.model<IBooking>("Booking", BookingSchema);
