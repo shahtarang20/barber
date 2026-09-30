@@ -5,7 +5,7 @@ import { requireAuth } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import { Slot } from "@/models/Slot";
 import { createConfirmedBooking } from "@/lib/createBooking";
-import { minutesUntilSlotEnd } from "@/lib/istTime";
+import { minutesUntilSlotEnd, getTodayISTString } from "@/lib/istTime";
 import { normalizePhone } from "@/lib/phone";
 import { heldByOthersExpr, activeHoldCount } from "@/lib/waitlistHold";
 import { notifyBarber } from "@/lib/realtime";
@@ -70,7 +70,7 @@ export async function POST(req: Request) {
     }
 
     try {
-      const { booking } = await createConfirmedBooking(slot, name, phone, "Walk-in");
+      const { booking } = await createConfirmedBooking(slot, name, phone, slot.date === getTodayISTString() ? "Walk-in" : "Phone booking");
 
       notifyBarber(slot.barberId.toString(), "BOOKINGS_UPDATED");
       return NextResponse.json({ success: true, data: { bookingNumber: booking.bookingNumber } }, { status: 201 });

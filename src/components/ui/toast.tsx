@@ -3,11 +3,29 @@
 import * as React from "react"
 import { Toast as ToastPrimitive } from "@base-ui/react/toast"
 import { cn } from "cn"
+import { translate } from "@/lib/i18n"
 
 import { Button } from "@/components/ui/button"
 import { XIcon, CircleCheckIcon, InfoIcon, TriangleAlertIcon, OctagonXIcon, Loader2Icon } from "lucide-react"
 
-const toast = ToastPrimitive.createToastManager()
+const rawToast = ToastPrimitive.createToastManager()
+
+// While the phone has no internet, any error toast says so plainly instead of a vague "something went wrong".
+const toast = new Proxy(rawToast, {
+  get(target, prop) {
+    if (prop === "add") {
+      return (options: Parameters<typeof rawToast.add>[0]) => {
+        const offline = typeof navigator !== "undefined" && navigator.onLine === false;
+        if (offline && (options as { type?: string }).type === "error") {
+          return target.add({ ...options, description: translate("noInternet") });
+        }
+        return target.add(options);
+      };
+    }
+    const value = (target as unknown as Record<string | symbol, unknown>)[prop];
+    return typeof value === "function" ? (value as (...a: unknown[]) => unknown).bind(target) : value;
+  },
+}) as typeof rawToast
 
 function ToastProvider({ ...props }: ToastPrimitive.Provider.Props) {
   return <ToastPrimitive.Provider {...props} />

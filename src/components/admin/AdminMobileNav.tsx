@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutGrid, Store, Building2, CalendarDays, Settings } from "lucide-react";
+import { LayoutGrid, Store, Building2, CalendarDays, Settings, Database } from "lucide-react";
 
 export function AdminMobileNav() {
   const pathname = usePathname();
@@ -12,6 +12,7 @@ export function AdminMobileNav() {
     { name: "Stores", href: "/admin/barbers", icon: Store },
     { name: "Shops", href: "/admin/shops", icon: Building2 },
     { name: "Bookings", href: "/admin/bookings", icon: CalendarDays },
+    { name: "Data", href: "/admin/data", icon: Database },
     { name: "Settings", href: "/admin/settings", icon: Settings },
   ];
 

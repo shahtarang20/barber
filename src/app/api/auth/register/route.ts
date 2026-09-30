@@ -2,13 +2,15 @@ import { NextResponse } from "next/server";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import connectToDatabase from "@/lib/mongodb";
 import { User } from "@/models/User";
+import { slugFromName, uniqueSlug } from "@/lib/slug";
 import { z } from "zod";
 
 const registerSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Invalid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
-  slug: z.string().min(3, "Slug must be at least 3 characters").regex(/^[a-z0-9-]+$/, "Slug can only contain lowercase letters, numbers, and hyphens"),
+  // Optional: the server makes a clean, unique link from the name when none is given.
+  slug: z.string().min(3, "Slug must be at least 3 characters").regex(/^[a-z0-9-]+$/, "Slug can only contain lowercase letters, numbers, and hyphens").optional(),
 });
 
 export async function POST(req: Request) {
@@ -22,10 +24,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: { message: result.error.issues[0].message } }, { status: 400 });
     }
     
-    const { name, email, password, slug } = result.data;
+    const { name, email, password } = result.data;
+    let slug = result.data.slug || (await uniqueSlug(slugFromName(name)));
     
     // Check if user exists
-    const existingUser = await User.findOne({ $or: [{ email }, { slug }] });
+    // A link we made ourselves can only clash with a simultaneous sign-up, which the retry below handles.
+    const existingUser = await User.findOne({ $or: [{ email }, ...(result.data.slug ? [{ slug }] : [])] });
     if (existingUser) {
       if (existingUser.email === email) {
         return NextResponse.json({ success: false, error: { message: "Email already registered" } }, { status: 400 });
@@ -48,16 +52,23 @@ export async function POST(req: Request) {
     ];
     
     // Create user (barberCode is auto-generated via pre-save hook)
-    const newUser = new User({
-      name,
-      email,
-      passwordHash,
-      slug,
-      role: "BARBER",
-      workingHours: defaultWorkingHours,
-    });
-    
-    await newUser.save();
+    let newUser;
+    for (let attempt = 0; ; attempt++) {
+      newUser = new User({ name, email, passwordHash, slug, role: "BARBER", workingHours: defaultWorkingHours });
+      try {
+        await newUser.save();
+        break;
+      } catch (err) {
+        // Two people picked the same link at the same instant: find the next free one and try again.
+        const dup = (err as { code?: number; keyPattern?: Record<string, unknown> });
+        if (dup.code === 11000 && dup.keyPattern?.slug && !result.data.slug && attempt < 8) {
+          // First retry takes the next free tidy link; if many people collide at once, fall back to a short random tail.
+          slug = attempt === 0 ? await uniqueSlug(slugFromName(name)) : `${slugFromName(name)}-${Math.floor(1000 + Math.random() * 9000)}`;
+          continue;
+        }
+        throw err;
+      }
+    }
     
     return NextResponse.json({ 
       success: true, 

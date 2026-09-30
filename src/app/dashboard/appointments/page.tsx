@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { format } from "date-fns";
+import { format, addDays } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/lib/i18n";
 import { toast } from "@/components/ui/toast";
@@ -58,9 +58,16 @@ export default function AppointmentsPage() {
   const [walkInSaving, setWalkInSaving] = useState(false);
 
   const todayStr = getTodayISTString();
-  const { data: walkInSlotsData } = useSWR(walkInOpen ? `/api/barber/slots?date=${todayStr}` : null, fetcher);
-  const walkInSlots: { _id: string; startTime: string; endTime: string; status: string }[] = walkInSlotsData?.success
-    ? walkInSlotsData.data.filter((sl: { status: string; endTime: string }) => sl.status === "AVAILABLE" && minutesUntilSlotEnd(todayStr, sl.endTime) > 0)
+  // The barber can book for any day in the next two weeks (a customer who phoned for tomorrow, or who is here now).
+  const [walkInDate, setWalkInDate] = useState(todayStr);
+  const dayChoices = Array.from({ length: 14 }).map((_, i) => {
+    const d = addDays(parseDateOnly(todayStr), i);
+    return { value: format(d, "yyyy-MM-dd"), label: `${i === 0 ? t('apptToday') + " · " : ""}${format(d, "EEE d MMM")}` };
+  });
+  const { data: walkInSlotsData } = useSWR(walkInOpen ? `/api/barber/slots?date=${walkInDate}` : null, fetcher);
+  const walkInSlots: { _id: string; startTime: string; endTime: string; status: string; bookingsCount: number; capacity: number }[] = walkInSlotsData?.success
+    ? walkInSlotsData.data.filter((sl: { status: string; endTime: string; bookingsCount: number; capacity: number }) =>
+        sl.status === "AVAILABLE" && sl.bookingsCount < sl.capacity && minutesUntilSlotEnd(walkInDate, sl.endTime) > 0)
     : [];
   const selectedWalkInSlot = walkInSlotId || walkInSlots[0]?._id || "";
 
@@ -79,6 +86,7 @@ export default function AppointmentsPage() {
         setWalkInName("");
         setWalkInPhone("");
         setWalkInSlotId("");
+        setWalkInDate(todayStr);
         mutateBookings();
       } else {
         toast.add({ title: "Error", description: data.error?.message || "Failed to add walk-in", type: "error" });
@@ -209,15 +217,15 @@ export default function AppointmentsPage() {
             <div className="flex items-center gap-2">
               {phone && (
                 <>
-                  <a href={`tel:${phone}`} className="flex-1 h-10 inline-flex items-center justify-center gap-1 rounded-lg border border-zinc-200 dark:border-zinc-700 text-sm">
+                  <a href={`tel:${phone}`} className="flex-1 h-11 inline-flex items-center justify-center gap-1 rounded-lg border border-zinc-200 dark:border-zinc-700 text-sm">
                     <Phone className="w-4 h-4" /> {t('callLabel')}
                   </a>
-                  <a href={`https://wa.me/${getWhatsAppNumber(phone)}`} target="_blank" rel="noreferrer" className="flex-1 h-10 inline-flex items-center justify-center gap-1 rounded-lg border border-green-200 text-green-700 text-sm">
+                  <a href={`https://wa.me/${getWhatsAppNumber(phone)}`} target="_blank" rel="noreferrer" className="flex-1 h-11 inline-flex items-center justify-center gap-1 rounded-lg border border-green-200 text-green-700 text-sm">
                     <MessageCircle className="w-4 h-4" /> {t('whatsappLabel')}
                   </a>
                 </>
               )}
-              <button onClick={() => handleAction(b._id, "cancel")} className="h-10 px-3 text-sm text-red-600">{t('cancel')}</button>
+              <button onClick={() => handleAction(b._id, "cancel")} className="h-11 px-3 text-sm text-red-600">{t('cancel')}</button>
             </div>
           </div>
         )}
@@ -240,7 +248,7 @@ export default function AppointmentsPage() {
         <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">{t('appointments')}</h1>
         <p className="text-zinc-500 dark:text-zinc-400 mt-2">{t('apptSubtitle')}</p>
         <Button className="mt-4 h-12 text-base w-full sm:w-auto" onClick={() => setWalkInOpen(true)}>
-          <UserPlus className="w-5 h-5 mr-2" /> {t('addWalkIn')}
+          <UserPlus className="w-5 h-5 mr-2" /> {t('addBookingTitle')}
         </Button>
       </div>
 
@@ -249,7 +257,7 @@ export default function AppointmentsPage() {
           <button
             key={tab.value}
             onClick={() => { setFilter(tab.value); setPage(1); }}
-            className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+            className={`px-4 py-3 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
               filter === tab.value 
                 ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900" 
                 : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
@@ -363,8 +371,8 @@ export default function AppointmentsPage() {
       <Dialog open={walkInOpen} onOpenChange={setWalkInOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t('addWalkIn')}</DialogTitle>
-            <DialogDescription>{t('walkInDesc')}</DialogDescription>
+            <DialogTitle>{t('addBookingTitle')}</DialogTitle>
+            <DialogDescription>{t('addBookingDesc')}</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <input
@@ -381,9 +389,19 @@ export default function AppointmentsPage() {
               value={walkInPhone}
               onChange={(e) => setWalkInPhone(e.target.value)}
             />
+            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">{t('chooseDay')}</label>
+            <select
+              className="w-full h-12 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-base"
+              value={walkInDate}
+              onChange={(e) => { setWalkInDate(e.target.value); setWalkInSlotId(""); }}
+            >
+              {dayChoices.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
+            </select>
             {walkInSlots.length === 0 ? (
               <p className="text-sm text-zinc-500">{t('noOpenSlots')}</p>
             ) : (
+              <>
+              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">{t('chooseTime')}</label>
               <select
                 className="w-full h-12 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-base"
                 value={selectedWalkInSlot}
@@ -393,6 +411,7 @@ export default function AppointmentsPage() {
                   <option key={sl._id} value={sl._id}>{sl.startTime} – {sl.endTime}</option>
                 ))}
               </select>
+              </>
             )}
           </div>
           <DialogFooter className="mt-2">
@@ -401,7 +420,7 @@ export default function AppointmentsPage() {
               disabled={walkInSaving || !selectedWalkInSlot || walkInName.trim().length < 2 || walkInPhone.replace(/\D/g, "").length < 10}
               onClick={handleWalkIn}
             >
-              {walkInSaving ? t('loading') : t('addWalkIn')}
+              {walkInSaving ? t('loading') : t('addBookingTitle')}
             </Button>
           </DialogFooter>
         </DialogContent>

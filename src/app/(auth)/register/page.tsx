@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useHydrated } from "@/lib/useHydrated";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Eye, EyeOff } from "lucide-react";
 
 export default function RegisterPage() {
+  const hydrated = useHydrated();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -25,14 +27,13 @@ export default function RegisterPage() {
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
     
-    // Auto generate a simple slug from name
-    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-") + "-" + Math.floor(Math.random() * 1000);
+    // The booking link is made by the server (clean and always unique) — he can change it later.
 
     try {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password, slug }),
+        body: JSON.stringify({ name, email, password }),
       });
 
       const data = await res.json();
@@ -88,7 +89,7 @@ export default function RegisterPage() {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form method="post" onSubmit={handleSubmit} className="space-y-4">
         {error && (
           <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-3 rounded-lg text-sm border border-red-100 dark:border-red-900/30">
             {error}
@@ -143,7 +144,7 @@ export default function RegisterPage() {
           </div>
         </div>
 
-        <Button type="submit" className="w-full h-11 mt-6" disabled={loading}>
+        <Button type="submit" className="w-full h-11 mt-6" disabled={loading || !hydrated}>
           {loading ? "Creating account..." : "Create account"}
         </Button>
       </form>

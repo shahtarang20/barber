@@ -28,7 +28,7 @@ export function PaginationControls({
           id="pageSize"
           value={pagination.limit}
           onChange={(e) => onLimitChange(Number(e.target.value))}
-          className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-2 py-1.5 text-sm"
+          className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-2 h-11 text-sm"
         >
           <option value={5}>5</option>
           <option value={10}>10</option>

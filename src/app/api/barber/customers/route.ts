@@ -31,9 +31,29 @@ export async function GET(req: Request) {
           lastVisit: { $max: { $cond: [{ $eq: ["$status", "COMPLETED"] }, "$date", null] } },
           // Customers whose every booking was cancelled aren't shown.
           activeBookings: { $sum: { $cond: [{ $ne: ["$status", "CANCELLED"] }, 1, 0] } },
+          // Booked but not yet done — lets a brand-new customer show as "new" instead of "0 visits".
+          upcoming: { $sum: { $cond: [{ $eq: ["$status", "CONFIRMED"] }, 1, 0] } },
         }
       },
-      { $match: { activeBookings: { $gt: 0 } } },
+      // Customers whose old bookings were cleaned up still belong in this barber's directory.
+      {
+        $unionWith: {
+          coll: "customers",
+          pipeline: [
+            { $match: { "barberStats.barberId": barberId } },
+            { $project: { _id: 1, totalVisits: { $literal: 0 }, lastVisit: { $literal: null }, activeBookings: { $literal: 0 }, upcoming: { $literal: 0 } } },
+          ],
+        },
+      },
+      {
+        $group: {
+          _id: "$_id",
+          totalVisits: { $sum: "$totalVisits" },
+          lastVisit: { $max: "$lastVisit" },
+          activeBookings: { $sum: "$activeBookings" },
+          upcoming: { $sum: "$upcoming" },
+        },
+      },
       {
         $lookup: {
           from: "customers", // Collection name
@@ -43,6 +63,16 @@ export async function GET(req: Request) {
         }
       },
       { $unwind: "$customerData" },
+      // Fold in visits from bookings that were cleaned up long ago.
+      { $addFields: { archived: { $first: { $filter: { input: { $ifNull: ["$customerData.barberStats", []] }, as: "s", cond: { $eq: ["$$s.barberId", barberId] } } } } } },
+      {
+        $addFields: {
+          totalVisits: { $add: ["$totalVisits", { $ifNull: ["$archived.visits", 0] }] },
+          lastVisit: { $max: ["$lastVisit", "$archived.lastVisit"] },
+        },
+      },
+      // Hide customers whose every booking was cancelled (and who have no past visits).
+      { $match: { $or: [{ activeBookings: { $gt: 0 } }, { "archived.visits": { $gt: 0 } }] } },
       ...(search
         ? [{
             $match: {
@@ -60,6 +90,7 @@ export async function GET(req: Request) {
           phone: "$customerData.phone",
           totalVisits: 1,
           lastVisit: 1,
+          upcoming: 1,
           barberNotes: {
             $filter: {
               input: { $ifNull: ["$customerData.barberNotes", []] },
@@ -88,6 +119,7 @@ export async function GET(req: Request) {
       name: c.name,
       phone: c.phone,
       totalVisits: c.totalVisits,
+      upcoming: c.upcoming || 0,
       lastVisit: c.lastVisit,
       note: c.barberNotes && c.barberNotes.length > 0 ? c.barberNotes[0].note : ""
     }));

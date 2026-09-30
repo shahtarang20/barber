@@ -7,6 +7,7 @@ import { toast } from "@/components/ui/toast";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { useRealtimeRefresh } from "@/lib/useRealtimeRefresh";
 import { parseDateOnly } from "@/lib/timeSort";
+import { useTranslation } from "@/lib/i18n";
 import useSWR from "swr";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
@@ -16,11 +17,13 @@ interface CustomerView {
   name: string;
   phone: string;
   totalVisits: number;
+  upcoming?: number;
   lastVisit: string | null;
   note?: string;
 }
 
 export default function CustomersPage() {
+  const { t } = useTranslation();
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [search, setSearch] = useState("");
@@ -99,7 +102,7 @@ export default function CustomersPage() {
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         placeholder="Search by name or phone..."
-        className="w-full sm:w-72 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-4 py-2 text-sm focus:ring-2 focus:ring-zinc-900 outline-none"
+        className="w-full sm:w-72 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-4 h-11 text-sm focus:ring-2 focus:ring-zinc-900 outline-none"
       />
 
       {loading ? (
@@ -139,7 +142,7 @@ export default function CustomersPage() {
                     <div className="text-right flex flex-col items-end gap-2">
                       <div className="flex items-center gap-2">
                         <span className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 text-xs font-bold px-2 py-1 rounded-full">
-                          {c.totalVisits} {c.totalVisits === 1 ? 'Visit' : 'Visits'}
+                          {c.totalVisits === 0 && (c.upcoming ?? 0) > 0 ? t('customerNewBooked').replace('{n}', String(c.upcoming)) : `${c.totalVisits} ${c.totalVisits === 1 ? t('visit') : t('visits')}`}
                         </span>
                         <svg className={`w-5 h-5 text-zinc-400 transform transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />

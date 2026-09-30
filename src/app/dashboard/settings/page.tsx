@@ -55,7 +55,7 @@ const formatTimeInput = (input: string, isEndTime: boolean): string => {
 const HOURS = [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
 const MINUTES = ["00", "05", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55"];
 const selectClass =
-  "h-10 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-1.5 text-sm";
+  "h-11 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-1.5 text-sm";
 
 // Working-hours time picker in the 12-hour style people use in India: hour 1–12, minutes, AM/PM.
 function TimeSelect({ value, onChange, label }: { value: string; onChange: (v: string) => void; label: string }) {
@@ -237,7 +237,7 @@ export default function SettingsPage() {
         </div>
 
         <details className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-4">
-          <summary className="cursor-pointer text-sm font-medium text-zinc-900 dark:text-zinc-100">{t('settingsMoreOptions')}</summary>
+          <summary className="cursor-pointer min-h-11 flex items-center text-sm font-medium text-zinc-900 dark:text-zinc-100">{t('settingsMoreOptions')}</summary>
           <div className="space-y-6 mt-4">
         <div className="space-y-2">
           <Label>Slot Length</Label>
@@ -245,7 +245,7 @@ export default function SettingsPage() {
             <select
               value={slotDuration}
               onChange={(e) => setSlotDuration(Number(e.target.value))}
-              className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 py-2 text-sm w-40"
+              className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 h-11 text-sm w-40"
             >
               <option value={10}>10 minutes</option>
               <option value={15}>15 minutes</option>
@@ -275,7 +275,7 @@ export default function SettingsPage() {
                 if (n >= 1 && n <= 50) setDefaultCapacity(n);
               }}
               onBlur={() => setCapacityText(String(defaultCapacity))}
-              className="w-20 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 py-2 text-sm"
+              className="w-20 h-11 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-sm"
             />
             <p className="text-xs text-zinc-500">
               How many customers can book the same time slot by default. This is the same value your Schedule page's "Generate" button starts with.
@@ -300,15 +300,15 @@ export default function SettingsPage() {
         <div className="space-y-4">
           {workingHours.map((wh, index) => (
             <div key={wh.day} className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/50">
-              <div className="w-32 font-medium text-zinc-900 dark:text-zinc-100 flex items-center justify-between">
+              <label className="w-32 min-h-11 font-medium text-zinc-900 dark:text-zinc-100 flex items-center justify-between cursor-pointer sm:pointer-events-none">
                 {wh.day}
                 <input 
                   type="checkbox" 
                   checked={!wh.isClosed} 
                   onChange={(e) => handleWorkingHourChange(index, "isClosed", !e.target.checked)}
-                  className="w-4 h-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900 ml-4 sm:hidden"
+                  className="w-7 h-7 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900 ml-2 sm:hidden"
                 />
-              </div>
+              </label>
               
               <div className="flex-1 flex flex-wrap items-center gap-2 w-full sm:w-auto">
                 {wh.isClosed ? (
@@ -328,9 +328,9 @@ export default function SettingsPage() {
                   id={`open-${wh.day}`}
                   checked={!wh.isClosed} 
                   onChange={(e) => handleWorkingHourChange(index, "isClosed", !e.target.checked)}
-                  className="w-4 h-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900"
+                  className="w-6 h-6 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900"
                 />
-                <Label htmlFor={`open-${wh.day}`} className="font-normal cursor-pointer">Open</Label>
+                <Label htmlFor={`open-${wh.day}`} className="font-normal cursor-pointer min-h-11 flex items-center pr-2">Open</Label>
               </div>
             </div>
           ))}

@@ -23,6 +23,11 @@ export function InstallPrompt({ isCustomer = false, appName = "BarberSaaS" }: { 
 
     if (standalone) return;
 
+    // Respect "not now": don't show it again for a week.
+    try {
+      if (Number(localStorage.getItem("install-dismissed-until") || 0) > Date.now()) return;
+    } catch {}
+
     // Always show prompt after a short delay (for both mobile and desktop)
     // Desktop users can also install PWAs!
     const timer = setTimeout(() => setShowPrompt(true), 3000);
@@ -66,12 +71,17 @@ export function InstallPrompt({ isCustomer = false, appName = "BarberSaaS" }: { 
     }
   };
 
+  const dismiss = () => {
+    setShowPrompt(false);
+    try { localStorage.setItem("install-dismissed-until", String(Date.now() + 7 * 24 * 60 * 60 * 1000)); } catch {}
+  };
+
   if (isStandalone || !showPrompt) return null;
 
   return (
     <div className={`fixed ${isCustomer ? "bottom-6" : "bottom-20 md:bottom-6"} left-0 right-0 z-50 flex justify-center px-4 pointer-events-none animate-in slide-in-from-bottom-10 fade-in duration-500`}>
       <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl rounded-2xl p-4 flex items-center justify-between gap-4 max-w-sm w-full pointer-events-auto relative">
-        <button onClick={() => setShowPrompt(false)} className="absolute -top-2 -right-2 bg-zinc-100 dark:bg-zinc-800 rounded-full p-1 text-zinc-500 hover:text-zinc-900 border border-zinc-200 shadow-sm">
+        <button onClick={dismiss} aria-label="Close" className="absolute -top-3 -right-3 w-10 h-10 flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 rounded-full text-zinc-500 hover:text-zinc-900 border border-zinc-200 shadow-sm">
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>

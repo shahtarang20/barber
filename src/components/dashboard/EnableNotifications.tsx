@@ -84,7 +84,7 @@ export function EnableNotifications() {
       onClick={subscribed ? turnOff : turnOn}
       disabled={busy}
       title={subscribed ? t("notifOn") : t("notifEnable")}
-      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+      className={`flex items-center gap-2 px-3 min-h-11 rounded-lg text-sm font-medium transition-colors ${
         subscribed
           ? "text-green-700 bg-green-50 dark:text-green-400 dark:bg-green-900/20"
           : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:text-zinc-50 dark:hover:bg-zinc-900/50"

@@ -17,7 +17,7 @@ export function LanguageSelector() {
     <select
       value={language}
       onChange={(e) => setLanguage(e.target.value as any)}
-      className="h-9 px-3 py-1 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-sm font-medium text-zinc-700 dark:text-zinc-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-zinc-900"
+      className="h-11 px-3 py-1 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-sm font-medium text-zinc-700 dark:text-zinc-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-zinc-900"
     >
       <option value="en">English</option>
       <option value="hi">हिन्दी</option>

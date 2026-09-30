@@ -2,17 +2,19 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslation } from "@/lib/i18n";
 import { LayoutGrid, ClipboardList, Settings, Users, Store } from "lucide-react";
 
 export function MobileNav() {
   const pathname = usePathname();
+  const { t } = useTranslation();
 
   const navItems = [
-    { name: "Schedule", href: "/dashboard", icon: LayoutGrid },
-    { name: "Today", href: "/dashboard/appointments", icon: ClipboardList },
-    { name: "Customers", href: "/dashboard/customers", icon: Users },
-    { name: "Shop", href: "/dashboard/shop", icon: Store },
-    { name: "Settings", href: "/dashboard/settings", icon: Settings },
+    { name: t('schedule'), href: "/dashboard", icon: LayoutGrid },
+    { name: t('apptToday'), href: "/dashboard/appointments", icon: ClipboardList },
+    { name: t('customers'), href: "/dashboard/customers", icon: Users },
+    { name: t('shop'), href: "/dashboard/shop", icon: Store },
+    { name: t('settings'), href: "/dashboard/settings", icon: Settings },
   ];
 
   return (

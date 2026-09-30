@@ -351,10 +351,10 @@ export default function DashboardPage() {
           <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-start">
             <h2 className="text-base sm:text-lg font-semibold text-zinc-900 dark:text-zinc-50 flex items-center gap-2 sm:gap-3">
               {format(selectedDate, "yyyy-MM-dd") !== format(new Date(), "yyyy-MM-dd") && (
-                <button onClick={() => setSelectedDate(subDays(selectedDate, 1))} className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-md">←</button>
+                <button onClick={() => setSelectedDate(subDays(selectedDate, 1))} className="min-w-11 min-h-11 flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-md">←</button>
               )}
               <span className="whitespace-nowrap">{format(selectedDate, "EEE, MMM d, yyyy")}</span>
-              <button onClick={() => setSelectedDate(addDays(selectedDate, 1))} className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-md">→</button>
+              <button onClick={() => setSelectedDate(addDays(selectedDate, 1))} className="min-w-11 min-h-11 flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-md">→</button>
             </h2>
           </div>
           {!(isClosedDay && slots.length === 0) && (
@@ -516,7 +516,7 @@ export default function DashboardPage() {
                           </span>
                           <div className="min-w-0 flex-1">
                             <div className="font-medium text-zinc-900 dark:text-zinc-100 break-words">{b.customerId?.name || "—"}</div>
-                            {b.customerId?.phone && <a href={`tel:${b.customerId.phone}`} className="text-sm text-zinc-500">{b.customerId.phone}</a>}
+                            {b.customerId?.phone && <a href={`tel:${b.customerId.phone}`} className="text-sm text-zinc-500 inline-block py-3">{b.customerId.phone}</a>}
                           </div>
                           {b.status !== "CONFIRMED" && (
                             <span className="text-sm font-medium text-green-600 dark:text-green-400 shrink-0">✓ {t('apptCompleted')}</span>
@@ -710,7 +710,7 @@ function CapacityEditor({ slot, onSave }: { slot: SlotView, onSave: (val: number
             handleSave();
           }
         }}
-        className="w-11 h-9 bg-transparent text-base font-bold text-zinc-700 dark:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-400/50 rounded text-center transition-all"
+        className="w-11 h-11 bg-transparent text-base font-bold text-zinc-700 dark:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-400/50 rounded text-center transition-all"
       />
       {isChanged && (
         <button

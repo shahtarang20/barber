@@ -9,6 +9,7 @@ import { autoCompleteStaleBookings } from "@/lib/bookingMaintenance";
 import { Booking } from "@/models/Booking";
 import { timeStringToMinutes } from "@/lib/timeSort";
 import { refreshAdminStats } from "@/lib/adminStats";
+import { runRetention } from "@/lib/retention";
 import { getTodayISTString } from "@/lib/istTime";
 import { parseDateOnly } from "@/lib/timeSort";
 
@@ -103,6 +104,13 @@ export async function GET(req: Request) {
         await Booking.bulkWrite(missing.map((b) => ({ updateOne: { filter: { _id: b._id }, update: { $set: { startMinutes: timeStringToMinutes(b.startTime) } } } })));
       }
       cleanup = { oldSlotsDeleted: deleted.deletedCount, autoCompleted };
+      // Admin-controlled cleanup of finished bookings older than the configured age (off by default).
+      try {
+        const r = await runRetention();
+        if ("bookingsDeleted" in r) { cleanup.retentionBookingsDeleted = r.bookingsDeleted ?? 0; cleanup.retentionSlotsDeleted = r.slotsDeleted ?? 0; }
+      } catch (err) {
+        console.error("Retention cleanup failed:", err);
+      }
     }
 
     await CronState.updateOne({ key: KEY }, { $set: { done: finished, lockedUntil: null } });

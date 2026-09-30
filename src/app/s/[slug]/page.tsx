@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useHydrated } from "@/lib/useHydrated";
 import { format, addDays } from "date-fns";
 import { getTodayISTString, minutesUntilSlot } from "@/lib/istTime";
 import { parseDateOnly } from "@/lib/timeSort";
@@ -45,6 +46,7 @@ interface BookingSuccessView {
 }
 
 export default function ShopBookingPage() {
+  const hydrated = useHydrated();
   const { slug } = useParams();
   const { t } = useTranslation();
 
@@ -367,7 +369,7 @@ export default function ShopBookingPage() {
               <button onClick={() => setSelectedSlot(null)} className="text-blue-600 text-sm font-medium">{t("cancel")}</button>
             </div>
 
-            <form onSubmit={handleBookingSubmit} className="space-y-5">
+            <form method="post" onSubmit={handleBookingSubmit} className="space-y-5">
               {bookingError && (
                 <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm border border-red-100">
                   {bookingError}
@@ -384,7 +386,7 @@ export default function ShopBookingPage() {
                 <Input id="phone" name="phone" type="tel" placeholder="98XXXXXXXX" required className="h-12 text-base" />
               </div>
 
-              <Button type="submit" className="w-full h-12 text-base mt-4" disabled={bookingLoading}>
+              <Button type="submit" className="w-full h-12 text-base mt-4" disabled={bookingLoading || !hydrated}>
                 {bookingLoading ? t("loading") : t("confirmBooking")}
               </Button>
             </form>

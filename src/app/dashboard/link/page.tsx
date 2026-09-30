@@ -5,8 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Copy, ExternalLink, Share2, Download } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/toast";
+import { useTranslation } from "@/lib/i18n";
 
 export default function PublicLinkPage() {
+  const { t } = useTranslation();
+  const [slugText, setSlugText] = useState("");
+  const [savingSlug, setSavingSlug] = useState(false);
   const [profile, setProfile] = useState<any>(null);
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -21,6 +25,7 @@ export default function PublicLinkPage() {
       const data = await res.json();
       if (data.success) {
         setProfile(data.data);
+        setSlugText(data.data.slug);
       }
     } catch (error) {
       console.error("Failed to fetch profile");
@@ -118,6 +123,38 @@ export default function PublicLinkPage() {
         
         <Button variant="outline" onClick={downloadQR} className="w-full sm:w-auto">
           <Download className="w-4 h-4 mr-2" /> Download QR Code
+        </Button>
+      </div>
+
+      <div className="bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-3">
+        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">{t('linkEditTitle')}</h2>
+        <div className="flex items-center gap-2 text-sm text-zinc-500">
+          <span className="whitespace-nowrap">/b/</span>
+          <Input value={slugText} onChange={(e) => setSlugText(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))} className="h-11" />
+        </div>
+        <p className="text-xs text-zinc-500">{t('linkEditHint')}</p>
+        <Button
+          className="h-11"
+          disabled={savingSlug || slugText === profile?.slug || slugText.length < 3}
+          onClick={async () => {
+            setSavingSlug(true);
+            try {
+              const res = await fetch("/api/barber/slug", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ slug: slugText }) });
+              const r = await res.json();
+              if (r.success) {
+                setProfile({ ...profile, slug: r.data.slug });
+                toast.add({ title: t('linkSaved'), description: `/b/${r.data.slug}`, type: "success" });
+              } else {
+                toast.add({ title: t('error'), description: r.error?.code === "SLUG_TAKEN" ? t('linkTaken') : r.error?.message || t('genericError'), type: "error" });
+              }
+            } catch {
+              toast.add({ title: t('error'), description: t('genericError'), type: "error" });
+            } finally {
+              setSavingSlug(false);
+            }
+          }}
+        >
+          {t('linkSave')}
         </Button>
       </div>
     </div>
