@@ -1,4 +1,5 @@
 import Pusher from "pusher";
+import { after } from "next/server";
 
 // Initialize Pusher only if env vars are present
 let pusher: Pusher | null = null;
@@ -13,8 +14,10 @@ if (
     appId: process.env.PUSHER_APP_ID,
     key: process.env.PUSHER_KEY,
     secret: process.env.PUSHER_SECRET,
-    cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER,
-    useTLS: true,
+    // PUSHER_HOST lets tests (or a self-hosted Pusher-compatible server) point elsewhere.
+    ...(process.env.PUSHER_HOST
+      ? { host: process.env.PUSHER_HOST, port: process.env.PUSHER_PORT, useTLS: process.env.PUSHER_TLS === "true" }
+      : { cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER, useTLS: true }),
   });
 }
 
@@ -37,9 +40,20 @@ export async function notifyBarber(barberId: string, type: string, data?: Record
     return;
   }
 
+  const send = async () => {
+    try {
+      await pusher!.trigger(barberChannel(barberId), "update", { type, data });
+    } catch (error) {
+      console.error("Failed to trigger Pusher event:", error);
+    }
+  };
+
+  // Callers don't wait for this. On a serverless host the function can be frozen the moment the
+  // response is sent, which would silently drop a still-running request — so hand it to `after`,
+  // which keeps the function alive until the event has gone out (and doesn't slow the response).
   try {
-    await pusher.trigger(barberChannel(barberId), "update", { type, data });
-  } catch (error) {
-    console.error("Failed to trigger Pusher event:", error);
+    after(send);
+  } catch {
+    void send(); // not inside a request (e.g. a script): just fire it
   }
 }
