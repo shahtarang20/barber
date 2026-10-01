@@ -246,6 +246,7 @@ export default function ShopPage() {
           <Button onClick={handleCreate} disabled={creating || !name || !slug}>
             {creating ? t('shopCreating') : t('shopCreateBtn')}
           </Button>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">{t('shopAfterCreateHint')}</p>
         </div>
       ) : (
         <>
