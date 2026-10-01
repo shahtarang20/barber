@@ -114,6 +114,25 @@ export default function PublicLinkPage() {
         </div>
       </div>
 
+      {profile?.linkUsage && (
+        <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
+          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">{t('linkUsageTitle')}</h2>
+          <p className="mt-1 text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+            {profile.linkUsage.limit > 0
+              ? t('linkUsageOf').replace('{used}', String(profile.linkUsage.used)).replace('{limit}', String(profile.linkUsage.limit))
+              : t('linkUsageUnlimited').replace('{used}', String(profile.linkUsage.used))}
+          </p>
+          {profile.linkUsage.limit > 0 && (
+            <div className="mt-3 h-2 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
+              <div className={`h-full ${profile.linkUsage.used / profile.linkUsage.limit >= 0.8 ? "bg-red-500" : "bg-green-500"}`} style={{ width: `${Math.min(100, (profile.linkUsage.used / profile.linkUsage.limit) * 100)}%` }} />
+            </div>
+          )}
+          {profile.linkUsage.limit > 0 && profile.linkUsage.used / profile.linkUsage.limit >= 0.8 && (
+            <p className="mt-3 text-sm text-red-600">{t('linkNearLimit')}</p>
+          )}
+        </div>
+      )}
+
       <div className="bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col items-center">
         <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 mb-2 w-full text-left">{t('linkQrTitle')}</h2>
         <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-8 w-full text-left">

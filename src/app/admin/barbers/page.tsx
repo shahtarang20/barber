@@ -12,6 +12,7 @@ export default function AdminBarbersPage() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [loading, setLoading] = useState(true);
+  const [defaultLimit, setDefaultLimit] = useState(0);
 
   useEffect(() => {
     fetchBarbers();
@@ -25,11 +26,23 @@ export default function AdminBarbersPage() {
       if (data.success) {
         setBarbers(data.data);
         setPagination(data.pagination || null);
+        setDefaultLimit(data.defaultLinkLimit ?? 0);
       }
     } catch (error) {
       console.error("Failed to fetch barbers", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const saveDefaultLimit = async (value: string) => {
+    const res = await fetch("/api/admin/link-limit", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ defaultLimit: Number(value || 0) }) });
+    const data = await res.json();
+    if (data.success) {
+      toast.add({ title: "Success", description: "Default link limit saved", type: "success" });
+      fetchBarbers();
+    } else {
+      toast.add({ title: "Error", description: data.error?.message || "Could not save", type: "error" });
     }
   };
 
@@ -77,6 +90,20 @@ export default function AdminBarbersPage() {
         <p className="text-zinc-500 dark:text-zinc-400 mt-2">View and manage all active barber stores on the platform.</p>
       </div>
 
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm p-5 flex flex-wrap items-center gap-3">
+        <div className="flex-1 min-w-[16rem]">
+          <p className="font-medium text-zinc-900 dark:text-zinc-100">Booking-link limit (default)</p>
+          <p className="text-sm text-zinc-500">Bookings per month a barber or shop can receive through their link. 0 = unlimited. A number typed in a row below overrides this.</p>
+        </div>
+        <input
+          key={defaultLimit}
+          type="number" min="0"
+          defaultValue={defaultLimit}
+          onBlur={(e) => e.target.value !== String(defaultLimit) && saveDefaultLimit(e.target.value)}
+          className="w-28 px-2 py-2 border border-zinc-200 rounded-md bg-transparent text-zinc-900 dark:text-zinc-100"
+        />
+      </div>
+
       <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
         {loading ? (
           <div className="p-12 text-center text-zinc-500">Loading stores...</div>
@@ -93,6 +120,7 @@ export default function AdminBarbersPage() {
                   <th className="px-6 py-4 font-medium">Status</th>
                   <th className="px-6 py-4 font-medium">Premium (₹)</th>
                   <th className="px-6 py-4 font-medium">Due Date</th>
+                  <th className="px-6 py-4 font-medium">Link limit / month</th>
                   <th className="px-6 py-4 font-medium text-right">Actions</th>
                 </tr>
               </thead>
@@ -131,6 +159,23 @@ export default function AdminBarbersPage() {
                         className="w-16 px-2 py-1 border border-zinc-200 rounded-md focus:outline-none focus:ring-2 focus:ring-zinc-500 bg-transparent text-zinc-900 dark:text-zinc-100"
                         placeholder="Day"
                       />
+                    </td>
+                    <td className="px-6 py-4">
+                      <input
+                        type="number" min="0"
+                        key={`${b._id}-${b.linkBookingLimit ?? "d"}`}
+                        defaultValue={b.linkBookingLimit ?? ""}
+                        placeholder={`Default (${defaultLimit || "∞"})`}
+                        onBlur={(e) => {
+                          const v = e.target.value.trim();
+                          if (v === String(b.linkBookingLimit ?? "")) return;
+                          handleUpdate(b._id, { linkBookingLimit: v === "" ? null : Number(v) }).then(fetchBarbers);
+                        }}
+                        className="w-28 px-2 py-1 border border-zinc-200 rounded-md focus:outline-none focus:ring-2 focus:ring-zinc-500 bg-transparent text-zinc-900 dark:text-zinc-100"
+                      />
+                      <div className={`text-xs mt-1 ${b.linkLimitEffective > 0 && b.linkUsed >= b.linkLimitEffective ? "text-red-600 font-medium" : "text-zinc-500"}`}>
+                        {b.linkUsed ?? 0} used{b.linkLimitEffective > 0 ? ` of ${b.linkLimitEffective}` : " · no limit"}
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-right space-x-2">
                       <Button variant="outline" size="sm" onClick={() => handleResetPassword(b._id, b.name)}>Reset Password</Button>

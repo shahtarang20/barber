@@ -134,14 +134,15 @@ export default function ShopBookingPage() {
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slotId: selectedSlot._id, name, phone }),
+        body: JSON.stringify({ slotId: selectedSlot._id, name, phone, shopSlug: slug }),
       });
 
       const data = await res.json();
 
       if (!res.ok || !data.success) {
         setBookingError(
-          data.error?.code === "SEAT_HELD" ? t("seatHeld")
+          data.error?.code === "LINK_LIMIT" ? t("linkClosedMsg")
+          : data.error?.code === "SEAT_HELD" ? t("seatHeld")
           : res.status === 400 && /phone/i.test(data.error?.message || "") ? t("phoneInvalid")
           : res.status === 400 && /name/i.test(data.error?.message || "") ? t("nameRequired")
           : data.error?.message || t("genericError")
@@ -259,7 +260,9 @@ export default function ShopBookingPage() {
       </div>
 
       <div className="max-w-2xl mx-auto px-4 mt-8">
-        {!selectedSlot ? (
+        {(shop?.linkClosed) ? (
+          <div className="rounded-2xl border border-orange-200 bg-orange-50 p-6 text-center text-orange-800">{t("linkClosedMsg")}</div>
+        ) : !selectedSlot ? (
           <>
             {/* Barber Selection */}
             <div className="mb-8">

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import { User } from "@/models/User";
+import { barberLinkUsage } from "@/lib/linkLimit";
 
 export async function GET(req: Request, { params }: { params: Promise<{ slug: string }> }) {
   try {
@@ -11,13 +12,15 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
     
     // Find barber by slug, only return safe public fields
     const barber = await User.findOne({ slug, role: "BARBER" })
-      .select("name profileImage bio workingHours isActive");
+      .select("name profileImage bio workingHours isActive linkBookingLimit");
 
     if (!barber || barber.isActive === false) {
       return NextResponse.json({ success: false, error: { message: "Barber not found" } }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, data: barber });
+    const { closed } = await barberLinkUsage(barber._id, barber.linkBookingLimit ?? null);
+    const { linkBookingLimit, ...publicFields } = barber.toObject();
+    return NextResponse.json({ success: true, data: { ...publicFields, linkClosed: closed } });
   } catch (error) {
     console.error("Fetch public barber error:", error);
     return NextResponse.json({ success: false, error: { message: "Internal server error" } }, { status: 500 });

@@ -33,6 +33,19 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       updateData.premiumDueDay = day;
     }
 
+    if (body.linkBookingLimit !== undefined) {
+      // null / empty = use the platform default; 0 = unlimited.
+      if (body.linkBookingLimit === null || body.linkBookingLimit === "") {
+        updateData.$unset = { linkBookingLimit: 1 };
+      } else {
+        const n = Number(body.linkBookingLimit);
+        if (!Number.isInteger(n) || n < 0 || n > 1_000_000) {
+          return NextResponse.json({ success: false, error: { message: "Link limit must be a whole number (0 = unlimited)." } }, { status: 400 });
+        }
+        updateData.linkBookingLimit = n;
+      }
+    }
+
     let suspending = false;
     if (body.isActive !== undefined) {
       updateData.isActive = Boolean(body.isActive);
@@ -46,8 +59,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       updateData.$inc = { tokenVersion: 1 };
     }
 
-    const { $inc, ...setFields } = updateData;
+    const { $inc, $unset, ...setFields } = updateData;
     const updateQuery: any = { $set: setFields };
+    if ($unset) updateQuery.$unset = $unset;
     if ($inc) updateQuery.$inc = $inc;
 
     const updatedUser = await User.findByIdAndUpdate(id, updateQuery, { new: true }).select("-passwordHash -tokenVersion");

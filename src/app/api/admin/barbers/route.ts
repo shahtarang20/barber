@@ -3,6 +3,7 @@ import { requireAuth } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import { User } from "@/models/User";
 import { Booking } from "@/models/Booking";
+import { barberLinkUsage, getDefaultLinkLimit } from "@/lib/linkLimit";
 
 export async function GET(req: Request) {
   try {
@@ -33,14 +34,19 @@ export async function GET(req: Request) {
       { $group: { _id: "$barberId", count: { $sum: 1 } } },
     ]);
     const countByBarber = new Map<string, number>(counts.map((c) => [String(c._id), c.count]));
-    const barbersWithStats = barbers.map((barber) => ({
+    const defaultLinkLimit = await getDefaultLinkLimit();
+    const usages = await Promise.all(barbers.map((b) => barberLinkUsage(b._id, b.linkBookingLimit ?? null, defaultLinkLimit)));
+    const barbersWithStats = barbers.map((barber, i) => ({
       ...barber,
       bookingCount: countByBarber.get(String(barber._id)) ?? 0,
+      linkUsed: usages[i].used,
+      linkLimitEffective: usages[i].limit,
     }));
 
     return NextResponse.json({
       success: true,
       data: barbersWithStats,
+      defaultLinkLimit,
       pagination: {
         total,
         page,

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import { User } from "@/models/User";
+import { barberLinkUsage } from "@/lib/linkLimit";
 
 export async function GET() {
   try {
@@ -19,7 +20,8 @@ export async function GET() {
       return NextResponse.json({ success: false, error: { message: "User not found" } }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, data: user });
+    const linkUsage = await barberLinkUsage(user._id, user.linkBookingLimit ?? null);
+    return NextResponse.json({ success: true, data: { ...user.toObject(), linkUsage } });
   } catch (error) {
     console.error("Profile fetch error:", error);
     return NextResponse.json({ success: false, error: { message: "Internal server error" } }, { status: 500 });

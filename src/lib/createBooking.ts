@@ -19,7 +19,7 @@ interface ClaimedSlot {
  *
  * On failure it throws; the caller is responsible for releasing the slot.
  */
-export async function createConfirmedBooking(slot: ClaimedSlot, name: string, phone: string, notes?: string) {
+export async function createConfirmedBooking(slot: ClaimedSlot, name: string, phone: string, notes?: string, via?: { viaLink?: boolean; viaShopId?: unknown }) {
   const normalizedPhone = normalizePhone(phone);
   const cleanName = name.trim();
 
@@ -51,6 +51,8 @@ export async function createConfirmedBooking(slot: ClaimedSlot, name: string, ph
     endTime: slot.endTime,
     status: "CONFIRMED",
     notes,
+    ...(via?.viaLink ? { viaLink: true } : {}),
+    ...(via?.viaShopId ? { viaShopId: via.viaShopId } : {}),
   }).save();
   return { booking, customer };
 }

@@ -61,7 +61,20 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       updateData.isActive = Boolean(body.isActive);
     }
 
-    const shop = await Shop.findByIdAndUpdate(id, { $set: updateData }, { new: true });
+    const update: any = { $set: updateData };
+    if (body.linkBookingLimit !== undefined) {
+      if (body.linkBookingLimit === null || body.linkBookingLimit === "") {
+        update.$unset = { linkBookingLimit: 1 };
+      } else {
+        const n = Number(body.linkBookingLimit);
+        if (!Number.isInteger(n) || n < 0 || n > 1_000_000) {
+          return NextResponse.json({ success: false, error: { message: "Link limit must be a whole number (0 = unlimited)." } }, { status: 400 });
+        }
+        updateData.linkBookingLimit = n;
+      }
+    }
+
+    const shop = await Shop.findByIdAndUpdate(id, update, { new: true });
     if (!shop) {
       return NextResponse.json({ success: false, error: { message: "Shop not found" } }, { status: 404 });
     }

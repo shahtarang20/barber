@@ -12,6 +12,8 @@ import { heldByOthersExpr, activeHoldCount } from "@/lib/waitlistHold";
 import { normalizePhone } from "@/lib/phone";
 import { User } from "@/models/User";
 import { minutesUntilSlot } from "@/lib/istTime";
+import { barberLinkUsage, shopLinkUsage, isOverLinkLimit } from "@/lib/linkLimit";
+import { Shop } from "@/models/Shop";
 
 // Two layers: a generous per-IP ceiling that only stops an actual scripted
 // flood (Indian mobile carriers commonly put hundreds of real customers
@@ -26,6 +28,8 @@ const bookingSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   phone: z.string().min(10, "Valid phone number is required"),
   notes: z.string().max(500, "Notes must be 500 characters or fewer").optional(),
+  // Set by the shop page, so the booking counts against the shop link's monthly limit.
+  shopSlug: z.string().max(80).optional(),
 });
 
 export async function POST(req: Request) {
@@ -44,13 +48,31 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: { message: result.error.issues[0].message } }, { status: 400 });
     }
 
-    const { slotId, name, phone, notes } = result.data;
+    const { slotId, name, phone, notes, shopSlug } = result.data;
     if (!mongoose.isValidObjectId(slotId)) {
       return NextResponse.json({ success: false, error: { code: "SLOT_ALREADY_BOOKED", message: "Sorry, this slot is fully booked or unavailable. Please choose another time." } }, { status: 409 });
     }
 
     if (!(await rateLimit(`public-booking-phone:${normalizePhone(phone)}`, PHONE_LIMIT, 60_000))) {
       return NextResponse.json({ success: false, error: { message: "Too many booking attempts with this phone number. Please try again in a minute." } }, { status: 429 });
+    }
+
+    // The admin's monthly cap on bookings coming in through a link (barber link and, if used, the shop link).
+    const slotOwner = await Slot.findById(slotId).select("barberId").lean<{ barberId: unknown } | null>();
+    let viaShopId: unknown;
+    if (slotOwner) {
+      const linkClosedResponse = NextResponse.json({
+        success: false,
+        error: { code: "LINK_LIMIT", message: "Online booking is closed for now. Please contact the barber directly." },
+      }, { status: 403 });
+      if ((await barberLinkUsage(slotOwner.barberId)).closed) return linkClosedResponse;
+      if (shopSlug) {
+        const shop = await Shop.findOne({ slug: shopSlug, isActive: true, barberIds: slotOwner.barberId }).select("_id").lean<{ _id: unknown } | null>();
+        if (shop) {
+          if ((await shopLinkUsage(shop._id)).closed) return linkClosedResponse;
+          viaShopId = shop._id;
+        }
+      }
     }
 
     // ATOMIC OPERATION: Check if bookingsCount < capacity and increment in one step.
@@ -111,7 +133,17 @@ export async function POST(req: Request) {
     }
 
     try {
-      const { booking: newBooking, customer } = await createConfirmedBooking(slot, name, phone, notes);
+      const { booking: newBooking, customer } = await createConfirmedBooking(slot, name, phone, notes, { viaLink: true, viaShopId });
+
+      // Customers booking at the very same moment can slip past the check above; settle it by order.
+      if (await isOverLinkLimit(newBooking._id, slot.barberId, viaShopId)) {
+        await Booking.findByIdAndUpdate(newBooking._id, { $set: { status: "CANCELLED" } });
+        await Slot.findByIdAndUpdate(slot._id, { $set: { status: "AVAILABLE" }, $inc: { bookingsCount: -1 } });
+        return NextResponse.json({
+          success: false,
+          error: { code: "LINK_LIMIT", message: "Online booking is closed for now. Please contact the barber directly." },
+        }, { status: 403 });
+      }
 
       notifyBarber(slot.barberId.toString(), "BOOKINGS_UPDATED");
       await pushToBarber(slot.barberId.toString(), {
