@@ -117,7 +117,7 @@ export default function AppointmentsPage() {
   };
 
   const { data: profileData } = useSWR("/api/barber/profile", fetcher);
-  const myProfile: { slug?: string } | undefined = profileData?.success ? profileData.data : undefined;
+  const myProfile: { slug?: string; name?: string } | undefined = profileData?.success ? profileData.data : undefined;
   const { data: bookingsData, isLoading: loading, mutate: mutateBookings } = useSWR(
     `/api/barber/bookings?filter=${filter}&page=${page}&limit=${limit}`,
     fetcher
@@ -190,6 +190,21 @@ export default function AppointmentsPage() {
     await processAction(id, "cancel");
   };
 
+  // Ready-written reminder (customer's language = the barber's language here), opened in WhatsApp in one tap.
+  const reminderLink = (b: { date: string; startTime: string; bookingNumber: string; customerId?: { name?: string; phone?: string } }) => {
+    const today = getTodayISTString();
+    const tomorrow = format(addDays(parseDateOnly(today), 1), "yyyy-MM-dd");
+    const when = b.date === today ? t('apptReminderToday') : b.date === tomorrow ? t('apptReminderTomorrow') : fmt(parseDateOnly(b.date), "d MMM");
+    const msg = t('apptReminderMessage')
+      .replace('{name}', b.customerId?.name || '')
+      .replace('{barber}', myProfile?.name || '')
+      .replace('{when}', when)
+      .replace('{time}', b.startTime)
+      .replace('{id}', b.bookingNumber)
+      .replace('{link}', `${typeof window !== 'undefined' ? window.location.origin : ''}/cancel?id=${encodeURIComponent(b.bookingNumber)}`);
+    return `https://wa.me/${getWhatsAppNumber(b.customerId?.phone || '')}?text=${encodeURIComponent(msg)}`;
+  };
+
   const handleSendWhatsApp = () => {
     if (!whatsappPromptData) return;
     const { phone, name, time } = whatsappPromptData;
@@ -253,7 +268,7 @@ export default function AppointmentsPage() {
                   <a href={`tel:${phone}`} className="flex-1 h-11 inline-flex items-center justify-center gap-1 rounded-lg border border-zinc-200 dark:border-zinc-700 text-sm">
                     <Phone className="w-4 h-4" /> {t('callLabel')}
                   </a>
-                  <a href={`https://wa.me/${getWhatsAppNumber(phone)}`} target="_blank" rel="noreferrer" className="flex-1 h-11 inline-flex items-center justify-center gap-1 rounded-lg border border-green-200 text-green-700 text-sm">
+                  <a href={reminderLink(b)} target="_blank" rel="noreferrer" className="flex-1 h-11 inline-flex items-center justify-center gap-1 rounded-lg border border-green-200 text-green-700 text-sm">
                     <MessageCircle className="w-4 h-4" /> {t('whatsappLabel')}
                   </a>
                 </>
@@ -361,7 +376,7 @@ export default function AppointmentsPage() {
                               <a href={`tel:${b.customerId.phone}`} aria-label={t('callLabel')} title={t('callLabel')} className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800">
                                 <Phone className="w-4 h-4" />
                               </a>
-                              <a href={`https://wa.me/${getWhatsAppNumber(b.customerId.phone)}`} target="_blank" rel="noreferrer" aria-label={t('whatsappLabel')} title={t('whatsappLabel')} className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-green-200 text-green-700 hover:bg-green-50">
+                              <a href={reminderLink(b)} target="_blank" rel="noreferrer" aria-label={t('whatsappLabel')} title={t('whatsappLabel')} className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-green-200 text-green-700 hover:bg-green-50">
                                 <MessageCircle className="w-4 h-4" />
                               </a>
                             </>
