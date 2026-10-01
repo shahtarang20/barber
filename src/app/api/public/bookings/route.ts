@@ -21,7 +21,7 @@ import { Shop } from "@/models/Shop";
 // on the same network for each other's activity), plus a tight per-phone
 // limit that catches the actual repeat offender regardless of their IP.
 const IP_LIMIT = 200;
-const PHONE_LIMIT = 5;
+const PHONE_LIMIT = 20;
 
 const bookingSchema = z.object({
   slotId: z.string().min(1, "Slot is required"),

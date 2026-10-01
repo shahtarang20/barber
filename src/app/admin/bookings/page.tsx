@@ -10,15 +10,23 @@ export default function AdminBookingsPage() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [query, setQuery] = useState("");
+
+  // Wait a moment after typing stops, then search from page 1.
+  useEffect(() => {
+    const timer = setTimeout(() => { setQuery(search.trim()); setPage(1); }, 350);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   useEffect(() => {
     fetchBookings();
-  }, [page, limit]);
+  }, [page, limit, query]);
 
   const fetchBookings = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/admin/bookings?page=${page}&limit=${limit}`);
+      const res = await fetch(`/api/admin/bookings?page=${page}&limit=${limit}&search=${encodeURIComponent(query)}`);
       const data = await res.json();
       if (data.success) {
         setBookings(data.data);
@@ -37,6 +45,14 @@ export default function AdminBookingsPage() {
         <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">Global Bookings</h1>
         <p className="text-zinc-500 dark:text-zinc-400 mt-2">View all bookings across all stores on the platform.</p>
       </div>
+
+      <input
+        type="search"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Search by Booking ID, customer name or phone, or barber name or code…"
+        className="w-full h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-4 text-sm"
+      />
 
       <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
         {loading ? (

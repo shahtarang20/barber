@@ -23,7 +23,7 @@ const waitlistSchema = z.object({
 // (CGNAT means many real customers can share one IP) plus a tight per-phone
 // limit that actually catches a repeat offender.
 const IP_LIMIT = 200;
-const PHONE_LIMIT = 5;
+const PHONE_LIMIT = 20;
 
 export async function POST(req: Request) {
   try {

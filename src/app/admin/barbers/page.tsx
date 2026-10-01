@@ -12,16 +12,24 @@ export default function AdminBarbersPage() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [query, setQuery] = useState("");
+
+  // Wait a moment after typing stops, then search from page 1.
+  useEffect(() => {
+    const timer = setTimeout(() => { setQuery(search.trim()); setPage(1); }, 350);
+    return () => clearTimeout(timer);
+  }, [search]);
   const [defaultLimit, setDefaultLimit] = useState(0);
 
   useEffect(() => {
     fetchBarbers();
-  }, [page, limit]);
+  }, [page, limit, query]);
 
   const fetchBarbers = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/admin/barbers?page=${page}&limit=${limit}`);
+      const res = await fetch(`/api/admin/barbers?page=${page}&limit=${limit}&search=${encodeURIComponent(query)}`);
       const data = await res.json();
       if (data.success) {
         setBarbers(data.data);
@@ -90,6 +98,14 @@ export default function AdminBarbersPage() {
         <p className="text-zinc-500 dark:text-zinc-400 mt-2">View and manage all active barber stores on the platform.</p>
       </div>
 
+      <input
+        type="search"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Search a barber by name, code, phone, email or link…"
+        className="w-full h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-4 text-sm"
+      />
+
       <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm p-5 flex flex-wrap items-center gap-3">
         <div className="flex-1 min-w-[16rem]">
           <p className="font-medium text-zinc-900 dark:text-zinc-100">Booking-link limit (default)</p>
@@ -108,7 +124,7 @@ export default function AdminBarbersPage() {
         {loading ? (
           <div className="p-12 text-center text-zinc-500">Loading stores...</div>
         ) : barbers.length === 0 ? (
-          <div className="p-12 text-center text-zinc-500">No stores found.</div>
+          <div className="p-12 text-center text-zinc-500">{query ? `No store matches "${query}".` : "No stores found."}</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm whitespace-nowrap">

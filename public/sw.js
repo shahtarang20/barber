@@ -1,4 +1,4 @@
-const CACHE_NAME = 'barber-saas-cache-v2';
+const CACHE_NAME = 'barber-saas-cache-v3';
 const urlsToCache = [
   '/'
 ];
@@ -29,15 +29,11 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// Always ask the network first, so a new version of the app reaches everyone straight after a deploy.
+// The saved copy of the home page is only a fallback for when the phone is offline.
 self.addEventListener('fetch', (event) => {
   event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        if (response) {
-          return response;
-        }
-        return fetch(event.request);
-      })
+    fetch(event.request).catch(() => caches.match(event.request))
   );
 });
 

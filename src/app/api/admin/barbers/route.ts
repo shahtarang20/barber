@@ -11,6 +11,9 @@ export async function GET(req: Request) {
     const page = parseInt(searchParams.get("page") || "1");
     const limit = Math.min(parseInt(searchParams.get("limit") || "10"), 100);
     const skip = (page - 1) * limit;
+    const search = (searchParams.get("search") || "").trim().slice(0, 60);
+    const rx = search ? new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i") : null;
+    const filter: Record<string, unknown> = { role: "BARBER", ...(rx ? { $or: [{ name: rx }, { barberCode: rx }, { email: rx }, { phone: rx }, { slug: rx }] } : {}) };
 
     const payload = await requireAuth(["ADMIN"]);
     if (!payload) {
@@ -19,9 +22,9 @@ export async function GET(req: Request) {
 
     await connectToDatabase();
 
-    const total = await User.countDocuments({ role: "BARBER" });
+    const total = await User.countDocuments(filter);
 
-    const barbers = await User.find({ role: "BARBER" })
+    const barbers = await User.find(filter)
       .select("-passwordHash -tokenVersion")
       .sort({ createdAt: -1 })
       .skip(skip)
