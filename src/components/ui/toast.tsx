@@ -40,7 +40,7 @@ function ToastViewport({ className, ...props }: ToastPrimitive.Viewport.Props) {
     <ToastPrimitive.Viewport
       data-slot="toast-viewport"
       className={cn(
-        "pointer-events-none fixed inset-x-4 bottom-4 z-50 mx-auto w-auto max-w-sm outline-none sm:right-4 sm:left-auto sm:mx-0 sm:w-full",
+        "pointer-events-none fixed inset-x-4 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-[100] mx-auto w-auto max-w-sm outline-none sm:right-4 sm:bottom-4 sm:left-auto sm:mx-0 sm:w-full",
         className
       )}
       {...props}
@@ -80,7 +80,7 @@ function ToastContent({ className, ...props }: ToastPrimitive.Content.Props) {
     <ToastPrimitive.Content
       data-slot="toast-content"
       className={cn(
-        "flex flex-col justify-center gap-1 overflow-hidden p-4 transition-opacity duration-250 ease-[cubic-bezier(0.22,1,0.36,1)] data-behind:opacity-0 data-expanded:opacity-100",
+        "flex flex-row items-start gap-3 overflow-hidden p-4 transition-opacity duration-250 ease-[cubic-bezier(0.22,1,0.36,1)] data-behind:opacity-0 data-expanded:opacity-100",
         className
       )}
       {...props}
@@ -105,7 +105,7 @@ function ToastDescription({
   return (
     <ToastPrimitive.Description
       data-slot="toast-description"
-      className={cn("text-sm text-muted-foreground", className)}
+      className={cn("text-sm text-muted-foreground break-words", className)}
       {...props}
     />
   )
