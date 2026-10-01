@@ -3,8 +3,8 @@ import { Redis } from '@upstash/redis';
 // Fallback in-memory store in case Redis is not configured
 const hits = new Map<string, { count: number; resetAt: number }>();
 
-const redisUrl = process.env.UPSTASH_REDIS_REST_URL || process.env.UPSTASH_REDIS_REST_REDIS_URL;
-const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.UPSTASH_REDIS_REST_REDIS_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+const redisUrl = process.env.UPSTASH_REDIS_REST_URL || process.env.UPSTASH_REDIS_REST_REDIS_URL || process.env.KV_REST_API_URL;
+const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.UPSTASH_REDIS_REST_REDIS_TOKEN || process.env.KV_REST_API_TOKEN;
 
 let redis: Redis | null = null;
 if (redisUrl && redisToken) {
