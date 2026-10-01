@@ -10,6 +10,7 @@ import { useTranslation } from "@/lib/i18n";
 import { useDateFormat } from "@/lib/dateLocale";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { AlertTriangle, LogOut } from "lucide-react";
+import { MyBarberCode } from "@/components/dashboard/MyBarberCode";
 import { useRouter } from "next/navigation";
 
 const formatTimeInput = (input: string, isEndTime: boolean): string => {
@@ -214,6 +215,8 @@ export default function SettingsPage() {
           {t('setSubtitle')}
         </p>
       </div>
+
+      <MyBarberCode />
 
       {/* Profile Settings */}
       <div className="bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-6">

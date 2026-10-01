@@ -9,6 +9,7 @@ import { toast } from "@/components/ui/toast";
 import { useTranslation } from "@/lib/i18n";
 import { FrontDeskBooking } from "@/components/dashboard/FrontDeskBooking";
 import { ShopCustomers } from "@/components/dashboard/ShopCustomers";
+import { MyBarberCode } from "@/components/dashboard/MyBarberCode";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -196,6 +197,8 @@ export default function ShopPage() {
           {t('shopIntro')}
         </p>
       </div>
+
+      <MyBarberCode />
 
       {!shop && myInvites.length > 0 && (
         <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-900 rounded-2xl p-6 space-y-4">
