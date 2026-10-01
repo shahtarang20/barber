@@ -15,7 +15,7 @@ const schema = z.object({
   phone: z.string().optional().transform((v) => v ?? "").refine((v) => v === "" || v.replace(/\D/g, "").length >= 10, { message: "Phone number must have 10 digits (or leave it empty)" }),
 });
 
-/** Shop front desk: the shop owner books a customer with ANY barber of the shop. */
+/** Shop front desk: any barber of the shop (owner or member) books a customer with ANY barber of the shop. */
 export async function POST(req: Request) {
   try {
     const payload = await requireAuth(["BARBER"]);
@@ -29,10 +29,10 @@ export async function POST(req: Request) {
     if (!mongoose.isValidObjectId(barberId)) return NextResponse.json({ success: false, error: { message: "Barber not found in your shop." } }, { status: 404 });
 
     await connectToDatabase();
-    const owner = await User.findById(payload.userId).select("shopId");
-    const shop = owner?.shopId ? await Shop.findById(owner.shopId) : null;
-    if (!shop || shop.ownerId.toString() !== payload.userId) {
-      return NextResponse.json({ success: false, error: { message: "Only the shop owner can book for the shop's barbers." } }, { status: 403 });
+    const me = await User.findById(payload.userId).select("shopId");
+    const shop = me?.shopId ? await Shop.findById(me.shopId) : null;
+    if (!shop) {
+      return NextResponse.json({ success: false, error: { message: "You don't belong to a shop." } }, { status: 403 });
     }
     const target = await User.findOne({ _id: barberId, shopId: shop._id, isActive: { $ne: false } }).select("name");
     if (!target) return NextResponse.json({ success: false, error: { message: "Barber not found in your shop." } }, { status: 404 });

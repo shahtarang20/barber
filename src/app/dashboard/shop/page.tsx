@@ -329,8 +329,8 @@ export default function ShopPage() {
             )}
           </div>
 
-          {shop.isOwner && <FrontDeskBooking shopSlug={shop.slug} members={shop.members} />}
-          {shop.isOwner && <ShopCustomers />}
+          <FrontDeskBooking shopSlug={shop.slug} members={shop.members} />
+          <ShopCustomers />
         </>
       )}
     </div>

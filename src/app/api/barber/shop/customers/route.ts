@@ -9,7 +9,7 @@ import { Booking } from "@/models/Booking";
 const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /**
- * The shop owner's view of every customer who has booked with ANY barber of the shop — visits
+ * Any shop barber's (owner or member) view of every customer who has booked with ANY barber of the shop — visits
  * added up across barbers, which barbers they've seen, and repeat customers. Barbers' private notes
  * are deliberately NOT included.
  */
@@ -25,10 +25,10 @@ export async function GET(req: Request) {
     const repeatOnly = searchParams.get("repeat") === "1";
 
     await connectToDatabase();
-    const owner = await User.findById(payload.userId).select("shopId");
-    const shop = owner?.shopId ? await Shop.findById(owner.shopId) : null;
-    if (!shop || shop.ownerId.toString() !== payload.userId) {
-      return NextResponse.json({ success: false, error: { message: "Only the shop owner can see the shop's customers." } }, { status: 403 });
+    const me = await User.findById(payload.userId).select("shopId");
+    const shop = me?.shopId ? await Shop.findById(me.shopId) : null;
+    if (!shop) {
+      return NextResponse.json({ success: false, error: { message: "You don't belong to a shop." } }, { status: 403 });
     }
 
     const members = await User.find({ shopId: shop._id }).select("name");

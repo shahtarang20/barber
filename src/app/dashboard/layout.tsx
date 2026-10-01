@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { verifyToken } from "@/lib/auth";
+import { verifyToken, requireAuth } from "@/lib/auth";
+import { SessionGuard } from "@/components/dashboard/SessionGuard";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { MobileNav } from "@/components/dashboard/MobileNav";
 import { Header } from "@/components/dashboard/Header";
@@ -19,8 +20,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect("/admin");
   }
 
+  // The cookie can still be well-formed after a suspension or password reset; check the account itself.
+  if (!(await requireAuth(["BARBER"]))) {
+    redirect("/login");
+  }
+
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-zinc-50 dark:bg-zinc-900">
+      <SessionGuard />
       <div className="hidden md:block">
         <Sidebar />
       </div>
