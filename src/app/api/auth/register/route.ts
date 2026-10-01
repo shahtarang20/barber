@@ -4,6 +4,7 @@ import connectToDatabase from "@/lib/mongodb";
 import { User } from "@/models/User";
 import { slugFromName, uniqueSlug } from "@/lib/slug";
 import { ensureUserEmailIndex } from "@/lib/ensureIndexes";
+import { autoGenerateFutureSlots } from "@/lib/slotGenerator";
 import { z } from "zod";
 
 const registerSchema = z.object({
@@ -75,6 +76,15 @@ export async function POST(req: Request) {
       }
     }
     
+    // Give the new barber his time slots right away, so a customer who opens his link
+    // straight after sign-up sees times to book (otherwise nothing exists until he saves
+    // Settings or the daily job runs). If this fails sign-up still works; the daily job fills it in.
+    try {
+      await autoGenerateFutureSlots(newUser._id.toString(), defaultWorkingHours, newUser.slotDuration || 30, newUser.defaultCapacity || 1);
+    } catch (slotError) {
+      console.error("Could not create first slots at sign-up:", slotError);
+    }
+
     return NextResponse.json({ 
       success: true, 
       data: { 
