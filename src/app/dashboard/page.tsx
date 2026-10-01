@@ -388,7 +388,7 @@ export default function DashboardPage() {
               <>
                 <div className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-800/50 p-1 rounded-lg border border-zinc-200 dark:border-zinc-800">
                   <label className="text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 hidden sm:block pl-2">{t('capacityLabel')}</label>
-                  <input type="number" min="1" max="50" value={capacity || ""} onChange={(e) => setCapacity(e.target.value === "" ? 0 : Number(e.target.value))} className="w-14 h-10 rounded-md border border-zinc-300 px-2 text-base dark:border-zinc-700 dark:bg-zinc-900" />
+                  <input type="number" min="1" max="50" value={capacity || ""} onChange={(e) => setCapacity(e.target.value === "" ? 0 : Number(e.target.value))} className="w-14 h-11 rounded-md border border-zinc-300 px-2 text-base dark:border-zinc-700 dark:bg-zinc-900" />
                 </div>
                 <Button variant="outline" className="h-11 px-4" onClick={generateSlots} disabled={generating}>
                   {generating ? t('loading') : t('generateSlots')}
@@ -423,7 +423,7 @@ export default function DashboardPage() {
               <div className="mt-6 flex flex-col items-center gap-4">
                 <div className="flex items-center gap-2">
                   <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{t('bookingsPerSlot')}</label>
-                  <input type="number" min="1" max="50" value={capacity || ""} onChange={(e) => setCapacity(e.target.value === "" ? 0 : Number(e.target.value))} className="w-20 rounded-md border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-800 dark:bg-zinc-950" />
+                  <input type="number" min="1" max="50" value={capacity || ""} onChange={(e) => setCapacity(e.target.value === "" ? 0 : Number(e.target.value))} className="w-20 h-11 rounded-md border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-800 dark:bg-zinc-950" />
                 </div>
                 <Button onClick={generateSlots} disabled={generating}>
                   {generating ? t('loading') : t('generateSlots')}

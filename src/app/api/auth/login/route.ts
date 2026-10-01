@@ -30,7 +30,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: { message: result.error.issues[0].message } }, { status: 400 });
     }
     
-    const { barberCode, password } = result.data;
+    const { password } = result.data;
+    // Phone keyboards often add a space before or after what was typed or pasted; ignore it.
+    const barberCode = result.data.barberCode.trim();
+    if (!barberCode) {
+      return NextResponse.json({ success: false, error: { message: "Barber Code is required" } }, { status: 400 });
+    }
 
     // The real guard against password guessing is per account, not per network.
     if (!(await rateLimit(`login-account:${barberCode.toLowerCase()}`, 10, 60_000))) {

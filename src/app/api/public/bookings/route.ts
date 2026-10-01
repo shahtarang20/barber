@@ -20,7 +20,7 @@ import { Shop } from "@/models/Shop";
 // behind one shared IP via CGNAT, so a tight per-IP limit punishes strangers
 // on the same network for each other's activity), plus a tight per-phone
 // limit that catches the actual repeat offender regardless of their IP.
-const IP_LIMIT = 60;
+const IP_LIMIT = 200;
 const PHONE_LIMIT = 5;
 
 const bookingSchema = z.object({

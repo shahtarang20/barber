@@ -38,7 +38,7 @@ import {
 export default function AppointmentsPage() {
   const fmt = useDateFormat();
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(10);
+  const [limit, setLimit] = useState(15);
   const [filter, setFilter] = useState("TODAY");
   const { t } = useTranslation();
 
@@ -87,7 +87,15 @@ export default function AppointmentsPage() {
       });
       const data = await res.json();
       if (data.success) {
-        toast.add({ title: t('walkInAdded'), description: `Booking ${data.data.bookingNumber} created.`, type: "success" });
+        // Say exactly what was booked and for which day, so a booking made for another day is not mistaken for "nothing happened".
+        const pickedSlot = walkInSlots.find((sl) => sl._id === selectedWalkInSlot);
+        toast.add({
+          title: t('bookingAddedTitle'),
+          description: `${walkInName.trim()} · ${fmt(parseDateOnly(walkInDate), "EEE d MMM")}${pickedSlot ? ` · ${pickedSlot.startTime}` : ""} · ${data.data.bookingNumber}`,
+          type: "success",
+        });
+        // A booking for a later day lives under Upcoming, not Today: take the barber there so he can see it.
+        if (walkInDate !== todayStr) { setFilter("UPCOMING"); setPage(1); }
         setWalkInOpen(false);
         setWalkInName("");
         setWalkInPhone("");
@@ -275,7 +283,7 @@ export default function AppointmentsPage() {
         </Button>
       </div>
 
-      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+      <div className="flex flex-wrap gap-2 pb-2">
         {tabs.map(tab => (
           <button
             key={tab.value}
@@ -301,7 +309,7 @@ export default function AppointmentsPage() {
       )}
 
       {nextBooking && (
-        <div className="md:hidden space-y-2">
+        <div className="xl:hidden space-y-2">
           <h2 className="text-sm font-semibold text-zinc-500 uppercase tracking-wide">{t('apptNextCustomer')}</h2>
           {renderBookingCard(nextBooking, true)}
         </div>
@@ -314,39 +322,49 @@ export default function AppointmentsPage() {
           <div className="p-12 text-center text-zinc-500">{t('apptNone')}</div>
         ) : (
           <>
-          <div className="md:hidden p-3 space-y-3">
+          <div className="xl:hidden p-3 space-y-3">
             {filteredBookings.filter((b) => b._id !== nextBooking?._id).map((b) => renderBookingCard(b))}
           </div>
-          <div className="hidden md:block overflow-x-auto">
+          <div className="hidden xl:block overflow-x-auto">
             <table className="w-full text-left text-sm whitespace-nowrap">
               <thead className="bg-zinc-50 dark:bg-zinc-900/50 text-zinc-500 dark:text-zinc-400 border-b border-zinc-200 dark:border-zinc-800">
                 <tr>
-                  <th className="px-6 py-4 font-medium">{t('customer')}</th>
-                  <th className="px-6 py-4 font-medium">{t('yourPhone')}</th>
-                  <th className="px-6 py-4 font-medium">{t('apptColDateTime')}</th>
-                  <th className="px-6 py-4 font-medium">{t('apptColStatus')}</th>
-                  <th className="px-6 py-4 font-medium text-right">{t('apptColActions')}</th>
+                  <th className="px-4 py-3 font-medium">{t('customer')}</th>
+                  <th className="px-4 py-3 font-medium">{t('yourPhone')}</th>
+                  <th className="px-4 py-3 font-medium">{t('apptColDateTime')}</th>
+                  <th className="px-4 py-3 font-medium">{t('apptColStatus')}</th>
+                  <th className="px-4 py-3 font-medium text-right">{t('apptColActions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
                 {filteredBookings.map((b) => (
                   <tr key={b._id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
-                    <td className="px-6 py-4 text-zinc-900 dark:text-zinc-100">{b.customerId?.name || "Unknown"}</td>
-                    <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">{b.customerId?.phone || "N/A"}</td>
-                    <td className="px-6 py-4 text-zinc-900 dark:text-zinc-100">
+                    <td className="px-4 py-3 text-zinc-900 dark:text-zinc-100">{b.customerId?.name || "Unknown"}</td>
+                    <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">{b.customerId?.phone || "N/A"}</td>
+                    <td className="px-4 py-3 text-zinc-900 dark:text-zinc-100">
                       {fmt(parseDateOnly(b.date), "d MMM yyyy")} <span className="text-zinc-500 ml-2">{b.startTime}</span>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-3">
                       {b.status === "CONFIRMED" && <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">{t('apptConfirmed')}</span>}
                       {b.status === "CONFIRMED" && b.endTime && minutesUntilSlotEnd(b.date, b.endTime) < 0 && <span className="ml-2 px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">{t('apptNeedsAction')}</span>}
                       {b.status === "COMPLETED" && <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">{t('apptCompleted')}</span>}
                       {b.status === "CANCELLED" && <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">{t('apptCancelled')}</span>}
                       {b.status === "NO_SHOW" && <span className="px-2 py-1 rounded-full text-xs font-medium bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">{t('apptNoShow')}</span>}
                     </td>
-                    <td className="px-6 py-4 text-right space-x-2 flex justify-end">
+                    <td className="px-4 py-3"><div className="flex items-center justify-end gap-2">
                       {b.status === "CONFIRMED" && (
                         <>
-                          <Button variant="outline" size="sm" disabled={busyIds.includes(b._id)} onClick={() => handleAction(b._id, "complete")}>{t('apptComplete')}</Button>
+                          {b.customerId?.phone && (
+                            <>
+                              <a href={`tel:${b.customerId.phone}`} aria-label={t('callLabel')} title={t('callLabel')} className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800">
+                                <Phone className="w-4 h-4" />
+                              </a>
+                              <a href={`https://wa.me/${getWhatsAppNumber(b.customerId.phone)}`} target="_blank" rel="noreferrer" aria-label={t('whatsappLabel')} title={t('whatsappLabel')} className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-green-200 text-green-700 hover:bg-green-50">
+                                <MessageCircle className="w-4 h-4" />
+                              </a>
+                            </>
+                          )}
+                          <Button variant="outline" size="sm" disabled={busyIds.includes(b._id)} onClick={() => handleAction(b._id, "complete")}>{t('done')}</Button>
                           <Button variant="outline" size="sm" disabled={busyIds.includes(b._id)} onClick={() => handleAction(b._id, "cancel")} className="text-red-600 hover:text-red-700 border-red-200 hover:bg-red-50">{t('cancel')}</Button>
                           <Button variant="ghost" size="sm" disabled={busyIds.includes(b._id)} onClick={() => handleAction(b._id, "no-show")}>{t('apptNoShow')}</Button>
                         </>
@@ -354,6 +372,7 @@ export default function AppointmentsPage() {
                       {b.status !== "CONFIRMED" && (
                         <span className="text-zinc-400 text-xs italic">{t('apptNoActions')}</span>
                       )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -423,7 +442,7 @@ export default function AppointmentsPage() {
             {walkInSlotsLoading ? (
               <p className="text-sm text-zinc-500">{t('loading')}</p>
             ) : walkInSlots.length === 0 ? (
-              <p className="text-sm text-zinc-500">{t('noOpenSlots')}</p>
+              <p className="text-sm text-zinc-500">{walkInDate === todayStr ? t('noOpenSlots') : t('noOpenSlotsDay')}</p>
             ) : (
               <>
               <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">{t('chooseTime')}</label>

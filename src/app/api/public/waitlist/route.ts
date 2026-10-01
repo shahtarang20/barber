@@ -8,17 +8,21 @@ import { rateLimit, getClientIp } from "@/lib/rateLimit";
 import { notifyBarber } from "@/lib/realtime";
 import { normalizePhone } from "@/lib/phone";
 import { User } from "@/models/User";
+import { Shop } from "@/models/Shop";
 
 const waitlistSchema = z.object({
   slotId: z.string().min(1, "Slot is required"),
   name: z.string().min(2, "Name must be at least 2 characters"),
   phone: z.string().min(10, "Valid phone number is required"),
+  // Set by the shop page's "Any barber" choice: wait for a seat with ANY barber of that shop at this time.
+  shopSlug: z.string().max(80).optional(),
+  anyBarber: z.boolean().optional(),
 });
 
 // Same two-layer approach as public bookings — a generous per-IP ceiling
 // (CGNAT means many real customers can share one IP) plus a tight per-phone
 // limit that actually catches a repeat offender.
-const IP_LIMIT = 60;
+const IP_LIMIT = 200;
 const PHONE_LIMIT = 5;
 
 export async function POST(req: Request) {
@@ -65,12 +69,20 @@ export async function POST(req: Request) {
       }, { status: 409 });
     }
 
+    // "Any barber": only valid if this slot's barber really belongs to that shop.
+    let anyShopId: unknown;
+    if (result.data.anyBarber && result.data.shopSlug) {
+      const owner = await Slot.findById(slotId).select("barberId").lean<{ barberId: unknown } | null>();
+      const shop = owner ? await Shop.findOne({ slug: result.data.shopSlug, isActive: true, barberIds: owner.barberId }).select("_id").lean<{ _id: unknown } | null>() : null;
+      if (shop) anyShopId = shop._id;
+    }
+
     // Add to waitlist array using atomic push
     const slot = await Slot.findOneAndUpdate(
       { _id: slotId, status: { $ne: "BLOCKED" } },
       {
         $push: {
-          waitlist: { name, phone, joinedAt: new Date() }
+          waitlist: { name, phone, joinedAt: new Date(), ...(anyShopId ? { anyBarber: true, shopId: anyShopId } : {}) }
         }
       },
       { new: true }

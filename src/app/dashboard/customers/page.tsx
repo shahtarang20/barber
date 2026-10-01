@@ -166,6 +166,7 @@ export default function CustomersPage() {
                           className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-3 text-sm focus:ring-2 focus:ring-zinc-900 outline-none resize-none h-24"
                           placeholder={t('custNotePlaceholder')}
                           value={noteInputs[c._id] || ""}
+                          maxLength={1000}
                           onChange={(e) => setNoteInputs({ ...noteInputs, [c._id]: e.target.value })}
                         />
                         <div className="flex justify-end">

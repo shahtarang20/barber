@@ -14,7 +14,7 @@ const schema = z.object({
 /** Lets a customer look up their own booking (Booking ID + phone) so they can pick a new time for it. */
 export async function POST(req: Request) {
   try {
-    if (!(await rateLimit(`public-lookup:${getClientIp(req)}`, 20, 60_000))) {
+    if (!(await rateLimit(`public-lookup:${getClientIp(req)}`, 60, 60_000))) {
       return NextResponse.json({ success: false, error: { code: "RATE_LIMITED", message: "Too many requests. Please try again shortly." } }, { status: 429 });
     }
     const parsed = schema.safeParse(await req.json());

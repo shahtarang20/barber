@@ -131,13 +131,31 @@ export default function ShopBookingPage() {
 
     try {
       const endpoint = selectedSlot.isWaitlist ? "/api/public/waitlist" : "/api/public/bookings";
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slotId: selectedSlot._id, name, phone, shopSlug: slug }),
-      });
+      const post = (slotId: string) =>
+        fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ slotId, name, phone, shopSlug: slug, ...(selectedSlot.isWaitlist && selectedBarberId === "ANY" ? { anyBarber: true } : {}) }),
+        });
+      let res = await post(selectedSlot._id);
+      let data = await res.json();
 
-      const data = await res.json();
+      // "Any barber" in a rush: someone else took the barber we picked a moment ago. If another barber is
+      // still free at the SAME time, quietly book with him instead of making the customer start again.
+      const tried = new Set<string>([selectedSlot._id]);
+      for (let attempt = 0; attempt < 3 && !selectedSlot.isWaitlist && selectedBarberId === "ANY" && !res.ok && data?.error?.code === "SLOT_ALREADY_BOOKED"; attempt++) {
+        const fresh = await fetch(`/api/public/shops/${slug}/slots?date=${formattedDate}`).then((r) => r.json()).catch(() => null);
+        const list: ShopSlot[] = fresh?.success ? fresh.data : [];
+        const load = new Map<string, number>();
+        for (const sl of list) load.set(sl.barberId, (load.get(sl.barberId) || 0) + (sl.bookingsCount || 0));
+        const next = list
+          .filter((x) => x.startTime === selectedSlot.startTime && hasRoom(x) && !tried.has(x._id))
+          .sort((a, b) => (b.capacity - b.bookingsCount) - (a.capacity - a.bookingsCount) || (load.get(a.barberId) || 0) - (load.get(b.barberId) || 0))[0];
+        if (!next) break;
+        tried.add(next._id);
+        res = await post(next._id);
+        data = await res.json();
+      }
 
       if (!res.ok || !data.success) {
         setBookingError(

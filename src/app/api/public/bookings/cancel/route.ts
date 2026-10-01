@@ -22,7 +22,7 @@ const NOT_FOUND = { success: false, error: { code: "NOT_FOUND", message: "No mat
 /** Lets a customer cancel their own booking using Booking ID + the phone number it was made with. */
 export async function POST(req: Request) {
   try {
-    if (!(await rateLimit(`public-cancel:${getClientIp(req)}`, 20, 60_000))) {
+    if (!(await rateLimit(`public-cancel:${getClientIp(req)}`, 60, 60_000))) {
       return NextResponse.json({ success: false, error: { code: "RATE_LIMITED", message: "Too many requests. Please try again shortly." } }, { status: 429 });
     }
 

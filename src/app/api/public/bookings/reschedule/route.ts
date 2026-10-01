@@ -26,7 +26,7 @@ const schema = z.object({
 /** Moves a customer's booking to another open slot of the same barber, keeping the same Booking ID. */
 export async function POST(req: Request) {
   try {
-    if (!(await rateLimit(`public-reschedule:${getClientIp(req)}`, 20, 60_000))) {
+    if (!(await rateLimit(`public-reschedule:${getClientIp(req)}`, 60, 60_000))) {
       return NextResponse.json({ success: false, error: { code: "RATE_LIMITED", message: "Too many requests. Please try again shortly." } }, { status: 429 });
     }
     const parsed = schema.safeParse(await req.json());

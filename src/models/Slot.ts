@@ -12,6 +12,9 @@ export interface ISlot extends Document {
     name: string;
     phone: string;
     joinedAt: Date;
+    /** Joined through a shop's "Any barber" choice: any barber of that shop's seat at this time will do. */
+    anyBarber?: boolean;
+    shopId?: mongoose.Types.ObjectId;
   }[];
   isCustomCapacity?: boolean;
   holds?: { phone: string; name: string; until: Date }[];
@@ -34,6 +37,8 @@ const SlotSchema: Schema = new Schema(
         name: { type: String, required: true },
         phone: { type: String, required: true },
         joinedAt: { type: Date, default: Date.now },
+        anyBarber: { type: Boolean },
+        shopId: { type: Schema.Types.ObjectId },
       },
     ],
     isCustomCapacity: { type: Boolean, default: false },
