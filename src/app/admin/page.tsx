@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { PaginationControls } from "@/components/ui/pagination-controls";
+import { GrowthPanel } from "@/components/admin/GrowthPanel";
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState<any>(null);
@@ -46,6 +47,8 @@ export default function AdminDashboard() {
         <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">Admin Overview</h1>
         <p className="text-zinc-500 dark:text-zinc-400 mt-2">Manage all barber stores and platform metrics.</p>
       </div>
+
+      <GrowthPanel />
 
       {loading ? (
         <div className="p-12 text-center text-zinc-500">Loading admin panel...</div>

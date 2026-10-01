@@ -317,6 +317,20 @@ Be honest with yourself: **20 million shops is more than there are barber shops 
 
 ---
 
+## 9b. The "Growth & limits" panel in the admin area
+
+At the top of the admin **Overview** page there is a box called **Growth & limits**. It reads this file's stages for you:
+
+- It shows which **stage** you are in and the rough monthly cost at that stage.
+- Three coloured bars: **shop progress** toward the next stage, **barbers online now** (about the same as Pusher connections), and **database storage**.
+- Green means fine, orange means "upgrade soon" (70% full), red means "upgrade now" (90% full). Each bar has one line saying what to do.
+- Type your real Pusher plan size in the box ("free = 100, Startup = 500, Pro = 2000") so the bar measures against what you actually pay for. Do this each time you upgrade Pusher.
+- Also set the database plan size on the **Data & Storage** page each time you upgrade MongoDB.
+
+What the panel **cannot** do: it can't see your real bills, Vercel usage, MongoDB speed or Pusher's own peak number. Check those on their dashboards (Section 3). The panel's "online" number counts barbers whose dashboard was open in the last 12 minutes, so it is an estimate.
+
+---
+
 ## 10. One-page summary (stick this on your wall)
 
 | Shops | Do this | Total / month (≈) |

@@ -25,6 +25,8 @@ export interface IUser extends Document {
   premiumAmount: number;
   /** Bookings per month allowed through this barber's link. undefined = platform default, 0 = unlimited. */
   linkBookingLimit?: number;
+  /** Last time this barber had the dashboard open (updated every few minutes). */
+  lastSeenAt?: Date;
   premiumDueDay: number;
   isActive: boolean;
   tokenVersion: number;
@@ -70,6 +72,7 @@ const UserSchema: Schema = new Schema(
     defaultCapacity: { type: Number, default: 1, min: 1, max: 50 },
     premiumAmount: { type: Number, default: 0 },
     linkBookingLimit: { type: Number, min: 0 },
+    lastSeenAt: { type: Date },
     premiumDueDay: { type: Number, default: 28 }, // default 28th of month
     isActive: { type: Boolean, default: true },
     // Bumped on logout, password reset, or suspension to invalidate any

@@ -23,5 +23,17 @@ export function SessionGuard() {
     };
     return () => { window.fetch = original; };
   }, []);
+
+  // Tell the server this dashboard is open (about every 8 minutes, only while the tab is visible).
+  useEffect(() => {
+    const beat = () => {
+      if (document.visibilityState === "visible") fetch("/api/barber/heartbeat", { method: "POST" }).catch(() => {});
+    };
+    beat();
+    const timer = setInterval(beat, 8 * 60 * 1000);
+    document.addEventListener("visibilitychange", beat);
+    return () => { clearInterval(timer); document.removeEventListener("visibilitychange", beat); };
+  }, []);
+
   return null;
 }
