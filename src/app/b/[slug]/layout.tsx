@@ -37,6 +37,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 }
 
 import { InstallPrompt } from "@/components/InstallPrompt";
+import { MyBookingBanner } from "@/components/MyBookingBanner";
 
 export default async function BarberLayout({ children, params }: { children: React.ReactNode; params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -46,6 +47,7 @@ export default async function BarberLayout({ children, params }: { children: Rea
 
   return (
     <>
+      <MyBookingBanner />
       {children}
       <InstallPrompt isCustomer={true} appName={barber?.name || "this barber"} />
     </>

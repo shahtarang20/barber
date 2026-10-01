@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { format, addDays } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,11 @@ interface OpenSlot { _id: string; startTime: string; endTime: string; status: st
 export default function ManageBookingPage() {
   const { t } = useTranslation();
   const [bookingNumber, setBookingNumber] = useState("");
+  // A link from the "Your booking" banner brings the ID along, so the customer only has to type his phone.
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("id");
+    if (id) setBookingNumber(id);
+  }, []);
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);

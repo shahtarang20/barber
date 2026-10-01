@@ -116,6 +116,8 @@ export default function AppointmentsPage() {
     }
   };
 
+  const { data: profileData } = useSWR("/api/barber/profile", fetcher);
+  const myProfile: { slug?: string } | undefined = profileData?.success ? profileData.data : undefined;
   const { data: bookingsData, isLoading: loading, mutate: mutateBookings } = useSWR(
     `/api/barber/bookings?filter=${filter}&page=${page}&limit=${limit}`,
     fetcher
@@ -495,7 +497,7 @@ export default function AppointmentsPage() {
                     className="w-full justify-start mb-2 border-green-200 bg-green-50 text-green-700 hover:bg-green-100" 
                     onClick={() => {
                       const cleanPhone = getWhatsAppNumber(wc.phone);
-                      const msgStr = t('apptWaitlistMessage').replace('{name}', wc.name).replace('{time}', whatsappPromptData.time).replace('{mins}', String(whatsappPromptData.holdMinutes ?? 15)).replace('{link}', window.location.origin);
+                      const msgStr = t('apptWaitlistMessage').replace('{name}', wc.name).replace('{time}', whatsappPromptData.time).replace('{mins}', String(whatsappPromptData.holdMinutes ?? 15)).replace('{link}', `${window.location.origin}${myProfile?.slug ? `/b/${myProfile.slug}` : ""}`);
                       window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msgStr)}`, '_blank');
                     }}
                   >

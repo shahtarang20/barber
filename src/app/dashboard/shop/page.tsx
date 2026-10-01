@@ -324,6 +324,7 @@ export default function ShopPage() {
                 <Input
                   value={newMemberCode}
                   onChange={(e) => setNewMemberCode(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter" && newMemberCode.trim() && !addingMember) handleAddMember(); }}
                   placeholder={t('shopCodePh')}
                 />
                 <Button onClick={handleAddMember} disabled={addingMember || !newMemberCode.trim()}>

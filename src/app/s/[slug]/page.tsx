@@ -13,6 +13,7 @@ import { useTranslation } from "@/lib/i18n";
 import { useDateFormat } from "@/lib/dateLocale";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import useSWR from "swr";
+import { saveLastBooking } from "@/lib/lastBooking";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -170,10 +171,11 @@ export default function ShopBookingPage() {
         return;
       }
 
+      if (!selectedSlot.isWaitlist && data.data?.bookingNumber) saveLastBooking({ id: data.data.bookingNumber, date: data.data.date, time: data.data.startTime, barber: shop?.name });
       setBookingSuccess({ ...data.data, isWaitlist: selectedSlot.isWaitlist });
       setBookingLoading(false);
     } catch (err) {
-      setBookingError("An unexpected error occurred.");
+      setBookingError(typeof navigator !== "undefined" && navigator.onLine === false ? t("noInternet") : t("genericError"));
       setBookingLoading(false);
     }
   };
