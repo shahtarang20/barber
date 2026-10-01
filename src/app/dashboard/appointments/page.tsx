@@ -107,7 +107,7 @@ export default function AppointmentsPage() {
         // Most likely someone else took the time meanwhile: refresh the list so a free time can be picked.
         mutateWalkInSlots();
         setWalkInSlotId("");
-        toast.add({ title: "Error", description: data.error?.message || "Failed to add walk-in", type: "error" });
+        toast.add({ title: t('error'), description: data.error?.message || t('genericError'), type: "error" });
       }
     } catch {
       toast.add({ title: t('error'), description: t('genericError'), type: "error" });

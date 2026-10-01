@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { format, addDays, subDays, parse, isAfter } from "date-fns";
+import { format, addDays, subDays } from "date-fns";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useTranslation } from "@/lib/i18n";
 import { useDateFormat } from "@/lib/dateLocale";
-import { getISTNow } from "@/lib/istTime";
+import { getISTNow, getTodayISTString, minutesUntilSlotEnd } from "@/lib/istTime";
+import { parseDateOnly } from "@/lib/timeSort";
 import { toast } from "@/components/ui/toast";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import { useRealtimeRefresh } from "@/lib/useRealtimeRefresh";
@@ -30,20 +31,18 @@ export default function DashboardPage() {
   const [profile, setProfile] = useState<any>(null);
   const [showPremiumPopup, setShowPremiumPopup] = useState(false);
   const [generating, setGenerating] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<Date>(() => {
-    if (typeof window !== "undefined") {
-      const stored = sessionStorage.getItem("dashboardSelectedDate");
-      if (stored) {
-        const storedDate = new Date(stored);
-        const todayStr = format(new Date(), "yyyy-MM-dd");
-        const storedStr = format(storedDate, "yyyy-MM-dd");
-        // If stored date is in the past (before today), reset to today.
-        // String comparison works perfectly for yyyy-MM-dd
-        if (storedStr >= todayStr) return storedDate;
-      }
-    }
-    return new Date();
-  });
+  // "Today" is India's today, not whatever the phone's own clock says.
+  const todayStr = getTodayISTString();
+  const [selectedDate, setSelectedDate] = useState<Date>(() => parseDateOnly(todayStr));
+  // Come back to the day he was last looking at — but only after the first draw, so the page the server
+  // sent and the first page drawn on the phone are identical.
+  useEffect(() => {
+    const stored = sessionStorage.getItem("dashboardSelectedDate");
+    if (!stored) return;
+    const storedDate = new Date(stored);
+    if (!isNaN(storedDate.getTime()) && format(storedDate, "yyyy-MM-dd") >= todayStr) setSelectedDate(storedDate);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [capacity, setCapacity] = useState(1);
   const formattedDate = format(selectedDate, "yyyy-MM-dd");
 
@@ -180,7 +179,7 @@ export default function DashboardPage() {
         const message = needsAttention > 0
           ? `${data.error?.message || ""} ${needsAttention} existing booking(s) on this date need manual cancellation.`.trim()
           : data.error?.message || "Failed to generate slots";
-        toast.add({ title: "Error", description: message, type: "error" });
+        toast.add({ title: t('error'), description: message, type: "error" });
       }
     } catch (error) {
       toast.add({ title: t('error'), description: t('genericError'), type: "error" });
@@ -219,7 +218,7 @@ export default function DashboardPage() {
       } else if (data.requiresConfirmation) {
         setShowBlockModal({ slotId: id, customers: data.customers });
       } else {
-        toast.add({ title: "Error", description: data.error?.message || "Failed to block slot", type: "error" });
+        toast.add({ title: t('error'), description: data.error?.message || t('genericError'), type: "error" });
       }
     } catch (error) {
       toast.add({ title: t('error'), description: t('genericError'), type: "error" });
@@ -244,10 +243,10 @@ export default function DashboardPage() {
         if (data.data.affectedCustomers && data.data.affectedCustomers.length > 0) {
           setAffectedCustomers(data.data.affectedCustomers);
         } else {
-          toast.add({ title: "Success", description: data.data.message, type: "success" });
+          toast.add({ title: t('done'), description: t('shiftedNone').replace('{mins}', String(shiftMinutes)), type: "success" });
         }
       } else {
-        toast.add({ title: "Error", description: data.error?.message, type: "error" });
+        toast.add({ title: t('error'), description: data.error?.message || t('genericError'), type: "error" });
       }
     } catch (e) {
       toast.add({ title: t('error'), description: t('genericError'), type: "error" });
@@ -279,7 +278,7 @@ export default function DashboardPage() {
            window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msgStr)}`, '_blank');
         }
       } else {
-        toast.add({ title: "Error", description: data.error?.message || "Failed to unblock slot", type: "error" });
+        toast.add({ title: t('error'), description: data.error?.message || t('genericError'), type: "error" });
       }
     } catch (error) {
       toast.add({ title: t('error'), description: t('genericError'), type: "error" });
@@ -297,7 +296,7 @@ export default function DashboardPage() {
       if (data.success) {
         mutateSlots();
       } else {
-        toast.add({ title: "Error", description: data.error?.message || "Failed to update capacity", type: "error" });
+        toast.add({ title: t('error'), description: data.error?.message || t('genericError'), type: "error" });
       }
     } catch (error) {
       toast.add({ title: t('error'), description: t('genericError'), type: "error" });
@@ -370,7 +369,7 @@ export default function DashboardPage() {
         <div className="p-4 sm:p-6 border-b border-zinc-200 dark:border-zinc-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-start">
             <h2 className="text-base sm:text-lg font-semibold text-zinc-900 dark:text-zinc-50 flex items-center gap-2 sm:gap-3">
-              {format(selectedDate, "yyyy-MM-dd") !== format(new Date(), "yyyy-MM-dd") && (
+              {format(selectedDate, "yyyy-MM-dd") !== todayStr && (
                 <button onClick={() => setSelectedDate(subDays(selectedDate, 1))} className="min-w-11 min-h-11 flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-md">←</button>
               )}
               <span className="whitespace-nowrap">{fmt(selectedDate, "EEE, d MMM yyyy")}</span>
@@ -433,25 +432,19 @@ export default function DashboardPage() {
             </div>
           ) : (
             (() => {
+              // Today: hide times that are completely over, but keep one that is still running or still has a
+              // customer who has not been marked Done / No Show.
+              const openSlotIds = new Set(dayBookings.filter((b) => b.status === "CONFIRMED").map((b) => b.slotId));
               const visibleSlots = slots.filter((slot: SlotView) => {
-                if (format(selectedDate, "yyyy-MM-dd") !== format(new Date(), "yyyy-MM-dd")) return true;
-                
+                if (format(selectedDate, "yyyy-MM-dd") !== todayStr) return true;
                 try {
-                  let slotDate;
-                  const cleanStr = slot.startTime.trim().toLowerCase();
-                  if (cleanStr.includes("am") || cleanStr.includes("pm")) {
-                    const strWithSpace = cleanStr.replace(/([0-9])(am|pm)/, "$1 $2");
-                    slotDate = parse(strWithSpace, "h:mm a", new Date());
-                  } else {
-                    slotDate = parse(slot.startTime, "HH:mm", new Date());
-                  }
-                  return isAfter(slotDate, new Date());
-                } catch(e) {
+                  return minutesUntilSlotEnd(todayStr, slot.endTime) > 0 || openSlotIds.has(slot._id);
+                } catch (e) {
                   return true;
                 }
               });
 
-              if (visibleSlots.length === 0 && format(selectedDate, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd")) {
+              if (visibleSlots.length === 0 && format(selectedDate, "yyyy-MM-dd") === todayStr) {
                 return (
                   <div className="p-12 text-center flex flex-col items-center justify-center">
                     <div className="h-16 w-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-4 text-green-600 dark:text-green-400">
