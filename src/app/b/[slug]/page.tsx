@@ -367,7 +367,7 @@ export default function BarberBookingPage() {
               
               <div className="space-y-2">
                 <Label htmlFor="name">{t('yourName')}</Label>
-                <Input id="name" name="name" placeholder="Tarang" autoComplete="name" aria-invalid={!!fieldErrors.name} aria-describedby={fieldErrors.name ? "name-error" : undefined} onChange={() => fieldErrors.name && setFieldErrors((x) => ({ ...x, name: undefined }))} className={`h-12 text-base ${fieldErrors.name ? "border-red-500" : ""}`} />
+                <Input id="name" name="name" placeholder={t('yourNamePlaceholder')} autoComplete="name" aria-invalid={!!fieldErrors.name} aria-describedby={fieldErrors.name ? "name-error" : undefined} onChange={() => fieldErrors.name && setFieldErrors((x) => ({ ...x, name: undefined }))} className={`h-12 text-base ${fieldErrors.name ? "border-red-500" : ""}`} />
                 {fieldErrors.name && <p id="name-error" role="alert" className="text-sm font-medium text-red-600">{fieldErrors.name}</p>}
               </div>
               
