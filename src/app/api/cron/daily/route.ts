@@ -17,7 +17,7 @@ export const maxDuration = 60;
 
 // Past slots with no bookings are useless; keep a week of history for safety.
 const PAST_SLOT_RETENTION_DAYS = 7;
-const CONCURRENCY = 10;
+const CONCURRENCY = Number(process.env.CRON_CONCURRENCY) || 10;
 const BATCH = Number(process.env.CRON_BATCH) || 50;
 // Stop taking new barbers this long before the function's limit; the next trigger resumes from the saved cursor.
 const TIME_BUDGET_MS = process.env.CRON_TIME_BUDGET_MS ? Number(process.env.CRON_TIME_BUDGET_MS) : 45_000;

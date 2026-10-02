@@ -1,5 +1,6 @@
 import Pusher from "pusher";
 import { after } from "next/server";
+import { trackUsage } from "@/lib/usage";
 
 // Initialize Pusher only if env vars are present
 let pusher: Pusher | null = null;
@@ -43,6 +44,7 @@ export async function notifyBarber(barberId: string, type: string, data?: Record
   const send = async () => {
     try {
       await pusher!.trigger(barberChannel(barberId), "update", { type, data });
+      trackUsage("pusher");
     } catch (error) {
       console.error("Failed to trigger Pusher event:", error);
     }

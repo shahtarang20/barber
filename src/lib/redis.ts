@@ -1,4 +1,5 @@
 import { Redis } from "@upstash/redis";
+import { trackUsage } from "@/lib/usage";
 
 // Same pattern as src/lib/realtime.ts's Pusher setup — only initialize if
 // credentials are present, so the app keeps working (with the previous
@@ -26,6 +27,7 @@ export async function cached<T>(key: string, ttlSeconds: number, fetcher: () => 
 
   try {
     const hit = await redis.get<T>(key);
+    trackUsage("redis");
     if (hit !== null && hit !== undefined) return hit;
   } catch (error) {
     console.error("Redis read error, falling back to direct fetch:", error);
@@ -35,6 +37,7 @@ export async function cached<T>(key: string, ttlSeconds: number, fetcher: () => 
   const fresh = await fetcher();
   try {
     await redis.set(key, fresh, { ex: ttlSeconds });
+    trackUsage("redis");
   } catch (error) {
     console.error("Redis write error (non-fatal):", error);
   }
@@ -46,6 +49,7 @@ export async function invalidateCache(key: string): Promise<void> {
   if (!redis) return;
   try {
     await redis.del(key);
+    trackUsage("redis");
   } catch (error) {
     console.error("Redis invalidate error (non-fatal):", error);
   }

@@ -9,7 +9,7 @@ Sign in at `/login` with the admin code and password. The admin area is at `/adm
 ## 1. Overview (`/admin`)
 - Totals: barbers, bookings, customers, today's bookings.
 - Bookings by Status and Last 7 Days charts.
-- **Growth & limits** panel: which barbers are active and how close they are to their link limits.
+- **Growth & limits** panel: the warning board for every outside service (details in section 7). Red items come first.
 - Active Stores table: Barber Code, name, public URL, total bookings. **View Public Page** opens the barber's customer page.
 
 ## 2. Manage Stores (`/admin/barbers`)
@@ -49,10 +49,34 @@ Good to know:
 - **Other Admin Accounts:** reset another admin's password (you confirm with your own password).
 - **Recent Admin Actions:** audit log of changes made by admins.
 
+## 7. Growth & limits panel (Overview page)
+Shows green, orange (70%) or red (90% / broken). The badge says "All fine", "Upgrade soon" or "Upgrade now". Red and orange items are listed first.
+
+**Measured by the app**
+| Item | Warns when |
+|---|---|
+| Shops (growth stage) | the stage is 70% / 90% full |
+| Barbers online (Pusher connections) | online barbers reach 70% / 90% of your Pusher plan |
+| Pusher messages today | about 70% / 90% of the daily message limit (estimate: events × 2) |
+| Redis commands this month | about 70% / 90% of the monthly limit (estimate) |
+| Database storage | 70% / 90% of your plan size |
+| MongoDB connections | 70% / 90% of the limit (if the plan lets the app read it) |
+| Vercel plan | red if the plan is Hobby but any barber has a premium amount recorded (Hobby is not allowed for paid products) |
+| Daily job (new slots, cleanup) | orange if it never ran, red if it has not run since before yesterday |
+| Pusher / Redis / phone notifications | orange if not set up on the server |
+
+**Checked by you (the app cannot see them)**
+Vercel usage, Upstash usage, and a MongoDB backup. Each has an **I checked it today** button and goes orange after 7 days and red after 14 days. The free MongoDB plan has no automatic backups, so export your data every week.
+
+**Plan sizes you must keep up to date** (bottom of the panel): Pusher connections, Pusher messages per day, Redis commands per month, and your Vercel plan (Hobby / Pro). When you upgrade a service, change the number here, or the warnings will be wrong.
+
+The message and command counts are the app's own estimates. The exact numbers are always on each service's own dashboard.
+
 ## Everyday routine
 | When | Do this |
 |---|---|
-| Every morning | Overview: check bookings and the Growth & limits panel |
+| Every morning | Overview: check bookings and the Growth & limits panel (anything red or orange?) |
+| Weekly | Click "I checked it today" on Vercel, Upstash and backup after really checking them |
 | A barber can't log in | Manage Stores → Reset Password |
 | A customer can't find a booking | Bookings → search by phone |
 | A barber stops paying | Manage Stores → Suspend |

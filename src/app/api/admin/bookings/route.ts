@@ -31,6 +31,10 @@ export async function GET(req: Request) {
         Customer.find({ $or: [{ name: rx }, { phone: phoneRx }] }).select("_id").limit(300).lean(),
         User.find({ role: "BARBER", $or: [{ name: rx }, { barberCode: rx }] }).select("_id").limit(100).lean(),
       ]);
+      // "B-0001" / "b0001" is a Booking ID: look for that booking only (its digits are not a phone number).
+      if (/^b[\s-]?\d{1,10}$/i.test(search)) {
+        filter = { $or: [{ bookingNumber: normalizeBookingNumber(search) }, { bookingNumber: rx }] };
+      } else
       filter = { $or: [{ bookingNumber: normalizeBookingNumber(search) }, { bookingNumber: rx }, { customerId: { $in: customers.map((c) => c._id) } }, { barberId: { $in: barbers.map((b) => b._id) } }] };
     }
 

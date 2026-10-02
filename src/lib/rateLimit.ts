@@ -1,4 +1,5 @@
 import { Redis } from '@upstash/redis';
+import { trackUsage } from '@/lib/usage';
 
 // Fallback in-memory store in case Redis is not configured
 const hits = new Map<string, { count: number; resetAt: number }>();
@@ -24,11 +25,13 @@ export async function rateLimit(key: string, limit: number, windowMs: number): P
       // Use Redis INCR and EXPIRE to implement rate limiting
       // A more robust algorithm is sliding window, but fixed window is sufficient for our current scale.
       const current = await redis.incr(key);
+      trackUsage('redis');
       
       // If this is the first request in the window, set the expiry
       if (current === 1) {
         // windowMs is in milliseconds, redis.expire takes seconds or we can use pexpire
         await redis.pexpire(key, windowMs);
+        trackUsage('redis');
       }
       
       if (current > limit) {
