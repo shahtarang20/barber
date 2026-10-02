@@ -15,7 +15,7 @@ Companion files in the same folder:
 
 A booking system for **village and city barbers in India**. It is not a marketplace: there is no search, map or discovery.
 
-1. A barber signs up with a name and password (email is optional) and gets a **Barber Code** (`b001`, `b002`…) and a personal booking link `/b/<slug>`.
+1. A barber signs up with a name, **a mobile number** and a password (email is optional) and gets a **Barber Code** (`b001`, `b002`…) and a personal booking link `/b/<slug>`.
 2. The app generates appointment slots from the barber's working hours.
 3. The barber shares the link (WhatsApp, QR). Customers open it, pick a day and time, enter name and phone, and get a **Booking ID** (`B-0001`). No customer account or password.
 4. The barber runs the day from a phone: sees the queue in time order, taps **Done**, **No-show** or **Cancel**, adds walk-ins, and calls or WhatsApps customers.
@@ -176,7 +176,7 @@ Customers are shared across barbers by phone number. A customer with no phone be
 | Page | What it does |
 |---|---|
 | **Overview** | Totals, bookings by status, last 7 days, **Growth & limits panel**, barbers table |
-| **Manage Stores** (`/admin/barbers`) | Search; suspend/re-activate; premium amount and due day; link limit; default link limit; reset password |
+| **Manage Stores** (`/admin/barbers`) | Search (incl. phone); a **Phone** column the admin can edit; suspend/re-activate; premium amount and due day; link limit; default link limit; reset password |
 | **Bookings** | Every booking; search by Booking ID, customer name/phone, barber name/code. A search like `B-0001` finds only that booking. |
 | **Shops** | Add/remove members, switch a shop on/off, delete, shop link limit |
 | **Data & Storage** | Database size, automatic cleanup (keep 1–60 months), preview, CSV download, run now |
@@ -199,7 +199,7 @@ Every barber/admin route checks the login cookie and the account's current state
 ### Auth
 | Method and path | Purpose |
 |---|---|
-| `POST /api/auth/register` | Barber sign-up (name, password; email, slug optional). Creates default hours (Mon–Sat 10 AM–8 PM, Sunday closed) and generates slots straight away. |
+| `POST /api/auth/register` | Barber sign-up (name, **mobile number**, password; email, slug optional). The phone is required, stored as 10 plain digits, and may be shared by two barbers. Creates default hours (Mon–Sat 10 AM–8 PM, Sunday closed) and generates slots straight away. |
 | `POST /api/auth/login` | Login by Barber Code (or email) + password. Rate limited per IP and per account. |
 | `POST /api/auth/logout` | Ends the session on **all** devices (bumps `tokenVersion`) |
 | `PUT /api/auth/change-password` | Admin password change |

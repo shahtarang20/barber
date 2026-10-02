@@ -132,7 +132,8 @@ export default function AdminBarbersPage() {
                 <tr>
                   <th className="px-6 py-4 font-medium">Store ID</th>
                   <th className="px-6 py-4 font-medium">Owner Name</th>
-                  <th className="px-6 py-4 font-medium">Email / Contact</th>
+                  <th className="px-6 py-4 font-medium">Email</th>
+                  <th className="px-6 py-4 font-medium">Phone</th>
                   <th className="px-6 py-4 font-medium">Status</th>
                   <th className="px-6 py-4 font-medium">Premium (₹)</th>
                   <th className="px-6 py-4 font-medium">Due Date</th>
@@ -145,9 +146,26 @@ export default function AdminBarbersPage() {
                   <tr key={b._id} className={`hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors ${!b.isActive ? 'opacity-50' : ''}`}>
                     <td className="px-6 py-4 font-mono font-medium text-zinc-900 dark:text-zinc-100">{b.barberCode}</td>
                     <td className="px-6 py-4 text-zinc-900 dark:text-zinc-100 font-medium">{b.name}</td>
+                    <td className="px-6 py-4 text-zinc-900 dark:text-zinc-100">{b.email || "—"}</td>
                     <td className="px-6 py-4">
-                      <div className="text-zinc-900 dark:text-zinc-100">{b.email || "—"}</div>
-                      <div className="text-zinc-500 text-xs">{b.phone || "No phone"}</div>
+                      <input
+                        type="tel" inputMode="numeric"
+                        key={`${b._id}-${b.phone ?? ""}`}
+                        defaultValue={b.phone ?? ""}
+                        placeholder="Add phone"
+                        onBlur={(e) => {
+                          const v = e.target.value.trim();
+                          if (v === (b.phone ?? "")) return;
+                          handleUpdate(b._id, { phone: v }).then(fetchBarbers);
+                        }}
+                        className="w-32 px-2 py-1 border border-zinc-200 rounded-md focus:outline-none focus:ring-2 focus:ring-zinc-500 bg-transparent text-zinc-900 dark:text-zinc-100"
+                      />
+                      {b.phone && (
+                        <div className="mt-1 flex gap-3 text-xs">
+                          <a className="text-blue-600 hover:underline" href={`tel:${b.phone}`}>Call</a>
+                          <a className="text-green-700 hover:underline" href={`https://wa.me/91${b.phone}`} target="_blank" rel="noreferrer">WhatsApp</a>
+                        </div>
+                      )}
                     </td>
                     <td className="px-6 py-4">
                       <button 

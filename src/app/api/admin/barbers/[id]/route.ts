@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import { User } from "@/models/User";
+import { normalizePhone } from "@/lib/phone";
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -47,6 +48,19 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     }
 
     let suspending = false;
+    if (body.phone !== undefined) {
+      const raw = String(body.phone ?? "").trim();
+      if (raw === "") {
+        updateData.$unset = { ...(updateData.$unset || {}), phone: 1 };
+      } else {
+        const digits = normalizePhone(raw);
+        if (!/^\d{10}$/.test(digits)) {
+          return NextResponse.json({ success: false, error: { message: "Enter a valid 10-digit mobile number (or leave it empty to remove it)." } }, { status: 400 });
+        }
+        updateData.phone = digits;
+      }
+    }
+
     if (body.isActive !== undefined) {
       updateData.isActive = Boolean(body.isActive);
       suspending = updateData.isActive === false;

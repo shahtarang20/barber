@@ -79,7 +79,7 @@ export async function GET(req: Request) {
               $or: [
                 { "customerData.name": { $regex: search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), $options: "i" } },
                 // A phone typed as "98765-43210" or "+91 98765 43210" must still find 9876543210.
-                { "customerData.phone": { $regex: (search.replace(/\D/g, "").length >= 3 ? search.replace(/\D/g, "").replace(/^(91|0)(?=\d{10}$)/, "") : search).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), $options: "i" } },
+                { "customerData.phone": { $regex: (search.replace(/\D/g, "").length >= 3 && /^[\d\s+()-]+$/.test(search) ? search.replace(/\D/g, "").replace(/^(91|0)(?=\d{10}$)/, "") : search).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), $options: "i" } },
               ],
             },
           }]

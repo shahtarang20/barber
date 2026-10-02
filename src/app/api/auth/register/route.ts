@@ -1,3 +1,4 @@
+import { normalizePhone } from "@/lib/phone";
 import { NextResponse } from "next/server";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import connectToDatabase from "@/lib/mongodb";
@@ -11,6 +12,8 @@ const registerSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   // Optional — village barbers often have none; they log in with their Barber Code.
   email: z.string().trim().email("Invalid email address").optional().or(z.literal("")),
+  // Required: the admin needs a way to reach every barber. Stored as the plain 10 digits.
+  phone: z.string({ error: "Mobile number is required" }).min(1, "Mobile number is required").transform((v) => normalizePhone(v)).refine((v) => /^\d{10}$/.test(v), { message: "Enter a valid 10-digit mobile number" }),
   password: z.string().min(6, "Password must be at least 6 characters"),
   // Optional: the server makes a clean, unique link from the name when none is given.
   slug: z.string().min(3, "Slug must be at least 3 characters").regex(/^[a-z0-9-]+$/, "Slug can only contain lowercase letters, numbers, and hyphens").optional(),
@@ -60,7 +63,7 @@ export async function POST(req: Request) {
     // Create user (barberCode is auto-generated via pre-save hook)
     let newUser;
     for (let attempt = 0; ; attempt++) {
-      newUser = new User({ name, ...(email ? { email } : {}), passwordHash, slug, role: "BARBER", workingHours: defaultWorkingHours });
+      newUser = new User({ name, phone: result.data.phone, ...(email ? { email } : {}), passwordHash, slug, role: "BARBER", workingHours: defaultWorkingHours });
       try {
         await newUser.save();
         break;

@@ -27,7 +27,14 @@ export default function RegisterPage() {
     const formData = new FormData(e.currentTarget);
     const name = formData.get("name") as string;
     const email = formData.get("email") as string;
+    const phone = (formData.get("phone") as string).trim();
     const password = formData.get("password") as string;
+
+    if (phone.replace(/\D/g, "").replace(/^(91|0)(?=\d{10}$)/, "").length !== 10) {
+      setError(t('authPhoneInvalid'));
+      setLoading(false);
+      return;
+    }
     
     // The booking link is made by the server (clean and always unique) — he can change it later.
 
@@ -35,7 +42,7 @@ export default function RegisterPage() {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ name, email, phone, password }),
       });
 
       const data = await res.json();
@@ -107,6 +114,20 @@ export default function RegisterPage() {
             placeholder="Rahul Sharma" 
             required 
             autoComplete="name"
+            className="h-11"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="phone">{t('authPhone')}</Label>
+          <Input 
+            id="phone" 
+            name="phone" 
+            type="tel" 
+            inputMode="numeric" 
+            placeholder="98XXXXXXXX" 
+            required 
+            autoComplete="tel"
             className="h-11"
           />
         </div>

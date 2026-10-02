@@ -26,14 +26,15 @@ export async function GET(req: Request) {
     if (search) {
       const rx = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
       const digits = search.replace(/\D/g, "");
-      const phoneRx = digits.length >= 3 ? new RegExp(digits.replace(/^(91|0)(?=\d{10}$)/, "")) : rx;
+      const phoneRx = digits.length >= 3 && /^[\d\s+()-]+$/.test(search) ? new RegExp(digits.replace(/^(91|0)(?=\d{10}$)/, "")) : rx;
       const [customers, barbers] = await Promise.all([
         Customer.find({ $or: [{ name: rx }, { phone: phoneRx }] }).select("_id").limit(300).lean(),
         User.find({ role: "BARBER", $or: [{ name: rx }, { barberCode: rx }] }).select("_id").limit(100).lean(),
       ]);
-      // "B-0001" / "b0001" is a Booking ID: look for that booking only (its digits are not a phone number).
+      // "B-0001" / "b002" looks like a Booking ID, and also like a Barber Code ("b002"): match those two only.
+      // Its digits are not a phone number, so customers are not searched (that would flood the list).
       if (/^b[\s-]?\d{1,10}$/i.test(search)) {
-        filter = { $or: [{ bookingNumber: normalizeBookingNumber(search) }, { bookingNumber: rx }] };
+        filter = { $or: [{ bookingNumber: normalizeBookingNumber(search) }, { bookingNumber: rx }, { barberId: { $in: barbers.map((b) => b._id) } }] };
       } else
       filter = { $or: [{ bookingNumber: normalizeBookingNumber(search) }, { bookingNumber: rx }, { customerId: { $in: customers.map((c) => c._id) } }, { barberId: { $in: barbers.map((b) => b._id) } }] };
     }

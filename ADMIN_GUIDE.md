@@ -14,7 +14,8 @@ Sign in at `/login` with the admin code and password. The admin area is at `/adm
 
 ## 2. Manage Stores (`/admin/barbers`)
 Manage each barber here.
-- **Search** by name, code, phone, email or link.
+- **Search** by name, code, phone (any style: `98765`, `+91 98765 43210`), email or link.
+- **Phone column:** every new barber gives a mobile number at sign-up. You can type or fix a number right in the table (10 digits; it saves when you click away; empty removes it). Older barbers who signed up before this show an empty box, so fill those in. Call and WhatsApp links appear under a saved number.
 - **Status:** suspend or re-activate a barber. A suspended barber is locked out at once and their public page closes to customers.
 - **Premium (₹) and Due Date:** record the amount a barber pays and the day of the month it is due.
 - **Link limit / month:** how many bookings per month can come through that barber's link. Empty means the platform default.
