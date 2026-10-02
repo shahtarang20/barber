@@ -12,6 +12,7 @@ export function InstallPrompt({ isCustomer = false, appName = "BarberSaaS" }: { 
   const { t } = useTranslation();
   const { standalone, isIOS, cardShown, install } = useInstall();
   const [showPrompt, setShowPrompt] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (standalone) return;
@@ -24,7 +25,10 @@ export function InstallPrompt({ isCustomer = false, appName = "BarberSaaS" }: { 
   }, [standalone]);
 
   const handleInstallClick = async () => {
-    if (await install()) { setShowPrompt(false); return; }
+    setBusy(true);
+    const done = await install(); // may wait a moment for the browser to say it is ready
+    setBusy(false);
+    if (done) { setShowPrompt(false); return; }
     // No native prompt (iPhone, or the browser isn't ready): tell them the steps.
     toast.add({ title: t("installTitle").replace("{name}", appName), description: isIOS ? t("installStepsIOS") : t("installStepsAndroid"), type: "info" });
   };
@@ -56,7 +60,7 @@ export function InstallPrompt({ isCustomer = false, appName = "BarberSaaS" }: { 
           </div>
         </div>
         
-        <Button onClick={handleInstallClick} size="sm" className="shrink-0 bg-zinc-900 text-white rounded-full px-4 font-semibold">
+        <Button onClick={handleInstallClick} disabled={busy} size="sm" className="shrink-0 bg-zinc-900 text-white rounded-full px-4 font-semibold">
           {t("installButton")}
         </Button>
       </div>

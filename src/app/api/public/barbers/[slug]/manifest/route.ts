@@ -37,7 +37,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
           sizes: "512x512",
           type: "image/svg+xml",
           purpose: "any maskable"
-        }
+        },
+        // Plain pictures: Android needs a PNG icon to install the page as a proper app.
+        { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
+        { src: "/icon-512.png", sizes: "512x512", type: "image/png" }
       ]
     };
 

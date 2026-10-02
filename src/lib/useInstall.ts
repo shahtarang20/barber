@@ -18,8 +18,22 @@ let started = false;
 export function captureInstallEvents() {
   if (started || typeof window === "undefined") return;
   started = true;
+  // The browser may have sent its signal before this code started: the tiny script in the page head kept it.
+  const early = (window as unknown as { __installEvent?: Prompt }).__installEvent;
+  if (early) deferred = early;
   window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); deferred = e as unknown as Prompt; notify(); });
   window.addEventListener("appinstalled", () => { installed = true; deferred = null; notify(); });
+}
+
+/** Resolves as soon as the browser's install signal is available, or after `ms`. */
+function waitForSignal(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    if (deferred) return resolve();
+    const done = () => { clearTimeout(timer); listeners.delete(check); resolve(); };
+    const check = () => { if (deferred) done(); };
+    const timer = setTimeout(done, ms);
+    listeners.add(check);
+  });
 }
 
 /** The install card on the confirmation screen tells the banner to stay out of the way. */
@@ -47,8 +61,13 @@ export function useInstall() {
     isIOS,
     canPromptNatively: !!deferred,
     cardShown,
-    /** Opens the browser's own install dialog. Returns false when the browser can't (iPhone, or not ready), so the caller shows steps. */
+    /**
+     * Opens the browser's own install dialog. Returns false when the browser can't, so the caller shows the manual steps.
+     * If the browser has not sent its "installable" signal yet (slow phone, first visit) it waits up to 2.5 s for it.
+     * iPhones never send one, so they go straight to the steps.
+     */
     install: async (): Promise<boolean> => {
+      if (!deferred && !isIOS) await waitForSignal(2500);
       if (!deferred) return false;
       const d = deferred;
       await d.prompt();

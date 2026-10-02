@@ -45,6 +45,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       lang={language}
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        {/* Keeps the browser's "this can be installed" signal if it arrives before the app has finished starting. */}
+        <script dangerouslySetInnerHTML={{ __html: "window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__installEvent=e;});" }} />
+      </head>
       <body className="min-h-full flex flex-col">
         <LanguageProvider initial={language} hadCookie={!!cookieLang}>
           <PWARegister />

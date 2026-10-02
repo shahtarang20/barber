@@ -14,6 +14,7 @@ export function InstallCard({ appName }: { appName: string }) {
   const { t } = useTranslation();
   const { standalone, isIOS, install } = useInstall();
   const [steps, setSteps] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (standalone) return;
@@ -22,7 +23,12 @@ export function InstallCard({ appName }: { appName: string }) {
   }, [standalone]);
 
   if (standalone) return null;
-  const onClick = async () => { if (!(await install())) setSteps(true); };
+  const onClick = async () => {
+    setBusy(true);
+    const done = await install(); // may wait a moment for the browser to say it is ready
+    setBusy(false);
+    if (!done) setSteps(true);
+  };
 
   return (
     <div className="mb-6 rounded-2xl border border-indigo-200 bg-indigo-50 p-4 text-left">
@@ -33,7 +39,7 @@ export function InstallCard({ appName }: { appName: string }) {
           <p className="text-sm text-indigo-900/80 mt-0.5">{t("installBenefit")}</p>
         </div>
       </div>
-      <Button onClick={onClick} className="w-full h-12 mt-3 bg-indigo-600 hover:bg-indigo-700 text-white">
+      <Button onClick={onClick} disabled={busy} className="w-full h-12 mt-3 bg-indigo-600 hover:bg-indigo-700 text-white">
         <Download className="w-4 h-4 mr-2" /> {t("installButton")}
       </Button>
       {steps && <p role="status" className="mt-3 text-sm text-indigo-950 bg-white rounded-lg p-3 border border-indigo-100">{isIOS ? t("installStepsIOS") : t("installStepsAndroid")}</p>}
