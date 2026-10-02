@@ -1,5 +1,6 @@
 "use client";
 
+import { InstallCard } from "@/components/InstallCard";
 import { useState, useEffect } from "react";
 import { useHydrated } from "@/lib/useHydrated";
 import { format, addDays } from "date-fns";
@@ -226,6 +227,7 @@ export default function BarberBookingPage() {
             </div>
           </div>
           
+          <InstallCard appName={barber?.name || "BarberSaaS"} />
           <Button className="w-full h-12" onClick={() => window.location.reload()}>{t('done')}</Button>
         </div>
       </div>
