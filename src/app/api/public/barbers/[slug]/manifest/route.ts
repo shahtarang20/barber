@@ -38,7 +38,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
       ]
     };
 
-    return NextResponse.json(manifest);
+    return NextResponse.json(manifest, { headers: { "Content-Type": "application/manifest+json", "Cache-Control": "public, max-age=300, s-maxage=3600, stale-while-revalidate=86400" } });
   } catch (error) {
     console.error("Manifest generation error:", error);
     return new NextResponse("Internal Server Error", { status: 500 });

@@ -81,9 +81,19 @@ export function isStandaloneNow(): boolean {
 
 export type InstallResult = "accepted" | "dismissed" | "unavailable";
 
+/**
+ * "ready"    the browser has said it can install the app: one tap does it.
+ * "waiting"  it has not said so yet (on a slow phone it can take up to ~10 s after the page opens): show "Getting ready…", never a button that cannot work yet.
+ * "none"     it will not (iPhone, a page opened inside WhatsApp, an old browser, or too long a wait): show the steps.
+ */
+export type InstallSignal = "ready" | "waiting" | "none";
+const WAIT_FOR_SIGNAL_MS = 15_000;
+
 export function useInstall() {
   const [, force] = useState(0);
   const [known, setKnown] = useState<{ ready: boolean; installed: boolean }>({ ready: false, installed: false });
+  // True once the page has been open longer than we are willing to wait for the browser's install signal.
+  const [waitOver, setWaitOver] = useState(() => typeof performance !== "undefined" && performance.now() >= WAIT_FOR_SIGNAL_MS);
 
   useEffect(() => {
     captureInstallEvents();
@@ -91,6 +101,8 @@ export function useInstall() {
     currentKey = key;
     const l = () => force((n) => n + 1);
     listeners.add(l);
+    // When the waiting time is over, re-draw so "Getting ready…" turns into the steps.
+    const stopWaiting = setTimeout(() => setWaitOver(true), Math.max(0, WAIT_FOR_SIGNAL_MS - performance.now()) + 50);
     let alive = true;
     const settle = (installed: boolean) => { if (alive) setKnown({ ready: true, installed }); };
 
@@ -107,14 +119,19 @@ export function useInstall() {
         settle(readFlag(key)); // phones that cannot tell: trust what we remembered
       }
     }
-    return () => { alive = false; listeners.delete(l); };
+    return () => { alive = false; clearTimeout(stopWaiting); listeners.delete(l); };
   }, []);
 
   const ua = typeof navigator === "undefined" ? "" : navigator.userAgent.toLowerCase();
   const isIOS = /iphone|ipad|ipod/.test(ua);
   // A page opened inside WhatsApp, Instagram, Facebook... (a "web view") cannot be installed from there; it must be opened in Chrome first.
   const inApp = /; wv\)|fban|fbav|instagram|whatsapp|line\/|snapchat|twitter|micromessenger|musical_ly/.test(ua);
+  // The manual steps are written for phones; a computer needs none of them (and would see steps that do not fit it).
+  const isMobile = /android|iphone|ipad|ipod|mobile/.test(ua) || (typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches);
+  const signal: InstallSignal = deferred ? "ready" : isIOS || inApp || waitOver ? "none" : "waiting";
   return {
+    signal,
+    isMobile,
     isInApp: inApp,
     /** Already installed (or running as the installed app): nothing more to ask. */
     standalone: installedThisSession || known.installed || isStandaloneNow(),
@@ -130,7 +147,7 @@ export function useInstall() {
      * If the browser has not sent its signal yet (slow phone, first visit) this waits up to 2.5 s for it.
      */
     install: async (): Promise<InstallResult> => {
-      if (!deferred && !isIOS && !inApp) await waitForSignal(2500);
+      if (!deferred && !isIOS && !inApp) await waitForSignal(1500);
       if (!deferred) return "unavailable";
       const d = deferred;
       deferred = null; // the browser lets each signal be used once

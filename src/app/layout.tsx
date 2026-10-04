@@ -38,6 +38,22 @@ export const metadata: Metadata = {
   },
 };
 
+/**
+ * Runs the moment the browser reads the page head, before any database lookup finishes:
+ *  1. keeps the browser's "this can be installed" signal if it arrives before the app has started,
+ *  2. starts the background worker at once (the install button only appears once it is ready),
+ *  3. puts the RIGHT manifest link first in the head for barber (/b/...) and shop (/s/...) pages.
+ * Why 3: Next sends a page's <link rel="manifest"> late when the page first looks the barber or shop up in the database
+ * (a cold server, or a slower database), placing it after </head>, where the browser ignores it, and then the page cannot
+ * be installed at all on that visit. The first manifest link in the page wins, so this one decides.
+ */
+const HEAD_SCRIPT = String.raw`(function(){
+  window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__installEvent=e;});
+  if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(function(){});}
+  var m=location.pathname.match(/^\/(b|s)\/([^\/?#]+)/);
+  if(m){var l=document.createElement('link');l.rel='manifest';l.href='/api/public/'+(m[1]==='b'?'barbers':'shops')+'/'+m[2]+'/manifest';document.head.insertBefore(l,document.head.firstChild);}
+})();`;
+
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const cookieLang = (await cookies()).get("lang")?.value;
   const language: Language = cookieLang === "hi" || cookieLang === "gu" || cookieLang === "mr" || cookieLang === "en" ? cookieLang : "en";
@@ -47,8 +63,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <head>
-        {/* Keeps the browser's "this can be installed" signal if it arrives before the app has finished starting. */}
-        <script dangerouslySetInnerHTML={{ __html: "window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__installEvent=e;});" }} />
+        <script dangerouslySetInnerHTML={{ __html: HEAD_SCRIPT }} />
       </head>
       <body className="min-h-full flex flex-col">
         <LanguageProvider initial={language} hadCookie={!!cookieLang}>

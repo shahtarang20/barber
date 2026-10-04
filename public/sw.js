@@ -1,5 +1,5 @@
-const CACHE_NAME = 'barber-saas-cache-v4';
-// The saved home page, plus a plain "no internet" page shown instead of the browser's own error screen.
+const CACHE_NAME = 'barber-saas-cache-v5';
+// A plain "no internet" page, shown instead of the browser's own error screen when a page cannot be reached.
 const OFFLINE_URL = '/offline.html';
 const urlsToCache = [
   OFFLINE_URL,
@@ -10,14 +10,9 @@ self.addEventListener('install', (event) => {
   // Activate a newly installed SW immediately instead of waiting for every
   // open tab to close — without this, updates sit dormant indefinitely.
   self.skipWaiting();
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(async (cache) => {
-      // These two must be saved: without them the worker is useless, so installing it fails (and is retried).
-      await cache.addAll(urlsToCache);
-      // The home page is a bonus: if it is slow or failing right now, that must never stop the app from installing.
-      try { await cache.add('/'); } catch (e) {}
-    })
-  );
+  // Only two tiny files are saved. The browser will not offer "install this app" until the worker is ready, so on a slow
+  // mobile connection anything bigger here (like the whole home page) delays the install button by many seconds.
+  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(urlsToCache)));
 });
 
 self.addEventListener('activate', (event) => {

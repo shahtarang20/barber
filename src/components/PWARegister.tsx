@@ -28,9 +28,8 @@ export function PWARegister() {
           }
         );
       };
-      // On a slow phone this may run after the page's "load" event already happened; waiting for it would never register.
-      if (document.readyState === "complete") register();
-      else window.addEventListener("load", register);
+      // The page head already started it (registering again is harmless); this is the safety net if that script did not run.
+      register();
     }
   }, []);
 
