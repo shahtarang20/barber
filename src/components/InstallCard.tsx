@@ -5,8 +5,8 @@ import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
 import { useTranslation } from "@/lib/i18n";
-import { useInstall, setInstallCardShown, stepsKey } from "@/lib/useInstall";
-import { InstallSteps } from "@/components/InstallSteps";
+import { useInstall, setInstallCardShown } from "@/lib/useInstall";
+import { InstallHelp } from "@/components/InstallHelp";
 
 /**
  * Shown on the "booking confirmed" screen — the moment a customer is happiest with the app.
@@ -16,7 +16,7 @@ import { InstallSteps } from "@/components/InstallSteps";
  */
 export function InstallCard({ appName }: { appName: string }) {
   const { t } = useTranslation();
-  const { standalone, signal, isMobile, isIOS, isInApp, install } = useInstall();
+  const { standalone, signal, isMobile, help, install } = useInstall();
   const [steps, setSteps] = useState(false);
   const [busy, setBusy] = useState(false);
   const manualOnly = signal === "none";
@@ -54,7 +54,7 @@ export function InstallCard({ appName }: { appName: string }) {
           {signal === "waiting" ? t("installPreparing") : t("installButton")}
         </Button>
       )}
-      {(manualOnly || steps) && <InstallSteps text={t(stepsKey(isIOS, isInApp))} className="mt-3 text-indigo-950 bg-white rounded-lg p-3 border border-indigo-100" />}
+      {(manualOnly || steps) && <InstallHelp help={help} className="mt-3 text-indigo-950 bg-white rounded-lg p-3 border border-indigo-100" />}
     </div>
   );
 }

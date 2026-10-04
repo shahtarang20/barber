@@ -81,6 +81,31 @@ export function isStandaloneNow(): boolean {
 
 export type InstallResult = "accepted" | "dismissed" | "unavailable";
 
+/** Which browser this is, for choosing the right "how to install" help. Only real BROWSER names are matched (never a phone maker or model name: Chrome on a "Xiaomi 13" is still Chrome). "other" = a browser that cannot add apps to the home screen (UC, Opera Mini, Xiaomi, Vivo...). */
+export type BrowserKind = "ios" | "samsung" | "firefox" | "edge" | "chrome" | "other";
+export function detectBrowser(ua: string): BrowserKind {
+  if (/iphone|ipad|ipod/.test(ua)) return "ios";
+  if (/samsungbrowser/.test(ua)) return "samsung";
+  if (/firefox|fxios/.test(ua)) return "firefox";
+  if (/edga|edgios|edg\//.test(ua)) return "edge";
+  if (/ucbrowser|ucweb|opr\/|opera|opt\/|miuibrowser|vivobrowser|huaweibrowser|heytapbrowser|oppobrowser|quark|baidubrowser|mqqbrowser|qqbrowser|puffin|yabrowser|maxthon|dolphin|duckduckgo/.test(ua)) return "other";
+  return /chrome\//.test(ua) ? "chrome" : "other";
+}
+
+/** What to show a customer who cannot install with one tap. */
+export type InstallHelp = { key: "installStepsIOS" | "installStepsInApp" | "installStepsAndroid" | "installStepsSamsung" | "installStepsFirefox" | "installStepsEdge" | "installOtherBrowser"; chromeButtons: boolean };
+export function helpFor(browser: BrowserKind, isInApp: boolean): InstallHelp {
+  if (isInApp) return { key: "installStepsInApp", chromeButtons: true };
+  switch (browser) {
+    case "ios": return { key: "installStepsIOS", chromeButtons: false };
+    case "samsung": return { key: "installStepsSamsung", chromeButtons: false };
+    case "firefox": return { key: "installStepsFirefox", chromeButtons: false };
+    case "edge": return { key: "installStepsEdge", chromeButtons: false };
+    case "other": return { key: "installOtherBrowser", chromeButtons: true };
+    default: return { key: "installStepsAndroid", chromeButtons: false };
+  }
+}
+
 /**
  * "ready"    the browser has said it can install the app: one tap does it.
  * "waiting"  it has not said so yet (on a slow phone it can take up to ~10 s after the page opens): show "Getting ready…", never a button that cannot work yet.
@@ -88,12 +113,14 @@ export type InstallResult = "accepted" | "dismissed" | "unavailable";
  */
 export type InstallSignal = "ready" | "waiting" | "none";
 const WAIT_FOR_SIGNAL_MS = 15_000;
+const WAIT_FOR_SIGNAL_OTHER_MS = 6_000; // browsers like UC / Opera Mini / Xiaomi almost never send it: do not keep customers waiting
 
 export function useInstall() {
   const [, force] = useState(0);
   const [known, setKnown] = useState<{ ready: boolean; installed: boolean }>({ ready: false, installed: false });
   // True once the page has been open longer than we are willing to wait for the browser's install signal.
-  const [waitOver, setWaitOver] = useState(() => typeof performance !== "undefined" && performance.now() >= WAIT_FOR_SIGNAL_MS);
+  const waitMs = typeof navigator !== "undefined" && detectBrowser(navigator.userAgent.toLowerCase()) === "other" ? WAIT_FOR_SIGNAL_OTHER_MS : WAIT_FOR_SIGNAL_MS;
+  const [waitOver, setWaitOver] = useState(() => typeof performance !== "undefined" && performance.now() >= waitMs);
 
   useEffect(() => {
     captureInstallEvents();
@@ -102,7 +129,7 @@ export function useInstall() {
     const l = () => force((n) => n + 1);
     listeners.add(l);
     // When the waiting time is over, re-draw so "Getting ready…" turns into the steps.
-    const stopWaiting = setTimeout(() => setWaitOver(true), Math.max(0, WAIT_FOR_SIGNAL_MS - performance.now()) + 50);
+    const stopWaiting = setTimeout(() => setWaitOver(true), Math.max(0, waitMs - performance.now()) + 50);
     let alive = true;
     const settle = (installed: boolean) => { if (alive) setKnown({ ready: true, installed }); };
 
@@ -120,10 +147,11 @@ export function useInstall() {
       }
     }
     return () => { alive = false; clearTimeout(stopWaiting); listeners.delete(l); };
-  }, []);
+  }, [waitMs]);
 
   const ua = typeof navigator === "undefined" ? "" : navigator.userAgent.toLowerCase();
   const isIOS = /iphone|ipad|ipod/.test(ua);
+  const browser = detectBrowser(ua);
   // A page opened inside WhatsApp, Instagram, Facebook... (a "web view") cannot be installed from there; it must be opened in Chrome first.
   const inApp = /; wv\)|fban|fbav|instagram|whatsapp|line\/|snapchat|twitter|micromessenger|musical_ly/.test(ua);
   // The manual steps are written for phones; a computer needs none of them (and would see steps that do not fit it).
@@ -132,6 +160,8 @@ export function useInstall() {
   return {
     signal,
     isMobile,
+    browser,
+    help: helpFor(browser, inApp),
     isInApp: inApp,
     /** Already installed (or running as the installed app): nothing more to ask. */
     standalone: installedThisSession || known.installed || isStandaloneNow(),
@@ -163,10 +193,4 @@ export function useInstall() {
       }
     },
   };
-}
-
-/** Which manual-steps message fits this phone. */
-export function stepsKey(isIOS: boolean, isInApp: boolean): "installStepsIOS" | "installStepsInApp" | "installStepsAndroid" {
-  if (isInApp) return "installStepsInApp";
-  return isIOS ? "installStepsIOS" : "installStepsAndroid";
 }

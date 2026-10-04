@@ -4,15 +4,15 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
 import { useTranslation } from "@/lib/i18n";
-import { useInstall, stepsKey } from "@/lib/useInstall";
-import { InstallSteps } from "@/components/InstallSteps";
+import { useInstall } from "@/lib/useInstall";
+import { InstallHelp } from "@/components/InstallHelp";
 
 const DAY = 24 * 60 * 60 * 1000;
 const visitKey = () => `install-dismissed-visit:${window.location.pathname.split("/").slice(0, 3).join("/")}`;
 
 export function InstallPrompt({ isCustomer = false, appName = "BarberSaaS" }: { isCustomer?: boolean; appName?: string }) {
   const { t } = useTranslation();
-  const { standalone, ready, signal, isMobile, isIOS, isInApp, cardShown, install } = useInstall();
+  const { standalone, ready, signal, isMobile, help, cardShown, install } = useInstall();
   const [showPrompt, setShowPrompt] = useState(false);
   const [busy, setBusy] = useState(false);
   const [typing, setTyping] = useState(false);
@@ -103,7 +103,7 @@ export function InstallPrompt({ isCustomer = false, appName = "BarberSaaS" }: { 
             {signal === "ready" ? t("installButton") : t("installHow")}
           </Button>
         </div>
-        {showSteps && <InstallSteps text={t(stepsKey(isIOS, isInApp))} className="text-zinc-700 dark:text-zinc-300 bg-zinc-50 dark:bg-zinc-800 rounded-lg p-3 border border-zinc-100 dark:border-zinc-700" />}
+        {showSteps && <InstallHelp help={help} className="text-zinc-700 dark:text-zinc-300 bg-zinc-50 dark:bg-zinc-800 rounded-lg p-3 border border-zinc-100 dark:border-zinc-700" />}
       </div>
     </div>}
     </>
