@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import { User } from "@/models/User";
 import { rateLimit, getClientIp } from "@/lib/rateLimit";
+import { publicOrigin } from "@/lib/origin";
 
 export async function GET(req: Request, { params }: { params: Promise<{ slug: string }> }) {
   try {
@@ -23,24 +24,17 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
       description: `Book your next haircut with ${barber.name}.`,
       start_url: `/b/${slug}`,
       display: "standalone",
+      // Lets Chrome on Android answer "is this app already installed?", so we keep asking until it is and stop once it is.
+      related_applications: [{ platform: "webapp", url: `${publicOrigin(req)}/api/public/barbers/${slug}/manifest` }],
+      prefer_related_applications: false,
       background_color: "#ffffff",
       theme_color: "#4f46e5", // Indigo color from our theme
       icons: [
-        {
-          src: `/api/public/barbers/${slug}/icon?size=192`,
-          sizes: "192x192",
-          type: "image/svg+xml",
-          purpose: "any maskable"
-        },
-        {
-          src: `/api/public/barbers/${slug}/icon?size=512`,
-          sizes: "512x512",
-          type: "image/svg+xml",
-          purpose: "any maskable"
-        },
-        // Plain pictures: Android needs a PNG icon to install the page as a proper app.
-        { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
-        { src: "/icon-512.png", sizes: "512x512", type: "image/png" }
+        // Real PNG pictures only: phones build the installed app from these, and an SVG (or a mislabelled file) can make the install fall back to a plain shortcut.
+        { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+        { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+        { src: "/icon-maskable-192.png", sizes: "192x192", type: "image/png", purpose: "maskable" },
+        { src: "/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
       ]
     };
 

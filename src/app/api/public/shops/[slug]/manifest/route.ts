@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import { Shop } from "@/models/Shop";
 import { rateLimit, getClientIp } from "@/lib/rateLimit";
+import { publicOrigin } from "@/lib/origin";
 
 /** Install manifest for a shop's booking page: the installed app carries the shop's name and opens the shop page. */
 export async function GET(req: Request, { params }: { params: Promise<{ slug: string }> }) {
@@ -22,14 +23,17 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
       id: `/s/${slug}`,
       start_url: `/s/${slug}`,
       display: "standalone",
+      // Lets Chrome on Android answer "is this app already installed?", so we keep asking until it is and stop once it is.
+      related_applications: [{ platform: "webapp", url: `${publicOrigin(req)}/api/public/shops/${slug}/manifest` }],
+      prefer_related_applications: false,
       background_color: "#ffffff",
       theme_color: "#4f46e5",
       icons: [
-        { src: `/api/public/shops/${slug}/icon?size=192`, sizes: "192x192", type: "image/svg+xml", purpose: "any maskable" },
-        { src: `/api/public/shops/${slug}/icon?size=512`, sizes: "512x512", type: "image/svg+xml", purpose: "any maskable" },
-        // Plain pictures for phones and browsers that do not draw SVG icons.
-        { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
-        { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
+        // Real PNG pictures only: phones build the installed app from these, and an SVG (or a mislabelled file) can make the install fall back to a plain shortcut.
+        { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+        { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+        { src: "/icon-maskable-192.png", sizes: "192x192", type: "image/png", purpose: "maskable" },
+        { src: "/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
       ],
     };
 

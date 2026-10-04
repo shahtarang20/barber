@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Copy, Share2 } from "lucide-react";
 import useSWR from "swr";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -168,6 +169,36 @@ export default function ShopPage() {
     }
   };
 
+  const [copied, setCopied] = useState(false);
+  const shopUrl = (slug: string) => `${window.location.origin}/s/${slug}`;
+
+  const copyShopLink = async (slug: string) => {
+    try {
+      await navigator.clipboard.writeText(shopUrl(slug));
+    } catch {
+      // Some browsers block the clipboard (or the site is not on https): fall back to the old copy command.
+      const box = document.createElement("textarea");
+      box.value = shopUrl(slug);
+      document.body.appendChild(box);
+      box.select();
+      document.execCommand("copy");
+      document.body.removeChild(box);
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  // Opens the phone's own share sheet (WhatsApp, SMS, ...). Where there is none (some computers) it copies instead.
+  const shareShopLink = async (name: string, slug: string) => {
+    if (typeof navigator.share !== "function") return copyShopLink(slug);
+    try {
+      await navigator.share({ title: t('linkShareTitle').replace('{name}', name), text: t('linkShareText'), url: shopUrl(slug) });
+    } catch (err) {
+      // Closing the share sheet is not an error; anything else falls back to copying.
+      if ((err as { name?: string }).name !== "AbortError") await copyShopLink(slug);
+    }
+  };
+
   const handleDeleteShop = async () => {
     if (!confirm(t('shopDeleteConfirm'))) return;
     setDeleting(true);
@@ -251,24 +282,24 @@ export default function ShopPage() {
       ) : (
         <>
           <div className="bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">{shop.name}</h2>
-                <button
-                  className="text-sm text-blue-600 hover:underline min-h-11 text-left break-all"
-                  onClick={() => {
-                    navigator.clipboard.writeText(`${window.location.origin}/s/${shop.slug}`);
-                    toast.add({ title: t('shopCopyTitle'), description: t('shopCopied'), type: "success" });
-                  }}
-                >
-                  {typeof window !== "undefined" ? window.location.origin : ""}/s/{shop.slug} {t('shopCopyWord')}
-                </button>
-              </div>
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 min-w-0 break-words">{shop.name}</h2>
               {shop.isOwner && (
-                <Button variant="ghost" className="text-red-600 hover:text-red-700" onClick={handleDeleteShop} disabled={deleting}>
+                <Button variant="ghost" className="text-red-600 hover:text-red-700 shrink-0" onClick={handleDeleteShop} disabled={deleting}>
                   {deleting ? t('shopDeleting') : t('shopDelete')}
                 </Button>
               )}
+            </div>
+            <p className="text-sm text-blue-600 break-all">
+              {typeof window !== "undefined" ? window.location.origin : ""}/s/{shop.slug}
+            </p>
+            <div className="flex gap-3">
+              <Button variant="outline" className="h-11 flex-1 sm:flex-none" onClick={() => copyShopLink(shop.slug)}>
+                {copied ? t('linkCopied') : <><Copy className="w-4 h-4 mr-2" /> {t('linkCopy')}</>}
+              </Button>
+              <Button variant="outline" className="h-11 flex-1 sm:flex-none" onClick={() => shareShopLink(shop.name, shop.slug)}>
+                <Share2 className="w-4 h-4 mr-2" /> {t('linkShare')}
+              </Button>
             </div>
           </div>
 

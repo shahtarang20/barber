@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#09090b">
+<title>No internet</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:#fafafa;color:#18181b;font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans","Noto Sans Devanagari","Noto Sans Gujarati",sans-serif;text-align:center}
+  main{max-width:360px}
+  img{width:88px;height:88px;border-radius:20px;margin-bottom:20px}
+  h1{font-size:22px;margin:0 0 6px}
+  p{margin:4px 0;color:#52525b;font-size:15px;line-height:1.5}
+  button{margin-top:24px;width:100%;min-height:48px;border:0;border-radius:12px;background:#18181b;color:#fff;font-size:16px;font-weight:600}
+  .wait{margin-top:14px;font-size:13px;color:#71717a}
+</style>
+</head>
+<body>
+<main>
+  <img src="/icon-192.png" alt="">
+  <h1>No internet connection</h1>
+  <p>इंटरनेट नहीं है · ઇન્ટરનેટ નથી · इंटरनेट नाही</p>
+  <p>Please check your mobile data or Wi-Fi. This page will open by itself as soon as you are back online.</p>
+  <button type="button" onclick="location.reload()">Try again · दोबारा कोशिश करें</button>
+  <p class="wait">Your bookings are safe. Nothing is lost.</p>
+</main>
+<script>
+  window.addEventListener('online', function () { location.reload(); });
+</script>
+</body>
+</html>

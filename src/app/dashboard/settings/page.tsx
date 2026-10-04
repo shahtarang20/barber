@@ -9,7 +9,8 @@ import { toast } from "@/components/ui/toast";
 import { useTranslation } from "@/lib/i18n";
 import { useDateFormat } from "@/lib/dateLocale";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { AlertTriangle, LogOut } from "lucide-react";
+import { AlertTriangle, LogOut, Share2 } from "lucide-react";
+import { shareOrCopy } from "@/lib/shareLink";
 import { MyBarberCode } from "@/components/dashboard/MyBarberCode";
 import { useRouter } from "next/navigation";
 
@@ -205,15 +206,26 @@ export default function SettingsPage() {
     }
   };
 
+  const handleShareApp = async () => {
+    const result = await shareOrCopy({ title: t('shareAppTitle'), text: t('shareAppText'), url: window.location.origin });
+    if (result === "copied") toast.add({ title: t('shareAppBtn'), description: t('shareAppCopied'), type: "success" });
+  };
+
   if (loading) return <div className="p-12 text-center text-zinc-500">{t('loading')}</div>;
 
   return (
     <div className="space-y-8 max-w-3xl mx-auto pb-12">
-      <div>
-        <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">{t('settings')}</h1>
-        <p className="text-zinc-500 dark:text-zinc-400 mt-2">
-          {t('setSubtitle')}
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">{t('settings')}</h1>
+          <p className="text-zinc-500 dark:text-zinc-400 mt-2">
+            {t('setSubtitle')}
+          </p>
+        </div>
+        {/* Lets an owner invite other barbers: shares the main page of the app (it explains the product and has sign-up). */}
+        <Button variant="outline" className="h-11 shrink-0 w-full sm:w-auto" onClick={handleShareApp}>
+          <Share2 className="w-4 h-4 mr-2" /> {t('shareAppBtn')}
+        </Button>
       </div>
 
       <MyBarberCode />

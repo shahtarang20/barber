@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     twitter: { card: "summary", title, description },
     // Installing this page gives the customer an app named after the shop that opens the shop page.
     manifest: `/api/public/shops/${slug}/manifest`,
-    icons: { apple: "/icon-192.png" },
+    icons: { apple: "/apple-touch-icon.png" },
     appleWebApp: { capable: true, title: name, statusBarStyle: "default" },
   };
 }

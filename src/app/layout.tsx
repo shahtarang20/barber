@@ -28,6 +28,7 @@ export const metadata: Metadata = {
   title: "BarberSaaS",
   description: "Book your barber appointments effortlessly.",
   manifest: "/manifest.json",
+  icons: { apple: "/apple-touch-icon.png" },
   // The app is designed in light colours only; stops phone browsers' "force dark" from inverting it.
   other: { "color-scheme": "light only" },
   appleWebApp: {

@@ -28,7 +28,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     },
     manifest: `/api/public/barbers/${slug}/manifest`,
     themeColor: "#09090b",
-    icons: { apple: "/icon-192.png" },
+    icons: { apple: "/apple-touch-icon.png" },
     appleWebApp: {
       capable: true,
       title: storeName,

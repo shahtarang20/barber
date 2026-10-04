@@ -4,44 +4,78 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
 import { useTranslation } from "@/lib/i18n";
-import { useInstall } from "@/lib/useInstall";
+import { useInstall, stepsKey } from "@/lib/useInstall";
 
 const DAY = 24 * 60 * 60 * 1000;
+const visitKey = () => `install-dismissed-visit:${window.location.pathname.split("/").slice(0, 3).join("/")}`;
 
 export function InstallPrompt({ isCustomer = false, appName = "BarberSaaS" }: { isCustomer?: boolean; appName?: string }) {
   const { t } = useTranslation();
-  const { standalone, isIOS, cardShown, install } = useInstall();
+  const { standalone, ready, isIOS, isInApp, cardShown, install } = useInstall();
   const [showPrompt, setShowPrompt] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [typing, setTyping] = useState(false);
 
   useEffect(() => {
-    if (standalone) return;
-    // Respect "not now": customers are asked again after a day (installing is the point), barbers after a week.
+    // Not yet known, or already installed: stay quiet.
+    if (!ready || standalone) return;
+    // "Not now" hides it for this visit only for customers: the next time they open the link (new tab / new visit) it is back,
+    // until the app is really installed. Barbers are asked again after a week.
     try {
-      if (Number(localStorage.getItem("install-dismissed-until") || 0) > Date.now()) return;
+      if (isCustomer) { if (sessionStorage.getItem(visitKey()) === "1") return; }
+      else if (Number(localStorage.getItem("install-dismissed-until") || 0) > Date.now()) return;
     } catch {}
-    const timer = setTimeout(() => setShowPrompt(true), 3000);
+    const timer = setTimeout(() => setShowPrompt(true), isCustomer ? 1500 : 3000);
     return () => clearTimeout(timer);
-  }, [standalone]);
+  }, [ready, standalone, isCustomer]);
+
+  // Never sit on top of the booking form while someone is typing.
+  useEffect(() => {
+    const fields = "input, textarea, select";
+    const on = (e: Event) => { if ((e.target as Element | null)?.matches?.(fields)) setTyping(true); };
+    const off = () => setTimeout(() => setTyping(false), 250);
+    document.addEventListener("focusin", on);
+    document.addEventListener("focusout", off);
+    return () => { document.removeEventListener("focusin", on); document.removeEventListener("focusout", off); };
+  }, []);
+
+  const hideForThisVisit = () => {
+    setShowPrompt(false);
+    try { if (isCustomer) sessionStorage.setItem(visitKey(), "1"); } catch {}
+  };
 
   const handleInstallClick = async () => {
     setBusy(true);
-    const done = await install(); // may wait a moment for the browser to say it is ready
+    const result = await install(); // may wait a moment for the browser to say it is ready
     setBusy(false);
-    if (done) { setShowPrompt(false); return; }
-    // No native prompt (iPhone, or the browser isn't ready): tell them the steps.
-    toast.add({ title: t("installTitle").replace("{name}", appName), description: isIOS ? t("installStepsIOS") : t("installStepsAndroid"), type: "info" });
+    if (result === "accepted") {
+      setShowPrompt(false);
+      toast.add({ title: t("installTitle").replace("{name}", appName), description: t("installDone"), type: "success" });
+    } else if (result === "dismissed") {
+      hideForThisVisit(); // they closed the browser's dialog: leave them alone for now, ask again next visit
+    } else {
+      // No native install here (iPhone, in-app browser, older phone): tell them the steps.
+      toast.add({ title: t("installTitle").replace("{name}", appName), description: t(stepsKey(isIOS, isInApp)), type: "info" });
+    }
   };
 
   const dismiss = () => {
     setShowPrompt(false);
-    try { localStorage.setItem("install-dismissed-until", String(Date.now() + (isCustomer ? DAY : 7 * DAY))); } catch {}
+    try {
+      if (isCustomer) sessionStorage.setItem(visitKey(), "1");
+      else localStorage.setItem("install-dismissed-until", String(Date.now() + 7 * DAY));
+    } catch {}
   };
 
-  if (standalone || !showPrompt || cardShown) return null;
+  const wanted = !standalone && showPrompt && !cardShown; // the prompt is due on this visit
+  if (!wanted) return null;
 
   return (
-    <div className={`fixed ${isCustomer ? "bottom-6" : "bottom-20 md:bottom-6"} left-0 right-0 z-50 flex justify-center px-4 pointer-events-none animate-in slide-in-from-bottom-10 fade-in duration-500`}>
+    <>
+    {/* The banner floats over the bottom of the screen. For customers, leave room at the end of the page so the last time buttons can scroll up above it. */}
+    {/* The room stays even while the banner steps aside for typing, so the page never jumps under the customer's finger. */}
+    {isCustomer && <div aria-hidden="true" style={{ height: 120 }} />}
+    {!typing && <div className={`fixed ${isCustomer ? "bottom-6" : "bottom-20 md:bottom-6"} left-0 right-0 z-50 flex justify-center px-4 pointer-events-none animate-in slide-in-from-bottom-10 fade-in duration-500`}>
       <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl rounded-2xl p-4 flex items-center justify-between gap-4 max-w-sm w-full pointer-events-auto relative">
         <button onClick={dismiss} aria-label="Close" className="absolute -top-3 -right-3 w-10 h-10 flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 rounded-full text-zinc-500 hover:text-zinc-900 border border-zinc-200 shadow-sm">
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -64,6 +98,7 @@ export function InstallPrompt({ isCustomer = false, appName = "BarberSaaS" }: { 
           {t("installButton")}
         </Button>
       </div>
-    </div>
+    </div>}
+    </>
   );
 }
