@@ -6,6 +6,8 @@ export interface IShop extends Document {
   ownerId: mongoose.Types.ObjectId;
   barberIds: mongoose.Types.ObjectId[];
   isActive: boolean;
+  /** What the owner lets other barbers of the shop do with the shop catalogue and numbers (effective only while the plan allows it). */
+  staff?: { userId: mongoose.Types.ObjectId; catalogue: boolean; analytics: boolean }[];
   /** Bookings per month allowed through the shop link. undefined = platform default, 0 = unlimited. */
   linkBookingLimit?: number;
   createdAt: Date;
@@ -19,6 +21,7 @@ const ShopSchema: Schema = new Schema(
     ownerId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
     barberIds: [{ type: Schema.Types.ObjectId, ref: "User", index: true }],
     isActive: { type: Boolean, default: true },
+    staff: [{ userId: { type: Schema.Types.ObjectId, ref: "User", required: true }, catalogue: { type: Boolean, default: false }, analytics: { type: Boolean, default: false }, _id: false }],
     linkBookingLimit: { type: Number, min: 0 },
   },
   { timestamps: true }

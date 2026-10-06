@@ -44,6 +44,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     await target.save();
 
     shop.barberIds = shop.barberIds.filter((id: any) => id.toString() !== targetId);
+    shop.staff = (shop.staff || []).filter((s: { userId: { toString(): string } }) => s.userId.toString() !== targetId); // staff access ends with membership
     await shop.save();
 
     return NextResponse.json({ success: true, data: { message: isSelf ? "You've left the shop." : `${target.name} was removed from the shop.` } });

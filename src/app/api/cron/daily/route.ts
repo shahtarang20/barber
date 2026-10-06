@@ -12,6 +12,8 @@ import { refreshAdminStats } from "@/lib/adminStats";
 import { runRetention } from "@/lib/retention";
 import { getTodayISTString } from "@/lib/istTime";
 import { parseDateOnly } from "@/lib/timeSort";
+import { cleanupMedia } from "@/lib/mediaService";
+import { sendPlanReminders } from "@/lib/planReminders";
 
 export const maxDuration = 60;
 
@@ -110,6 +112,18 @@ export async function GET(req: Request) {
         if ("bookingsDeleted" in r) { cleanup.retentionBookingsDeleted = r.bookingsDeleted ?? 0; cleanup.retentionSlotsDeleted = r.slotsDeleted ?? 0; }
       } catch (err) {
         console.error("Retention cleanup failed:", err);
+      }
+      // Renewal reminders for plans ending within 3 days or in their grace period.
+      try {
+        cleanup.planRemindersSent = await sendPlanReminders();
+      } catch (err) {
+        console.error("Plan reminders failed:", err);
+      }
+      // Unfinished uploads and pictures/videos no service or branding uses any more.
+      try {
+        cleanup.mediaRemoved = (await cleanupMedia()).removed;
+      } catch (err) {
+        console.error("Media cleanup failed:", err);
       }
     }
 

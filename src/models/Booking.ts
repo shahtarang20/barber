@@ -13,6 +13,11 @@ export interface IBooking extends Document {
   viaLink?: boolean;
   viaShopId?: mongoose.Types.ObjectId;
   startMinutes?: number;
+  // The catalogue service the customer picked, copied at booking time so later edits or deletes never change old bookings.
+  serviceId?: mongoose.Types.ObjectId;
+  serviceNameSnapshot?: string;
+  serviceDurationSnapshot?: number;
+  servicePriceSnapshot?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -38,6 +43,10 @@ const BookingSchema: Schema = new Schema(
     viaShopId: { type: Schema.Types.ObjectId },
     // startTime as minutes since midnight, so lists sort chronologically ("9:00 AM" before "10:00 AM").
     startMinutes: { type: Number },
+    serviceId: { type: Schema.Types.ObjectId },
+    serviceNameSnapshot: { type: String, maxlength: 80 },
+    serviceDurationSnapshot: { type: Number },
+    servicePriceSnapshot: { type: Number },
   },
   { timestamps: true }
 );

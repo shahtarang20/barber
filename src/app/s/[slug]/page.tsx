@@ -1,6 +1,10 @@
 "use client";
 
 import { InstallCard } from "@/components/InstallCard";
+import { ViewSwitch } from "@/components/catalogue/ViewSwitch";
+import { PublicCatalogue } from "@/components/catalogue/PublicCatalogue";
+import { SelectedServiceChip } from "@/components/catalogue/SelectedServiceChip";
+import { useCatalogueView } from "@/lib/useCatalogueView";
 import { useState, useEffect } from "react";
 import { useHydrated } from "@/lib/useHydrated";
 import { format, addDays } from "date-fns";
@@ -45,6 +49,7 @@ interface BookingSuccessView {
   startTime: string;
   customerName?: string;
   name?: string;
+  serviceName?: string;
   isWaitlist?: boolean;
 }
 
@@ -53,6 +58,8 @@ export default function ShopBookingPage() {
   const hydrated = useHydrated();
   const { slug } = useParams();
   const { t } = useTranslation();
+  // Booking / Catalogue switch, and the catalogue service the customer picked (carried into the booking).
+  const cat = useCatalogueView("shop", typeof slug === "string" ? slug : undefined);
 
   const [selectedDate, setSelectedDate] = useState<Date>(() => parseDateOnly(getTodayISTString()));
   const [selectedBarberId, setSelectedBarberId] = useState<string | "ANY">("ANY");
@@ -72,7 +79,12 @@ export default function ShopBookingPage() {
   const shop = shopData?.success ? shopData.data : null;
   const shopError = shopLoadError || (shopData && !shopData.success);
   const allSlots: ShopSlot[] = slotsData?.success ? slotsData.data : [];
-  const slots = selectedBarberId === "ANY" ? allSlots : allSlots.filter((s) => s.barberId === selectedBarberId);
+  // A service that only some barbers perform: only those barbers are offered, and only their times are shown.
+  const performers = cat.selectedService?.barberIds ?? [];
+  const canDo = (barberId: string) => performers.length === 0 || performers.includes(barberId);
+  const offeredBarbers: ShopBarber[] = (shop?.barbers ?? []).filter((b: ShopBarber) => canDo(b._id));
+  const effectiveBarberId = selectedBarberId !== "ANY" && !canDo(selectedBarberId) ? "ANY" : selectedBarberId;
+  const slots = (effectiveBarberId === "ANY" ? allSlots : allSlots.filter((s) => s.barberId === effectiveBarberId)).filter((s) => canDo(s.barberId));
 
   // "Any available barber": show each time once (not once per barber). Pick the barber with the most free seats
   // for that time, and remember how many barbers still have room.
@@ -137,7 +149,7 @@ export default function ShopBookingPage() {
         fetch(endpoint, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ slotId, name, phone, shopSlug: slug, ...(selectedSlot.isWaitlist && selectedBarberId === "ANY" ? { anyBarber: true } : {}) }),
+          body: JSON.stringify({ slotId, name, phone, shopSlug: slug, ...(cat.selectedService && !selectedSlot.isWaitlist ? { serviceId: cat.selectedService.id } : {}), ...(selectedSlot.isWaitlist && effectiveBarberId === "ANY" ? { anyBarber: true } : {}) }),
         });
       let res = await post(selectedSlot._id);
       let data = await res.json();
@@ -145,13 +157,13 @@ export default function ShopBookingPage() {
       // "Any barber" in a rush: someone else took the barber we picked a moment ago. If another barber is
       // still free at the SAME time, quietly book with him instead of making the customer start again.
       const tried = new Set<string>([selectedSlot._id]);
-      for (let attempt = 0; attempt < 3 && !selectedSlot.isWaitlist && selectedBarberId === "ANY" && !res.ok && data?.error?.code === "SLOT_ALREADY_BOOKED"; attempt++) {
+      for (let attempt = 0; attempt < 3 && !selectedSlot.isWaitlist && effectiveBarberId === "ANY" && !res.ok && data?.error?.code === "SLOT_ALREADY_BOOKED"; attempt++) {
         const fresh = await fetch(`/api/public/shops/${slug}/slots?date=${formattedDate}`).then((r) => r.json()).catch(() => null);
         const list: ShopSlot[] = fresh?.success ? fresh.data : [];
         const load = new Map<string, number>();
         for (const sl of list) load.set(sl.barberId, (load.get(sl.barberId) || 0) + (sl.bookingsCount || 0));
         const next = list
-          .filter((x) => x.startTime === selectedSlot.startTime && hasRoom(x) && !tried.has(x._id))
+          .filter((x) => x.startTime === selectedSlot.startTime && hasRoom(x) && !tried.has(x._id) && canDo(x.barberId))
           .sort((a, b) => (b.capacity - b.bookingsCount) - (a.capacity - a.bookingsCount) || (load.get(a.barberId) || 0) - (load.get(b.barberId) || 0))[0];
         if (!next) break;
         tried.add(next._id);
@@ -160,6 +172,7 @@ export default function ShopBookingPage() {
       }
 
       if (!res.ok || !data.success) {
+        if (data.error?.code === "SERVICE_UNAVAILABLE") cat.clearService(); // the owner removed it meanwhile
         setBookingError(
           data.error?.code === "LINK_LIMIT" ? t("linkClosedMsg")
           : data.error?.code === "SEAT_HELD" ? t("seatHeld")
@@ -252,6 +265,12 @@ export default function ShopBookingPage() {
               <div className="font-medium text-right">{bookedBarber?.name || selectedSlot?.barberName}</div>
               <div className="text-zinc-500">{t("customer")}</div>
               <div className="font-medium text-right">{bookingSuccess.customerName || bookingSuccess.name}</div>
+              {bookingSuccess.serviceName && (
+                <>
+                  <div className="text-zinc-500">{t('catSelectedService')}</div>
+                  <div className="font-medium text-right">{bookingSuccess.serviceName}</div>
+                </>
+              )}
             </div>
           </div>
 
@@ -282,6 +301,11 @@ export default function ShopBookingPage() {
       </div>
 
       <div className="max-w-2xl mx-auto px-4 mt-8">
+        {cat.available && <ViewSwitch view={cat.view} onChange={cat.setView} />}
+        {cat.view === "catalogue" && <PublicCatalogue catalogue={cat.catalogue} loading={cat.loading} onBook={cat.bookService} allowedBarberIds={undefined} notifyTarget={{ kind: "shop", slug: String(slug) }} />}
+        {cat.view !== "catalogue" && (
+        <div id="view-panel-booking" role={cat.available ? "tabpanel" : undefined} aria-labelledby={cat.available ? "view-tab-booking" : undefined}>
+        {cat.selectedService && <SelectedServiceChip service={cat.selectedService} onChange={() => cat.setView("catalogue")} onRemove={cat.clearService} restrictedToSomeBarbers={performers.length > 0} />}
         {(shop?.linkClosed) ? (
           <div className="rounded-2xl border border-orange-200 bg-orange-50 p-6 text-center text-orange-800">{t("linkClosedMsg")}</div>
         ) : !selectedSlot ? (
@@ -293,19 +317,19 @@ export default function ShopBookingPage() {
                 <button
                   onClick={() => setSelectedBarberId("ANY")}
                   className={`flex-shrink-0 px-4 py-3 rounded-2xl border text-sm font-medium transition-all ${
-                    selectedBarberId === "ANY"
+                    effectiveBarberId === "ANY"
                       ? "bg-zinc-900 border-zinc-900 text-white shadow-md"
                       : "bg-white border-zinc-200 text-zinc-600 hover:border-zinc-300"
                   }`}
                 >
                   {t("anyBarber")}
                 </button>
-                {shop?.barbers?.map((b: ShopBarber) => (
+                {offeredBarbers.map((b: ShopBarber) => (
                   <button
                     key={b._id}
                     onClick={() => setSelectedBarberId(b._id)}
                     className={`flex-shrink-0 px-4 py-3 rounded-2xl border text-sm font-medium transition-all ${
-                      selectedBarberId === b._id
+                      effectiveBarberId === b._id
                         ? "bg-zinc-900 border-zinc-900 text-white shadow-md"
                         : "bg-white border-zinc-200 text-zinc-600 hover:border-zinc-300"
                     }`}
@@ -362,7 +386,7 @@ export default function ShopBookingPage() {
                         return true;
                       }
                     })
-                    .filter((slot) => selectedBarberId !== "ANY" || bestByTime.get(slot.startTime)?._id === slot._id)
+                    .filter((slot) => effectiveBarberId !== "ANY" || bestByTime.get(slot.startTime)?._id === slot._id)
                     .map((slot) => {
                       const isAvailable = slot.status === "AVAILABLE" || (slot.capacity && slot.capacity > 1 && slot.bookingsCount < slot.capacity);
                       const isFull = !isAvailable && slot.status !== "BLOCKED";
@@ -383,7 +407,7 @@ export default function ShopBookingPage() {
                           className={`py-4 rounded-xl border font-medium text-sm transition-all flex flex-col items-center justify-center ${btnStyle}`}
                         >
                           <span>{slot.startTime}</span>
-                          {selectedBarberId === "ANY" && (
+                          {effectiveBarberId === "ANY" && (
                             <span className="text-[10px] text-zinc-500 mt-0.5">
                               {(freeBarbersByTime.get(slot.startTime) || 0) > 0
                                 ? t("barbersFree").replace("{n}", String(freeBarbersByTime.get(slot.startTime)))
@@ -444,6 +468,8 @@ export default function ShopBookingPage() {
               </Button>
             </form>
           </div>
+        )}
+        </div>
         )}
       </div>
     </div>

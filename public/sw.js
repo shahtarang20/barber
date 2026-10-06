@@ -52,7 +52,7 @@ self.addEventListener('fetch', (event) => {
 
 // ---- Push notifications (new booking, customer cancelled / rescheduled) ----
 self.addEventListener('push', (event) => {
-  let data = { title: 'BarberSaaS', body: '', url: '/dashboard/appointments' };
+  let data = { title: 'BarberSaaS', body: '', url: '/dashboard/appointments', tag: 'booking-update' };
   try { data = { ...data, ...event.data.json() }; } catch (e) {}
   event.waitUntil(
     self.registration.showNotification(data.title, {
@@ -60,7 +60,7 @@ self.addEventListener('push', (event) => {
       icon: '/icon-192.png',
       badge: '/icon-192.png',
       data: { url: data.url },
-      tag: 'booking-update',
+      tag: data.tag || 'booking-update',
       renotify: true,
     })
   );

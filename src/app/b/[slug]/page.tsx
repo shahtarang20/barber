@@ -1,6 +1,10 @@
 "use client";
 
 import { InstallCard } from "@/components/InstallCard";
+import { ViewSwitch } from "@/components/catalogue/ViewSwitch";
+import { PublicCatalogue } from "@/components/catalogue/PublicCatalogue";
+import { SelectedServiceChip } from "@/components/catalogue/SelectedServiceChip";
+import { useCatalogueView } from "@/lib/useCatalogueView";
 import { useState, useEffect } from "react";
 import { useHydrated } from "@/lib/useHydrated";
 import { format, addDays } from "date-fns";
@@ -35,6 +39,7 @@ interface BookingSuccessView {
   startTime: string;
   customerName?: string;
   name?: string;
+  serviceName?: string;
   isWaitlist?: boolean;
 }
 
@@ -43,6 +48,8 @@ export default function BarberBookingPage() {
   const hydrated = useHydrated();
   const { slug } = useParams();
   const { t, language } = useTranslation();
+  // Booking / Catalogue switch, and the catalogue service the customer picked (carried into the booking).
+  const cat = useCatalogueView("barber", typeof slug === "string" ? slug : undefined);
   
   const [selectedDate, setSelectedDate] = useState<Date>(() => parseDateOnly(getTodayISTString()));
   const formattedDate = format(selectedDate, "yyyy-MM-dd");
@@ -108,13 +115,15 @@ export default function BarberBookingPage() {
         body: JSON.stringify({ 
           slotId: selectedSlot._id,
           name, 
-          phone 
+          phone,
+          ...(cat.selectedService && !selectedSlot.isWaitlist ? { serviceId: cat.selectedService.id } : {}),
         }),
       });
 
       const data = await res.json();
 
       if (!res.ok || !data.success) {
+        if (data.error?.code === "SERVICE_UNAVAILABLE") cat.clearService(); // the owner removed it meanwhile
         setBookingError(
           data.error?.code === "LINK_LIMIT" ? t("linkClosedMsg")
           : data.error?.code === "SEAT_HELD" ? t("seatHeld")
@@ -224,6 +233,12 @@ export default function BarberBookingPage() {
               
               <div className="text-zinc-500">{t('customer')}</div>
               <div className="font-medium text-right">{bookingSuccess.customerName || bookingSuccess.name}</div>
+              {bookingSuccess.serviceName && (
+                <>
+                  <div className="text-zinc-500">{t('catSelectedService')}</div>
+                  <div className="font-medium text-right">{bookingSuccess.serviceName}</div>
+                </>
+              )}
             </div>
           </div>
           
@@ -256,6 +271,11 @@ export default function BarberBookingPage() {
       </div>
 
       <div className="max-w-2xl mx-auto px-4 mt-8">
+        {cat.available && <ViewSwitch view={cat.view} onChange={cat.setView} />}
+        {cat.view === "catalogue" && <PublicCatalogue catalogue={cat.catalogue} loading={cat.loading} onBook={cat.bookService} notifyTarget={{ kind: "barber", slug: String(slug) }} />}
+        {cat.view !== "catalogue" && (
+        <div id="view-panel-booking" role={cat.available ? "tabpanel" : undefined} aria-labelledby={cat.available ? "view-tab-booking" : undefined}>
+        {cat.selectedService && <SelectedServiceChip service={cat.selectedService} onChange={() => cat.setView("catalogue")} onRemove={cat.clearService} />}
         {(barber?.linkClosed) ? (
           <div className="rounded-2xl border border-orange-200 bg-orange-50 p-6 text-center text-orange-800">{t("linkClosedMsg")}</div>
         ) : !selectedSlot ? (
@@ -384,6 +404,8 @@ export default function BarberBookingPage() {
               </Button>
             </form>
           </div>
+        )}
+        </div>
         )}
       </div>
     </div>

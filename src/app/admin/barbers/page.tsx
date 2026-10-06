@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
+import { PlanPaymentsDialog } from "@/components/admin/PlanPaymentsDialog";
+import { showDate } from "@/lib/usePlan";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 
 export default function AdminBarbersPage() {
@@ -21,6 +23,7 @@ export default function AdminBarbersPage() {
     return () => clearTimeout(timer);
   }, [search]);
   const [defaultLimit, setDefaultLimit] = useState(0);
+  const [payFor, setPayFor] = useState<{ _id: string; name: string; premiumAmount: number } | null>(null);
 
   useEffect(() => {
     fetchBarbers();
@@ -137,7 +140,9 @@ export default function AdminBarbersPage() {
                   <th className="px-6 py-4 font-medium">Status</th>
                   <th className="px-6 py-4 font-medium">Premium (₹)</th>
                   <th className="px-6 py-4 font-medium">Due Date</th>
+                  <th className="px-6 py-4 font-medium">Plan</th>
                   <th className="px-6 py-4 font-medium">Link limit / month</th>
+                  <th className="px-6 py-4 font-medium">Catalogue</th>
                   <th className="px-6 py-4 font-medium text-right">Actions</th>
                 </tr>
               </thead>
@@ -195,6 +200,15 @@ export default function AdminBarbersPage() {
                       />
                     </td>
                     <td className="px-6 py-4">
+                      {b.plan && b.plan.status !== "FREE" ? (
+                        <div>
+                          <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${b.plan.status === "ACTIVE" ? "bg-green-100 text-green-700" : b.plan.status === "GRACE" ? "bg-amber-100 text-amber-800" : "bg-red-100 text-red-700"}`}>{b.plan.status}</span>
+                          <div className="mt-1 text-xs text-zinc-500">{b.plan.estimated ? "due" : "ends"} {showDate(b.plan.endsOn)}{b.plan.daysLeft !== null && b.plan.daysLeft <= 3 ? ` (${b.plan.daysLeft < 0 ? `${-b.plan.daysLeft}d ago` : `${b.plan.daysLeft}d`})` : ""}</div>
+                        </div>
+                      ) : <span className="text-xs text-zinc-500">Free</span>}
+                      <button type="button" className="mt-1 block text-xs text-blue-600 underline" onClick={() => setPayFor({ _id: b._id, name: b.name, premiumAmount: b.premiumAmount || 0 })}>Payments</button>
+                    </td>
+                    <td className="px-6 py-4">
                       <input
                         type="number" min="0"
                         key={`${b._id}-${b.linkBookingLimit ?? "d"}`}
@@ -211,6 +225,18 @@ export default function AdminBarbersPage() {
                         {b.linkUsed ?? 0} used{b.linkLimitEffective > 0 ? ` of ${b.linkLimitEffective}` : " · no limit"}
                       </div>
                     </td>
+                    <td className="px-6 py-4">
+                      <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          className="h-5 w-5"
+                          checked={b.catalogueEnabled !== false}
+                          onChange={(e) => handleUpdate(b._id, { catalogueEnabled: e.target.checked })}
+                          aria-label={`Premium catalogue for ${b.name}`}
+                        />
+                        {b.catalogueEnabled !== false ? "On" : "Off"}
+                      </label>
+                    </td>
                     <td className="px-6 py-4 text-right space-x-2">
                       <Button variant="outline" size="sm" onClick={() => handleResetPassword(b._id, b.name)}>Reset Password</Button>
                       <Link href={`/b/${b.slug}`} target="_blank">
@@ -223,6 +249,7 @@ export default function AdminBarbersPage() {
             </table>
           </div>
         )}
+        <PlanPaymentsDialog barber={payFor} onClose={() => setPayFor(null)} onChanged={fetchBarbers} />
         <PaginationControls
           pagination={pagination}
           onPageChange={setPage}

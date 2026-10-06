@@ -9,6 +9,7 @@ import { useDateFormat } from "@/lib/dateLocale";
 import { getISTNow, getTodayISTString, minutesUntilSlotEnd } from "@/lib/istTime";
 import { parseDateOnly } from "@/lib/timeSort";
 import { toast } from "@/components/ui/toast";
+import { PlanBanner } from "@/components/PlanBanner";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import { useRealtimeRefresh } from "@/lib/useRealtimeRefresh";
 import { getWhatsAppNumber } from "@/lib/phone";
@@ -29,7 +30,6 @@ export default function DashboardPage() {
   const { t } = useTranslation();
   const fmt = useDateFormat();
   const [profile, setProfile] = useState<any>(null);
-  const [showPremiumPopup, setShowPremiumPopup] = useState(false);
   const [generating, setGenerating] = useState(false);
   // "Today" is India's today, not whatever the phone's own clock says.
   const todayStr = getTodayISTString();
@@ -132,27 +132,6 @@ export default function DashboardPage() {
         // keeps the two pages' idea of "your usual capacity" in sync instead
         // of Schedule always starting from a hardcoded 1.
         setCapacity(p.defaultCapacity || 1);
-
-        // Premium popup logic
-        if (p.premiumAmount > 0) {
-          const today = new Date();
-          const dueDay = p.premiumDueDay || 28;
-          const currentDay = today.getDate();
-          
-          // Check if today is within [dueDay - 3, dueDay]
-          const isDueWindow = currentDay >= (dueDay - 3) && currentDay <= dueDay;
-          
-          if (isDueWindow) {
-            const todayStr = format(today, "yyyy-MM-dd");
-            const storageKey = `premium_pop_${p._id}_${todayStr}`;
-            const popCount = parseInt(localStorage.getItem(storageKey) || "0");
-            
-            if (popCount < 3) {
-              setShowPremiumPopup(true);
-              localStorage.setItem(storageKey, (popCount + 1).toString());
-            }
-          }
-        }
       }
     } catch (error) {
       console.error("Failed to fetch profile");
@@ -319,25 +298,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8 relative">
-      {showPremiumPopup && (
-        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-zinc-900 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl relative">
-            <button onClick={() => setShowPremiumPopup(false)} className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100">
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
-            </button>
-            <div className="w-20 h-20 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mx-auto mb-6">
-              <span className="text-4xl">💎</span>
-            </div>
-            <h2 className="text-2xl font-black text-zinc-900 dark:text-zinc-50 mb-2">{t('premiumDueTitle' as any)}</h2>
-            <p className="text-zinc-600 dark:text-zinc-400 mb-6">
-              {t('premiumDueDesc' as any).replace('{amount}', profile.premiumAmount.toString())}
-            </p>
-            <Button className="w-full h-12 text-lg font-bold bg-yellow-500 hover:bg-yellow-600 text-white" onClick={() => setShowPremiumPopup(false)}>
-              {t('payNow' as any)}
-            </Button>
-          </div>
-        </div>
-      )}
+      <PlanBanner />
       <div className="flex justify-between items-start">
         <div>
           <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">

@@ -40,3 +40,17 @@ export async function pushToBarber(barberId: string, payload: { title: string; b
     console.error("Push error:", err);
   }
 }
+
+/** Sends one notification to one device. "gone" means the device no longer accepts messages and should be forgotten. */
+export async function sendToSubscription(sub: { endpoint: string; keys: { p256dh: string; auth: string } }, payload: { title: string; body: string; url: string; tag?: string }): Promise<"ok" | "gone" | "error"> {
+  if (!isPushConfigured) return "error";
+  try {
+    await webpush.sendNotification({ endpoint: sub.endpoint, keys: sub.keys }, JSON.stringify(payload), { TTL: 60 * 60 * 24 });
+    return "ok";
+  } catch (err) {
+    const code = (err as { statusCode?: number }).statusCode;
+    if (code === 404 || code === 410) return "gone";
+    console.error("Customer push failed:", code ?? err);
+    return "error";
+  }
+}

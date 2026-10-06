@@ -5,6 +5,7 @@ import { Shop } from "@/models/Shop";
 import { User } from "@/models/User";
 import { ShopInvite } from "@/models/ShopInvite";
 import { z } from "zod";
+import { effectivePlan, staffLevel } from "@/lib/plans";
 
 const createShopSchema = z.object({
   name: z.string().min(2, "Shop name must be at least 2 characters").max(80, "Shop name is too long"),
@@ -39,9 +40,21 @@ export async function GET(req: Request) {
     const pending = isOwner ? await ShopInvite.find({ shopId: shop._id, status: "PENDING" }).populate("barberId", "name barberCode") : [];
     const pendingInvites = pending.map((i: any) => ({ _id: i._id, name: i.barberId?.name, barberCode: i.barberId?.barberCode }));
 
+    // What this viewer may do with the shop catalogue and numbers (owner: everything; staff: what the owner allowed AND the plan still permits).
+    const level = staffLevel((await effectivePlan(shop.ownerId.toString())).limits.tier);
+    const grants: { userId: { toString(): string }; catalogue: boolean; analytics: boolean }[] = shop.staff || [];
+    const mine = grants.find((g) => g.userId.toString() === payload.userId);
+    const myAccess = isOwner
+      ? { catalogue: true, analytics: true, level: "OWNER" }
+      : { catalogue: !!mine?.catalogue && level !== "NONE", analytics: !!mine?.analytics && level === "FULL", level };
+    const staff = isOwner ? grants.map((g) => ({ userId: g.userId.toString(), catalogue: g.catalogue, analytics: g.analytics })) : undefined;
+
     return NextResponse.json({
       success: true,
       data: {
+        myAccess,
+        staff,
+        staffLevel: isOwner ? level : undefined,
         _id: shop._id,
         name: shop.name,
         slug: shop.slug,

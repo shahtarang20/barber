@@ -1,5 +1,6 @@
 "use client";
 
+import { PlanSettingsCard } from "@/components/admin/PlanSettingsCard";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,7 +22,7 @@ interface AuditEntry {
   action: string;
   actorName: string;
   targetName?: string;
-  metadata?: { bookingsDeleted?: number; after?: { enabled?: boolean; months?: number } };
+  metadata?: { bookingsDeleted?: number; after?: { enabled?: boolean; months?: number }; amount?: number; months?: number; periodEnd?: string; reason?: string; changed?: Record<string, { from: unknown; to: unknown }> };
   createdAt: string;
 }
 
@@ -32,6 +33,11 @@ function describeAudit(entry: AuditEntry) {
   }
   if (entry.action === "RETENTION_RUN_MANUALLY") return `ran cleanup now (${entry.metadata?.bookingsDeleted ?? 0} bookings removed)`;
   if (entry.action === "ADMIN_PASSWORD_RESET") return `reset the password for ${entry.targetName ?? "an admin"}`;
+  const m = entry.metadata;
+  if (entry.action === "PLAN_PAYMENT_RECORDED") return `recorded ₹${m?.amount ?? 0} for ${entry.targetName ?? "a barber"} (${m?.months ?? "?"} month(s), plan now ends ${m?.periodEnd ?? "?"})`;
+  if (entry.action === "PLAN_PAYMENT_VOIDED") return `voided a ₹${m?.amount ?? 0} payment for ${entry.targetName ?? "a barber"} (${m?.reason ?? "no reason"})`;
+  if (entry.action === "PLAN_SETTINGS_CHANGED") return "changed plan sizes / grace period";
+  if (entry.action === "BARBER_SETTINGS_CHANGED") return `changed ${Object.entries(m?.changed ?? {}).map(([k, v]) => `${k} ${String(v.from)} → ${String(v.to)}`).join(", ") || "settings"} for ${entry.targetName ?? "a barber"}`;
   return entry.action.toLowerCase().replace(/_/g, " ");
 }
 
@@ -185,6 +191,8 @@ export default function AdminSettingsPage() {
           </div>
         )}
       </div>
+
+      <PlanSettingsCard />
 
       {/* Audit log */}
       <div className="bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-4">

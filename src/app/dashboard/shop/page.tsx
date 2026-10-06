@@ -1,5 +1,6 @@
 "use client";
 
+import { StaffAccess } from "@/components/dashboard/StaffAccess";
 import { useState } from "react";
 import { Copy, Share2 } from "lucide-react";
 import useSWR from "swr";
@@ -30,6 +31,8 @@ interface ShopData {
   viewerId: string;
   members: ShopMember[];
   pendingInvites?: { _id: string; name?: string; barberCode?: string }[];
+  staff?: { userId: string; catalogue: boolean; analytics: boolean }[];
+  staffLevel?: "NONE" | "BASIC" | "FULL";
 }
 
 interface MyInvite {
@@ -364,6 +367,8 @@ export default function ShopPage() {
               </div>
             )}
           </div>
+
+          {shop.isOwner && <StaffAccess members={shop.members} ownerId={shop.ownerId} staff={shop.staff ?? []} level={shop.staffLevel ?? "NONE"} onChanged={() => mutate()} />}
 
           <FrontDeskBooking shopSlug={shop.slug} members={shop.members} />
           <ShopCustomers />

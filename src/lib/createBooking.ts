@@ -17,9 +17,10 @@ interface ClaimedSlot {
  * creates the customer, takes the next booking number and saves a CONFIRMED
  * booking for a slot the caller has ALREADY claimed atomically.
  *
+ * Optionally saves a snapshot of the catalogue service the customer picked.
  * On failure it throws; the caller is responsible for releasing the slot.
  */
-export async function createConfirmedBooking(slot: ClaimedSlot, name: string, phone: string, notes?: string, via?: { viaLink?: boolean; viaShopId?: unknown }) {
+export async function createConfirmedBooking(slot: ClaimedSlot, name: string, phone: string, notes?: string, via?: { viaLink?: boolean; viaShopId?: unknown }, service?: { serviceId: unknown; name: string; durationMinutes: number; price: number | null }) {
   const normalizedPhone = normalizePhone(phone);
   const cleanName = name.trim();
 
@@ -53,6 +54,8 @@ export async function createConfirmedBooking(slot: ClaimedSlot, name: string, ph
     notes,
     ...(via?.viaLink ? { viaLink: true } : {}),
     ...(via?.viaShopId ? { viaShopId: via.viaShopId } : {}),
+    // A copy of the catalogue service the customer picked: later edits or deletes by the owner never change this booking.
+    ...(service ? { serviceId: service.serviceId, serviceNameSnapshot: service.name, serviceDurationSnapshot: service.durationMinutes, ...(service.price !== null ? { servicePriceSnapshot: service.price } : {}) } : {}),
   }).save();
   return { booking, customer };
 }

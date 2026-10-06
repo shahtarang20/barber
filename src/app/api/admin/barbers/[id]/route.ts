@@ -3,6 +3,7 @@ import { requireAuth } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import { User } from "@/models/User";
 import { normalizePhone } from "@/lib/phone";
+import { audit } from "@/lib/planAdmin";
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -61,6 +62,13 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       }
     }
 
+    if (body.catalogueEnabled !== undefined) {
+      if (typeof body.catalogueEnabled !== "boolean") {
+        return NextResponse.json({ success: false, error: { message: "catalogueEnabled must be true or false." } }, { status: 400 });
+      }
+      updateData.catalogueEnabled = body.catalogueEnabled;
+    }
+
     if (body.isActive !== undefined) {
       updateData.isActive = Boolean(body.isActive);
       suspending = updateData.isActive === false;
@@ -78,10 +86,22 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if ($unset) updateQuery.$unset = $unset;
     if ($inc) updateQuery.$inc = $inc;
 
+    const before = await User.findById(id).select("premiumAmount premiumDueDay catalogueEnabled isActive linkBookingLimit").lean<Record<string, unknown> | null>();
     const updatedUser = await User.findByIdAndUpdate(id, updateQuery, { new: true }).select("-passwordHash -tokenVersion");
 
     if (!updatedUser) {
       return NextResponse.json({ success: false, error: { message: "Barber not found" } }, { status: 404 });
+    }
+
+    // Audit trail: money, access and limits are recorded with the before/after values.
+    const changed: Record<string, { from: unknown; to: unknown }> = {};
+    for (const k of ["premiumAmount", "premiumDueDay", "catalogueEnabled", "isActive", "linkBookingLimit"] as const) {
+      const to = (updatedUser as unknown as Record<string, unknown>)[k];
+      if (before && before[k] !== to) changed[k] = { from: before[k] ?? null, to: to ?? null };
+    }
+    if (Object.keys(changed).length > 0) {
+      const admin = await User.findById(payload.userId).select("name").lean<{ name: string } | null>();
+      await audit({ id: payload.userId, name: admin?.name || "Admin" }, "BARBER_SETTINGS_CHANGED", updatedUser, { changed });
     }
 
     return NextResponse.json({ success: true, data: updatedUser });

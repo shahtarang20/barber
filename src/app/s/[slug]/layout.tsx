@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import connectToDatabase from "@/lib/mongodb";
 import { Shop } from "@/models/Shop";
+import { loadShareInfo } from "@/lib/shareCard";
 import { MyBookingBanner } from "@/components/MyBookingBanner";
 import { InstallPrompt } from "@/components/InstallPrompt";
 
@@ -11,12 +12,14 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const shop = await Shop.findOne({ slug, isActive: true }).select("name").lean<{ name: string } | null>();
   const name = shop?.name || "Barber Shop";
   const title = `Book at ${name}`;
-  const description = `Choose your barber and book your next haircut at ${name}.`;
+  const share = await loadShareInfo("SHOP", slug).catch(() => null);
+  const menu = share && share.services > 0 ? `${share.services} service${share.services === 1 ? "" : "s"}${share.fromPrice !== null ? ` from ₹${share.fromPrice}` : ""}. ` : "";
+  const description = `${menu}Choose your barber and book your next haircut at ${name}.`;
   return {
     title,
     description,
     openGraph: { title, description, siteName: name, type: "website" },
-    twitter: { card: "summary", title, description },
+    twitter: { card: "summary_large_image", title, description },
     // Installing this page gives the customer an app named after the shop that opens the shop page.
     manifest: `/api/public/shops/${slug}/manifest`,
     icons: { apple: "/apple-touch-icon.png" },

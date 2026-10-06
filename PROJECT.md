@@ -399,3 +399,70 @@ Bugs found and fixed along the way (examples): settings couldn't open a closed d
 - **Bookings take 30 seconds to show.** Pusher isn't set up or its variables are wrong. Fix them and redeploy without cache.
 - **Customers can't cancel.** It is blocked inside 30 minutes of the start; the barber can cancel.
 - **Where are the prices/stages?** `BUSINESS.md` and `src/lib/growth.ts` (keep them in step).
+
+---
+
+## Premium catalogue (Phase 1 of `BARBER_CATALOGUE_PREMIUM_PLAN.md`)
+
+A service and hairstyle catalogue beside online booking. Booking links keep working exactly as before; the catalogue only appears when an owner switches it on and publishes at least one service.
+
+| Part | Where |
+|---|---|
+| Models | `CatalogueCategory`, `BarberService`, `CatalogueSettings`; `Booking` gains `serviceId` + `serviceNameSnapshot / DurationSnapshot / PriceSnapshot`; `User.catalogueEnabled` (admin switch) |
+| Rules in one place | `src/lib/catalogue.ts` (plan limits, ownership scope, safe URLs, price maths), `catalogueService.ts` (service validation), `cataloguePublic.ts` (what customers may see; booking-time service check) |
+| Owner APIs | `/api/barber/catalogue/{settings,categories,categories/[id],services,services/[id],reorder}`; add `?scope=shop` for the shop-wide catalogue (shop owner only; members cannot change it) |
+| Public APIs | `/api/public/barbers/[slug]/catalogue`, `/api/public/shops/[slug]/catalogue`, `/api/public/catalogue/services/[id]` (published content only, cached 15 s) |
+| Owner pages | Settings → **Premium Catalogue** card → `/dashboard/catalogue` (switch, plan usage, share/preview, services, branding), `/categories`, `/services/new`, `/services/[id]/edit` |
+| Customer UI | Full-width 50/50 **Book Appointment / Catalogue** switch on `/b/<slug>` and `/s/<slug>` (tab list, keyboard + screen-reader support), shareable as `?view=catalogue`; "Book this service" carries the service into booking |
+| Booking | `POST /api/public/bookings` accepts `serviceId`; it is re-checked (published, right barber/shop, catalogue on) **before** a seat is taken, and a snapshot is saved with the booking. Barbers see the service on the appointment card and in the phone notification. |
+
+**Plans** (from the amount the admin records per barber; `limitsFor` in `catalogue.ts`): Free 3 categories / 10 published services / 2 pictures / no video; Premium (amount > 0) 15 / 100 / 6 / 1 video; Business (amount ≥ ₹1500, adjustable constant) 100 / 500 / 10 / 3. Admin → Manage Stores has a **Catalogue** on/off switch per barber (data is kept when off).
+
+### Media, branding and share card (Phase 2)
+
+| Part | How it works |
+|---|---|
+| Pictures | Owner picks a photo; the browser shrinks anything over ~3.5 MB (a serverless function only receives ~4.5 MB), `POST /api/barber/catalogue/media` checks the **real file type from its bytes** (JPEG/PNG/WebP only; SVG/HTML/GIF refused), rejects pictures under 64 px or over 50 megapixels, applies camera rotation, **strips all metadata incl. GPS**, and stores a WebP (longest side 1600 px) plus a 480 px thumbnail |
+| Videos | MP4/MOV, 50 MB max, 5–120 s (30 s recommended). The phone uploads **straight to R2** with a 15-minute presigned URL (`POST .../media/video`), then `POST .../media/video/confirm` checks the real size, the `ftyp` header and the length (read from the `mvhd` box, also when the header is at the end of the file). Anything wrong is deleted at once |
+| Storage | `src/lib/mediaStorage.ts`. **Cloudflare R2** when configured, otherwise pictures are kept in MongoDB (`MediaBlob`) and served by `/api/public/media/<key>` (fine to start; videos need R2). Keys are `barber/<barber|shop>/<ownerId>/<uuid>.<ext>` – this app's own prefix only |
+| Limits | Per plan storage: Free 25 MB, Premium 500 MB, Business 2000 MB (`maxMediaMB`), checked on every upload; videos need a paid plan |
+| Cleanup | Deleting a file removes it from storage **and** from the owner's services/logo/cover. The daily cron deletes unfinished uploads and files nothing uses after 1 hour (`cleanupMedia`) |
+| Branding & theme | Logo, cover, accent colour, **layout** (cards/list) and **picture shape** (tall/square/wide) in `/dashboard/catalogue` → Branding |
+| Share card | `/b/<slug>/opengraph-image` and `/s/<slug>/opengraph-image` (1200×630 PNG: name, number of services, "from ₹X", accent colour, cover if it is an absolute address). The link preview text also states "N services from ₹X". The built-in card font has no Indic letters, so names in Hindi/Gujarati/Marathi fall back to "Book your slot" on the picture (the preview *text* keeps the real name) |
+
+**Set-up (R2, optional but needed for video)** – create a NEW bucket and a NEW API token limited to it for this app, then set (Vercel → Environment Variables): `R2_ENDPOINT` (`https://<account>.r2.cloudflarestorage.com`), `R2_BUCKET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_PUBLIC_BASE_URL` (the bucket's public address, no trailing slash). Add a CORS rule on the bucket that allows `PUT` and the header `Content-Type` from your site's origin, otherwise phone video uploads are blocked by the browser. Never reuse another project's bucket or keys.
+
+**Honest limits:** thumbnails are stored and listed but the public cards currently load the full 1600 px picture; there is no video transcoding or poster frame (the owner's file is served as is, so keep clips short); moving between R2 and the MongoDB fallback does not migrate old files; pictures served from MongoDB use the database's bandwidth, so switch to R2 before heavy use.
+
+### Plans, payments and renewals (Phase 3)
+
+Money is collected **outside the app** (cash, UPI, bank); the admin records it and the app tracks what it buys. The app never holds customer or barber money.
+
+| Part | How it works |
+|---|---|
+| Plan rules in one place | `src/lib/plans.ts`: tier from the monthly amount (0 = Free, any amount = Premium, ≥ the admin's Business amount = Business), `subscriptionState()` → `FREE / ACTIVE / GRACE / EXPIRED`, IST date maths on `YYYY-MM-DD` strings (31 Jan + 1 month = 28/29 Feb) |
+| Subscription fields | `User.planEndsOn` (last covered day), `lastPaymentAt`, `planReminderOn`; `premiumAmount` stays the monthly price. **Barbers with a price but no payment recorded yet keep the old behaviour**: the end date is the monthly due day and rolls forward, so nobody is cut off before the admin starts recording |
+| Payment history | `PlanPayment` (amount, months, method UPI/CASH/BANK/OTHER/COMPLIMENTARY, reference, note, period start/end, who recorded). Rows are never edited or deleted; a mistake is **voided** with a reason and stays visible |
+| Admin APIs | `GET/POST /api/admin/barbers/[id]/payments`, `POST .../payments/[paymentId]/void`, `GET/PUT /api/admin/plans` |
+| Extending | A payment covers N months starting the day after the current end (paying early loses nothing) or today if already ended. Done with a compare-and-set, so a double click / two admins cannot add the same months twice (second gets 409) |
+| Grace period | Admin-set (default 7 days). During grace everything paid keeps working. After it: **Free limits apply**, the public page shows only what Free allows, and a hidden service cannot be booked by id. **Nothing is deleted**; recording a payment brings it all back at once |
+| Limits editable by admin | Admin → Settings → **Plans and limits**: categories, published services, pictures/service, videos/service and storage per tier, the Business price and the grace days (all validated, bounded, 30 s cache) |
+| Reminders | Barber dashboard: a slim dismissible notice (no pop-up) in the last 3 days, shown at most 3 times a day, and during grace; after expiry it stays as a quiet one-line notice. The daily job also pushes one notification per day (3 days before until the end of grace; not after). Settings shows the plan card with end date and payment history |
+| Audit trail | `AuditLog` now also records: payment recorded / voided, plan settings changed, and before/after of a barber's price, due day, catalogue switch, suspension and link limit; shown under Admin → Settings → Recent Admin Actions |
+
+**Honest limits:** voiding an older payment while later ones exist keeps the latest end date (periods are not re-chained); if the only payment is voided the barber goes back to the old due-day behaviour; push reminders are English only (the in-app notice is translated); there is no automatic payment collection or invoice/GST receipt; `videoUploadsEnabled` / `maxVideoDurationSeconds` from the plan are not separate switches (video length is fixed at 5–120 s, and a plan with 0 videos blocks videos).
+
+### Growth features (Phase 4)
+
+| Part | How it works |
+|---|---|
+| Analytics | `GET /api/barber/analytics?range=7|30|90[&scope=shop]`, page `/dashboard/analytics`. **Free = counts** (bookings, completed, cancelled, no-shows, no-show rate, bookings per day, upcoming). **Premium and up = advanced**: revenue (completed visits with a catalogue price, the price saved at booking time, so it is *not* a full till), top services, new vs returning customers, busiest hours and weekdays. Plan checked on the server, the Free response contains no revenue data at all. Bookings removed by the admin's old-booking cleanup are not counted |
+| Offers | `Offer` (title, % or ₹ off, start/end IST dates, all services or chosen ones, Active/Paused). APIs `/api/barber/catalogue/offers[/id]`, page `/dashboard/catalogue/offers`. Live offers show as a strip on the customer catalogue; each service gets **the better of its own discount and the offer**, and **the booking saves that price**. "Ask shop" prices are never discounted. Live offers per plan: Free 1 / Premium 10 / Business 50 (admin-editable); paused or ended offers do not count |
+| Customer opt-in messages | No customer accounts: a customer taps **Get offers from …** on the catalogue, the browser asks permission and the *device* is saved (`CustomerPush`, per barber/shop). The same button turns it off. The owner writes a ≤120-letter message (optionally about a live offer) and sends it from the Offers page: only to opted-in devices, **plan limit per rolling 7 days (Free 0 / Premium 2 / Business 5, admin-editable)**, **at most one message per phone per day**, a confirmation step, the weekly slot is reserved before sending (two clicks cannot both pass), dead devices (410) are removed. History in `Campaign`. Needs the VAPID variables; without them the owner sees "not set up" |
+| Staff permissions | The shop owner chooses per barber **Edit catalogue** and **See shop numbers** (Shop → Staff access). Premium owner = basic staff (services, categories, pictures, offers); Business owner = full staff (also branding, on/off switch, customer messages, shop numbers). Plans and limits always follow the *owner*; if the owner's plan lapses staff access stops at once (grants are kept); leaving or being removed from the shop deletes the grant. Changes go to the audit log |
+| Saved services | A heart on each service card, kept **on the customer's own phone** (localStorage), with a "Saved (n)" filter. Nothing is sent to the server |
+| Growth panel | New cards: Cloudflare R2 storage used by barbers vs the 10 GB free allowance (or "not set up", with MongoDB picture size), and how many customer devices opted in |
+
+**Honest limits:** loyalty points/stamps are **not built** (they need to recognise a customer across visits, which means customer accounts: the plan says that needs separate approval); saved services are per device, not per person; provider cards show configuration and what the app itself measures, not live numbers from the Vercel/Atlas/Pusher/Upstash/Cloudflare billing APIs (their dashboards are linked; no provider tokens are stored); customer messages are one text line (no images or scheduling); push delivery depends on the browser (iPhone needs the app added to the Home Screen); offer discounts are shown on the customer price but there is no coupon code or per-customer limit; analytics are per barber/shop, not per staff member; the opt-in list is per device and a phone used by a barber and a customer on the same browser shares one push subscription.
+
+**Not built yet:** loyalty/stamps, per-staff analytics, scheduled or recurring campaigns, coupon codes, live usage from provider billing APIs. The service **duration is stored and shown but does not yet change slot availability** (slots stay on the barber's fixed grid).

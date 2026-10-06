@@ -1,5 +1,6 @@
 "use client";
 
+import { PlanCard } from "@/components/PlanCard";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,7 @@ import { AlertTriangle, LogOut, Share2 } from "lucide-react";
 import { shareOrCopy } from "@/lib/shareLink";
 import { MyBarberCode } from "@/components/dashboard/MyBarberCode";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 const formatTimeInput = (input: string, isEndTime: boolean): string => {
   if (!input) return "";
@@ -230,6 +232,18 @@ export default function SettingsPage() {
 
       <MyBarberCode />
 
+      {/* Premium catalogue: a separate management page, never a big editor inside Settings. */}
+      <section className="bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-4" aria-labelledby="catalogue-card-title">
+        <h2 id="catalogue-card-title" className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">{t('settingsCatalogueTitle')}</h2>
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">{t('settingsCatalogueDesc')}</p>
+        <Link href="/dashboard/catalogue" className="inline-flex h-11 items-center justify-center rounded-lg bg-zinc-900 px-5 text-sm font-semibold text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-900">
+          {t('settingsCatalogueBtn')}
+        </Link>
+        <Link href="/dashboard/analytics" className="ml-2 inline-flex h-11 items-center justify-center rounded-lg border border-zinc-300 px-5 text-sm font-semibold text-zinc-800 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-100">
+          Your numbers
+        </Link>
+      </section>
+
       {/* Profile Settings */}
       <div className="bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-6">
         <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">{t('setPublicProfile')}</h2>
@@ -240,20 +254,7 @@ export default function SettingsPage() {
           <p className="text-xs text-zinc-500">{t('setNameHint')}</p>
         </div>
 
-        <div className="space-y-2">
-          <Label>{t('setPremium')}</Label>
-          <div className="flex items-center gap-3">
-            <Input disabled value={`₹${profile?.premiumAmount || 0} / month`} className="bg-zinc-50 text-zinc-800 font-semibold dark:bg-zinc-950 dark:text-zinc-200 w-48" />
-            <span className="text-sm font-medium bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full">
-              {profile?.premiumAmount > 0 ? t('setPremiumActive') : t('setFreeTier')}
-            </span>
-          </div>
-          <p className="text-xs text-zinc-500">
-            {profile?.premiumAmount > 0 
-              ? t('setPremiumDue').replace('{day}', String(profile?.premiumDueDay || 28))
-              : t('setSetByAdmin')}
-          </p>
-        </div>
+        <PlanCard dueDay={profile?.premiumDueDay || 28} />
 
         <div className="space-y-2">
           <Label>{t('setBio')}</Label>

@@ -3,7 +3,7 @@
 Sign in at `/login` with the admin code and password. The admin area is at `/admin`. Barbers cannot open it.
 
 ## 0. Before anything else
-- **Creating the admin:** `scripts/create-admin.ts` makes the first admin, using a fixed code and password written in the file. Anyone who has seen that file knows them. After your first login, go to **Settings → Change My Password** and set your own.
+- **Creating the first admin:** run `ADMIN_CODE=<code> ADMIN_PASSWORD='<a long private password>' npx tsx scripts/create-admin.ts`. The code and password come from the command line (nothing secret is stored in the script), and the script tells you which database it is about to change. Then change the password at **Settings → Change My Password**.
 - **Staying signed in:** a login lasts 7 days.
 
 ## 1. Overview (`/admin`)
@@ -20,6 +20,9 @@ Manage each barber here.
 - **Premium (₹) and Due Date:** record the amount a barber pays and the day of the month it is due.
 - **Link limit / month:** how many bookings per month can come through that barber's link. Empty means the platform default.
 - **Reset Password:** use it when a barber is locked out, then tell them the new password.
+- **Catalogue:** a switch per barber for the Premium Catalogue (on by default). Switching it off hides the catalogue from customers and stops the barber editing it; nothing is deleted. A barber's catalogue size follows the amount in **Premium (₹)**: nothing = Free, any amount = Premium, ₹1500 or more = Business. Barbers can upload pictures (and, with Premium, short videos); storage per barber is Free 25 MB / Premium 500 MB / Business 2000 MB. Videos only work after you connect Cloudflare R2 (see PROJECT.md, "Media, branding and share card").
+- **Plans and payments:** set the barber's monthly **Premium (₹)**, then open **Payments** in their row after you receive the money and record the amount, months and how it was paid (a mistake can be voided with a reason; it stays in the history). The plan end date moves forward by the months paid. Barbers are reminded in the last 3 days; after the plan ends they get a grace period (default 7 days, changeable in Settings → Plans and limits) and then fall back to the Free limits. Nothing they created is deleted, and recording a payment brings it back immediately. Every payment, void, price change and plan-size change appears under Settings → Recent Admin Actions.
+- **Plan features:** besides catalogue sizes, Settings → Plans and limits now sets **live offers** and **messages to customers per week** for each plan. Advanced numbers (revenue, top services, busy times) are part of Premium and Business. Shop owners decide which of their barbers can help edit the shop catalogue; that needs a Premium plan (and a Business plan for staff to see numbers and send messages). Customer messages only work when the phone-notification (VAPID) variables are set, and only reach customers who chose "Get offers" on the page.
 
 ## 3. Shops (`/admin/shops`)
 - **Add or remove members:** type a barber code (for example `b002`) and press add.

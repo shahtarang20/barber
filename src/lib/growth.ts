@@ -1,3 +1,6 @@
+import { MediaAsset } from "@/models/MediaAsset";
+import { CustomerPush } from "@/models/CustomerPush";
+import { r2Config } from "@/lib/mediaConfig";
 import { AppSetting } from "@/models/AppSetting";
 import { Shop } from "@/models/Shop";
 import { User } from "@/models/User";
@@ -178,6 +181,22 @@ export async function computeGrowth() {
   items.push(isPushConfigured
     ? { kind: "status", key: "vapid", label: "Phone notifications (barbers)", value: "switched on", pct: 0, level: "ok", advice: "Fine." }
     : { kind: "status", key: "vapid", label: "Phone notifications (barbers)", value: "not set up on this server", pct: 0, level: "warn", advice: "Barbers will not get new-booking alerts on their phone. Add the VAPID variables in Vercel and redeploy." });
+
+  // --- Pictures and videos (Cloudflare R2 when set up, otherwise pictures live in MongoDB) ---
+  const [mediaAgg, customerDevices] = await Promise.all([
+    MediaAsset.aggregate([{ $group: { _id: "$driver", bytes: { $sum: { $add: ["$sizeBytes", { $ifNull: ["$thumbSizeBytes", 0] }] } }, n: { $sum: 1 } } }]),
+    CustomerPush.estimatedDocumentCount(),
+  ]);
+  const bytesOf = (d: string) => mediaAgg.find((m) => m._id === d)?.bytes ?? 0;
+  const R2_FREE_GB = 10; // Cloudflare R2's free allowance is 10 GB of storage
+  if (r2Config()) {
+    const gb = bytesOf("R2") / 1024 ** 3, pct = Math.round((gb / R2_FREE_GB) * 100);
+    items.push({ kind: "meter", key: "r2", label: "Cloudflare R2 storage (pictures and videos)", value: `${gb.toFixed(2)} GB stored by barbers of the ${R2_FREE_GB} GB free allowance (${(mediaAgg.find((m) => m._id === "R2")?.n ?? 0).toLocaleString("en-IN")} files)`, pct, level: level(pct), advice: pct >= 70 ? "Close to the free allowance. Paid R2 storage is cheap, but check the bill on the Cloudflare dashboard, and lower the storage per plan in Settings → Plans and limits if needed." : "Fine. Cloudflare's dashboard shows the exact bill and downloads.", link: "https://dash.cloudflare.com" });
+  } else {
+    const mb = bytesOf("MONGO") / 1024 ** 2;
+    items.push({ kind: "status", key: "r2Off", label: "Cloudflare R2 (pictures and videos)", value: `not set up: ${mb.toFixed(1)} MB of pictures are kept inside MongoDB, videos are switched off`, pct: 0, level: mb > 100 ? "warn" : "ok", advice: "Fine to start. Pictures in MongoDB use your database storage and bandwidth, so set up R2 (see PROJECT.md, Media) before many barbers upload, and to allow videos.", link: "https://dash.cloudflare.com" });
+  }
+  items.push({ kind: "status", key: "customerPush", label: "Customer offer notifications", value: `${customerDevices.toLocaleString("en-IN")} customer devices opted in${isPushConfigured ? "" : " (phone notifications are not set up, so nothing can be sent)"}`, pct: 0, level: isPushConfigured ? "ok" : "warn", advice: isPushConfigured ? "Fine. Each barber is limited per plan and each phone gets at most one message a day." : "Add the VAPID variables in Vercel and redeploy." });
 
   // --- Things only their own dashboards can show: "I checked it" reminders ---
   const manual: { key: (typeof CHECK_KEYS)[number]; label: string; what: string; link: string }[] = [

@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import connectToDatabase from "@/lib/mongodb";
 import { User } from "@/models/User";
+import { loadShareInfo } from "@/lib/shareCard";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
@@ -10,7 +11,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
   const storeName = barber?.name || "Barber Shop";
   const title = `Book ${storeName}`;
-  const description = barber?.bio || `Book your next haircut at ${storeName}.`;
+  const share = await loadShareInfo("BARBER", slug).catch(() => null);
+  const menu = share && share.services > 0 ? `${share.services} service${share.services === 1 ? "" : "s"}${share.fromPrice !== null ? ` from ₹${share.fromPrice}` : ""}. ` : "";
+  const description = `${menu}${barber?.bio || `Book your next haircut at ${storeName}.`}`;
 
   return {
     title,

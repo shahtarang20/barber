@@ -3,6 +3,7 @@ import { requireAuth } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import { User } from "@/models/User";
 import { Booking } from "@/models/Booking";
+import { getPlansConfig, subscriptionState } from "@/lib/plans";
 import { barberLinkUsage, getDefaultLinkLimit } from "@/lib/linkLimit";
 
 export async function GET(req: Request) {
@@ -42,12 +43,14 @@ export async function GET(req: Request) {
     ]);
     const countByBarber = new Map<string, number>(counts.map((c) => [String(c._id), c.count]));
     const defaultLinkLimit = await getDefaultLinkLimit();
+    const plansCfg = await getPlansConfig();
     const usages = await Promise.all(barbers.map((b) => barberLinkUsage(b._id, b.linkBookingLimit ?? null, defaultLinkLimit)));
     const barbersWithStats = barbers.map((barber, i) => ({
       ...barber,
       bookingCount: countByBarber.get(String(barber._id)) ?? 0,
       linkUsed: usages[i].used,
       linkLimitEffective: usages[i].limit,
+      plan: subscriptionState(barber, plansCfg),
     }));
 
     return NextResponse.json({

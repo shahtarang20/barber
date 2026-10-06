@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import { Slot } from "@/models/Slot";
+import { loadServiceForBooking } from "@/lib/cataloguePublic";
 import { createConfirmedBooking } from "@/lib/createBooking";
 import { Booking } from "@/models/Booking";
 import { z } from "zod";
@@ -30,6 +31,8 @@ const bookingSchema = z.object({
   notes: z.string().max(500, "Notes must be 500 characters or fewer").optional(),
   // Set by the shop page, so the booking counts against the shop link's monthly limit.
   shopSlug: z.string().max(80).optional(),
+  // A catalogue service the customer chose ("Book this service"). Checked again here and saved with the booking.
+  serviceId: z.string().max(40).optional(),
 });
 
 export async function POST(req: Request) {
@@ -48,7 +51,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: { message: result.error.issues[0].message } }, { status: 400 });
     }
 
-    const { slotId, name, phone, notes, shopSlug } = result.data;
+    const { slotId, name, phone, notes, shopSlug, serviceId } = result.data;
     if (!mongoose.isValidObjectId(slotId)) {
       return NextResponse.json({ success: false, error: { code: "SLOT_ALREADY_BOOKED", message: "Sorry, this slot is fully booked or unavailable. Please choose another time." } }, { status: 409 });
     }
@@ -72,6 +75,15 @@ export async function POST(req: Request) {
           if ((await shopLinkUsage(shop._id)).closed) return linkClosedResponse;
           viaShopId = shop._id;
         }
+      }
+    }
+
+    // The chosen catalogue service must still be valid for this barber (checked BEFORE a seat is taken, so nothing needs undoing).
+    let service: Awaited<ReturnType<typeof loadServiceForBooking>> = null;
+    if (serviceId && slotOwner) {
+      service = await loadServiceForBooking(serviceId, slotOwner.barberId, viaShopId);
+      if (!service) {
+        return NextResponse.json({ success: false, error: { code: "SERVICE_UNAVAILABLE", message: "This service is no longer available. Please choose another service or book without one." } }, { status: 409 });
       }
     }
 
@@ -133,7 +145,7 @@ export async function POST(req: Request) {
     }
 
     try {
-      const { booking: newBooking, customer } = await createConfirmedBooking(slot, name, phone, notes, { viaLink: true, viaShopId });
+      const { booking: newBooking, customer } = await createConfirmedBooking(slot, name, phone, notes, { viaLink: true, viaShopId }, service ?? undefined);
 
       // Customers booking at the very same moment can slip past the check above; settle it by order.
       if (await isOverLinkLimit(newBooking._id, slot.barberId, viaShopId)) {
@@ -148,7 +160,7 @@ export async function POST(req: Request) {
       notifyBarber(slot.barberId.toString(), "BOOKINGS_UPDATED");
       await pushToBarber(slot.barberId.toString(), {
         title: "New booking",
-        body: `${customer.name} booked ${newBooking.startTime} on ${newBooking.date}`,
+        body: `${customer.name} booked ${newBooking.startTime} on ${newBooking.date}${service ? ` for ${service.name}` : ""}`,
       });
 
       // First-come position within this time slot (cancelled bookings don't count).
@@ -165,7 +177,8 @@ export async function POST(req: Request) {
           bookingNumber: newBooking.bookingNumber,
           date: newBooking.date,
           startTime: newBooking.startTime,
-          customerName: customer.name
+          customerName: customer.name,
+          ...(service ? { serviceName: service.name } : {}),
         } 
       }, { status: 201 });
 
