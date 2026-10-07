@@ -453,6 +453,24 @@ Money is collected **outside the app** (cash, UPI, bank); the admin records it a
 
 **Honest limits:** voiding an older payment while later ones exist keeps the latest end date (periods are not re-chained); if the only payment is voided the barber goes back to the old due-day behaviour; push reminders are English only (the in-app notice is translated); there is no automatic payment collection or invoice/GST receipt; `videoUploadsEnabled` / `maxVideoDurationSeconds` from the plan are not separate switches (video length is fixed at 5–120 s, and a plan with 0 videos blocks videos).
 
+### Customer data isolation (audited)
+
+Rule: a customer's details (name, phone, notes, bookings, visit history) are visible only to **their shop/barber**, to **the customer** (Booking ID + phone) and to **the admin**. Checked by reading every route that touches customer data and by a live black-box test with two shops, a solo barber, an outsider and an admin (`isolation` test, 96 checks):
+
+| Area | How it is enforced |
+|---|---|
+| Barber lists (bookings, customers, notes, analytics) | Always filtered by the signed-in barber id (token), never by an id sent by the browser |
+| Shop customer list | `src/lib/shopCustomers.ts`: customers of the **current members** of one shop only; private notes never included; one function shared by the shop's barbers and the admin |
+| Actions on a booking, slot or customer note | Ownership checked on every call (another shop gets 403/404 and nothing changes) |
+| Same phone at two shops | Customer records are keyed by phone + name; per-barber data (notes, visit counts) is keyed by barber id, so each shop sees only its own |
+| Public pages and APIs | Never contain names, phones, notes, holds or waitlist; Booking ID + phone lookups give one identical "not found" for wrong ID, wrong phone or another shop's customer; per-minute and **daily per-phone** attempt limits stop guessing |
+| Live updates (Pusher) | Private channel per barber, authorised only for your own id. **Events carry only a type and an alert id, never a name or phone**: details are kept for 15 minutes on our server (`DashboardAlert`) and only that barber can open them (`/api/barber/alerts/[id]`) |
+| Push notifications | Go only to that barber's devices; the device is forgotten on logout so a shared phone never shows the previous barber's customers |
+| Joining a shop | The invitation screen warns that the owner and the other barbers will see the joining barber's customers (names, phones, visits; never private notes); leaving ends that |
+| Admin | Shop name first, that shop's customers under it (Admin → Multi-Barber Shops → open a shop); bookings list shows the shop name and can be searched by shop name |
+
+**Decisions left to you:** the shop view is shop-wide by design (every member sees all the shop's customers); the public barber directory shows barber codes (which are also login usernames); the waitlist route says "already on the waitlist" for a known slot and phone.
+
 ### Visitor cap per link (unique IP addresses)
 
 Besides the monthly **booking** cap (`linkLimit.ts`, unchanged), the admin can cap how many **different visitors (unique IP addresses)** may open a link in a month.

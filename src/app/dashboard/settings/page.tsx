@@ -1,5 +1,6 @@
 "use client";
 
+import { forgetPushOnThisDevice } from "@/lib/forgetPushOnLogout";
 import { PlanCard } from "@/components/PlanCard";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -111,6 +112,7 @@ export default function SettingsPage() {
   const handleLogout = async () => {
     setLoggingOut(true);
     try {
+      await forgetPushOnThisDevice();
       await fetch("/api/auth/logout", { method: "POST" });
     } finally {
       router.push("/login");

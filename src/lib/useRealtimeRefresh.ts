@@ -64,7 +64,16 @@ export function useRealtimeRefresh(onUpdate: (event?: { type: string; data?: any
       });
 
       const channel = pusher.subscribe(channelName);
-      channel.bind("update", (event?: { type: string; data?: any }) => {
+      channel.bind("update", async (event?: { type: string; alertId?: string; data?: any }) => {
+        // Events never carry customer details; if there is something to show, fetch it from our own server (this barber only).
+        if (event?.alertId) {
+          try {
+            const res = await fetch(`/api/barber/alerts/${event.alertId}`);
+            const json = await res.json();
+            onUpdateRef.current(json?.success ? { type: json.data.type, data: json.data.data } : { type: event.type });
+          } catch { onUpdateRef.current({ type: event.type }); }
+          return;
+        }
         onUpdateRef.current(event);
       });
       channel.bind("pusher:subscription_error", () => {

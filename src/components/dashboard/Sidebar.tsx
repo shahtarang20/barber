@@ -1,5 +1,6 @@
 "use client";
 
+import { forgetPushOnThisDevice } from "@/lib/forgetPushOnLogout";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { CalendarDays, Settings, Users, Link as LinkIcon, LogOut, Store } from "lucide-react";
@@ -12,6 +13,7 @@ export function Sidebar() {
   const { t } = useTranslation();
 
   const handleLogout = async () => {
+    await forgetPushOnThisDevice();
     await fetch("/api/auth/logout", { method: "POST" });
     router.push("/login");
     router.refresh();

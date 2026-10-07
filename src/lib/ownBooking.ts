@@ -1,6 +1,7 @@
 import { Booking } from "@/models/Booking";
 import { Customer } from "@/models/Customer";
 import { normalizePhone } from "@/lib/phone";
+import { rateLimit } from "@/lib/rateLimit";
 
 /**
  * Finds a booking from Booking ID + phone. Returns null for both "no such
@@ -19,4 +20,13 @@ export async function findOwnBooking(bookingNumber: string, phone: string) {
   const customer = await Customer.findById(booking.customerId);
   if (!customer || customer.phone !== normalizePhone(phone)) return null;
   return { booking, customer };
+}
+
+/**
+ * A daily ceiling on Booking ID + phone attempts for one phone number (lookup, cancel and reschedule together). On top of
+ * the per-minute limits, it stops someone who only knows a victim's phone from slowly guessing booking IDs for days.
+ * A real customer never needs more than a handful of tries in a day.
+ */
+export async function withinDailyOwnBookingLimit(phone: string): Promise<boolean> {
+  return rateLimit(`own-booking-day:${normalizePhone(phone)}`, 40, 24 * 60 * 60_000);
 }

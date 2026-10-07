@@ -10,7 +10,7 @@ import { normalizePhone } from "@/lib/phone";
 import { minutesUntilSlot } from "@/lib/istTime";
 import { notifyBarber } from "@/lib/realtime";
 import { pushToBarber } from "@/lib/push";
-import { findOwnBooking } from "@/lib/ownBooking";
+import { findOwnBooking, withinDailyOwnBookingLimit } from "@/lib/ownBooking";
 import { freeSlotSeat } from "@/lib/cancelBooking";
 import { heldByOthersExpr } from "@/lib/waitlistHold";
 
@@ -39,6 +39,9 @@ export async function POST(req: Request) {
     }
     if (!(await rateLimit(`public-reschedule-phone:${normalizePhone(phone)}`, 5, 60_000))) {
       return NextResponse.json({ success: false, error: { code: "RATE_LIMITED", message: "Too many attempts. Please try again in a minute." } }, { status: 429 });
+    }
+    if (!(await withinDailyOwnBookingLimit(phone))) {
+      return NextResponse.json({ success: false, error: { code: "RATE_LIMITED", message: "Too many attempts for this phone number today. Please try again tomorrow or contact the barber." } }, { status: 429 });
     }
 
     await connectToDatabase();

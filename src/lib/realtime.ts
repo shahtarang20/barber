@@ -1,6 +1,7 @@
 import Pusher from "pusher";
 import { after } from "next/server";
 import { trackUsage } from "@/lib/usage";
+import { DashboardAlert } from "@/models/DashboardAlert";
 
 // Initialize Pusher only if env vars are present
 let pusher: Pusher | null = null;
@@ -43,7 +44,11 @@ export async function notifyBarber(barberId: string, type: string, data?: Record
 
   const send = async () => {
     try {
-      await pusher!.trigger(barberChannel(barberId), "update", { type, data });
+      // Customer details (name, phone, waitlist) are NOT sent through the live-update service: they are kept briefly on our
+      // own server and the event carries only the id of that record, which only this barber can open.
+      let alertId: string | undefined;
+      if (data) alertId = String((await DashboardAlert.create({ barberId, type, data }))._id);
+      await pusher!.trigger(barberChannel(barberId), "update", alertId ? { type, alertId } : { type });
       trackUsage("pusher");
     } catch (error) {
       console.error("Failed to trigger Pusher event:", error);

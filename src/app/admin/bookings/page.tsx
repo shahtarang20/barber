@@ -50,7 +50,7 @@ export default function AdminBookingsPage() {
         type="search"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        placeholder="Search by Booking ID, customer name or phone, or barber name or code…"
+        placeholder="Search by Booking ID, customer name or phone, barber name or code, or shop name…"
         className="w-full h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-4 text-sm"
       />
 
@@ -65,6 +65,7 @@ export default function AdminBookingsPage() {
               <thead className="bg-zinc-50 dark:bg-zinc-900/50 text-zinc-500 dark:text-zinc-400 border-b border-zinc-200 dark:border-zinc-800">
                 <tr>
                   <th className="px-6 py-4 font-medium">Booking ID</th>
+                  <th className="px-6 py-4 font-medium">Shop</th>
                   <th className="px-6 py-4 font-medium">Store (Barber)</th>
                   <th className="px-6 py-4 font-medium">Customer</th>
                   <th className="px-6 py-4 font-medium">Date & Time</th>
@@ -75,6 +76,7 @@ export default function AdminBookingsPage() {
                 {bookings.map((b) => (
                   <tr key={b._id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
                     <td className="px-6 py-4 font-mono font-medium text-zinc-900 dark:text-zinc-100">{b.bookingNumber}</td>
+                    <td className="px-6 py-4 text-zinc-900 dark:text-zinc-100">{b.shopName ? <span className="font-medium">{b.shopName}</span> : <span className="text-zinc-400">Solo barber</span>}</td>
                     <td className="px-6 py-4">
                       <div className="text-zinc-900 dark:text-zinc-100 font-medium">{b.barberId?.name || "Unknown"}</div>
                       <div className="text-zinc-500 text-xs">{b.barberId?.barberCode || ""}</div>

@@ -48,9 +48,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       const entry = slot.waitlist.shift();
       waitlistCustomer = { name: entry.name, phone: entry.phone };
 
-      let customer = await Customer.findOne({ phone: entry.phone });
+      // Same rule as every other booking: phone AND name (case-insensitive), so a waitlisted customer is never
+      // attached to somebody else's record that merely shares the phone number.
+      let customer = await Customer.findOne({ phone: entry.phone, name: String(entry.name).trim() }).collation({ locale: "en", strength: 2 });
       if (!customer) {
-        customer = new Customer({ name: entry.name, phone: entry.phone });
+        customer = new Customer({ name: String(entry.name).trim(), phone: entry.phone });
         await customer.save();
       }
 

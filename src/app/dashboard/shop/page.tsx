@@ -237,6 +237,7 @@ export default function ShopPage() {
       {!shop && myInvites.length > 0 && (
         <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-900 rounded-2xl p-6 space-y-4">
           <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">{t('shopInvitedTitle')}</h2>
+          <p role="note" className="rounded-lg bg-white/70 p-3 text-sm text-zinc-700 dark:bg-zinc-900/50 dark:text-zinc-300">{t('shopJoinNotice')}</p>
           {myInvites.map((inv) => (
             <div key={inv._id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <p className="text-zinc-800 dark:text-zinc-200">

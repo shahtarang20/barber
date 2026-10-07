@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import connectToDatabase from "@/lib/mongodb";
 import { cancelBookingAndFreeSlot } from "@/lib/cancelBooking";
-import { findOwnBooking } from "@/lib/ownBooking";
+import { findOwnBooking, withinDailyOwnBookingLimit } from "@/lib/ownBooking";
 import { rateLimit, getClientIp } from "@/lib/rateLimit";
 import { normalizePhone } from "@/lib/phone";
 import { minutesUntilSlot } from "@/lib/istTime";
@@ -33,6 +33,9 @@ export async function POST(req: Request) {
     const phone = normalizePhone(parsed.data.phone);
     if (!(await rateLimit(`public-cancel-phone:${phone}`, 5, 60_000))) {
       return NextResponse.json({ success: false, error: { code: "RATE_LIMITED", message: "Too many attempts. Please try again in a minute." } }, { status: 429 });
+    }
+    if (!(await withinDailyOwnBookingLimit(phone))) {
+      return NextResponse.json({ success: false, error: { code: "RATE_LIMITED", message: "Too many attempts for this phone number today. Please try again tomorrow or contact the barber." } }, { status: 429 });
     }
 
     await connectToDatabase();

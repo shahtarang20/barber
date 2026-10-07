@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { PlanGrantPanel } from "@/components/admin/PlanGrantPanel";
+import { ShopCustomersPanel } from "@/components/admin/ShopCustomersPanel";
 import { showDate } from "@/lib/usePlan";
 import { toast } from "@/components/ui/toast";
 import { PaginationControls } from "@/components/ui/pagination-controls";
@@ -300,6 +301,8 @@ export default function AdminShopsPage() {
                               Delete Shop
                             </Button>
                           </div>
+
+                          <ShopCustomersPanel shopId={shop._id} shopName={shop.name} />
 
                           <PlanGrantPanel endpoint={`/api/admin/shops/${shop._id}/grant`} plan={shop.plan ? { ...shop.plan } : null} onChanged={fetchShops} label={`${shop.name} (owner ${shop.owner?.name ?? ""})`} />
 

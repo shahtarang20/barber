@@ -4,7 +4,7 @@ import connectToDatabase from "@/lib/mongodb";
 import { User } from "@/models/User";
 import { rateLimit, getClientIp } from "@/lib/rateLimit";
 import { normalizePhone } from "@/lib/phone";
-import { findOwnBooking } from "@/lib/ownBooking";
+import { findOwnBooking, withinDailyOwnBookingLimit } from "@/lib/ownBooking";
 
 const schema = z.object({
   bookingNumber: z.string().min(1, "Booking ID is required"),
@@ -23,6 +23,9 @@ export async function POST(req: Request) {
     }
     if (!(await rateLimit(`public-lookup-phone:${normalizePhone(parsed.data.phone)}`, 5, 60_000))) {
       return NextResponse.json({ success: false, error: { code: "RATE_LIMITED", message: "Too many attempts. Please try again in a minute." } }, { status: 429 });
+    }
+    if (!(await withinDailyOwnBookingLimit(parsed.data.phone))) {
+      return NextResponse.json({ success: false, error: { code: "RATE_LIMITED", message: "Too many attempts for this phone number today. Please try again tomorrow or contact the barber." } }, { status: 429 });
     }
 
     await connectToDatabase();
