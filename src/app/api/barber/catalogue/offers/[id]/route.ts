@@ -13,7 +13,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const serviceIds = await checkOffer(scope, parsed.data, id);
     const saved = await Offer.findOneAndUpdate(mine, { $set: { ...parsed.data, serviceIds } }, { new: true }).lean();
     return ok(saved);
-  }, { write: true });
+  }, { write: true, ownerOrFullOnly: true });
 }
 
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -22,5 +22,5 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     if (!isId(id)) return fail("Invalid offer.");
     const gone = await Offer.findOneAndDelete({ _id: id, ownerType: scope.ownerType, ownerId: scope.ownerId });
     return gone ? ok({ deleted: true }) : fail("Offer not found.", 404);
-  }, { write: true });
+  }, { write: true, ownerOrFullOnly: true });
 }

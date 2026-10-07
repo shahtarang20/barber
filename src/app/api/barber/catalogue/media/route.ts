@@ -12,6 +12,8 @@ export async function GET(req: Request) {
 /** Upload one picture (multipart field "file"). It is checked, resized, converted to WebP and a thumbnail is made. */
 export async function POST(req: Request) {
   return ownerRoute(req, async ({ scope }) => {
+    // Refuse an oversized body before the server reads any of it.
+    if (Number(req.headers.get("content-length") || 0) > IMAGE_MAX_UPLOAD_BYTES + 512 * 1024) return fail("That picture is too large. Please choose a smaller one.", 413);
     const form = await req.formData().catch(() => null);
     const file = form?.get("file");
     if (!(file instanceof File)) return fail("Please choose a picture.");

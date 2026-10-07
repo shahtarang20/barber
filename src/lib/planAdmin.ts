@@ -61,3 +61,36 @@ export async function voidPayment(barberId: string, paymentId: string, reason: s
   await audit(admin, "PLAN_PAYMENT_VOIDED", user, { paymentId, amount: payment.amount, periodEnd: payment.periodEnd, reason });
   return payment;
 }
+
+export interface GrantInput { tier: "PREMIUM" | "BUSINESS" | "NONE"; months?: number; until?: string }
+
+/**
+ * Free access to a paid plan given by the admin, without a payment (a gift, a trial, a partner). It does not touch the
+ * barber's price or payment history; it simply counts as that plan until the last day, and the plan in force is whichever
+ * is better (this or what the barber pays for). "NONE" takes it away. For a shop, the plan always belongs to its owner.
+ */
+export async function setGrant(userId: string, input: GrantInput, admin: Admin, shopName?: string) {
+  if (!mongoose.isValidObjectId(userId)) throw new PlanError(400, "Invalid barber.");
+  const user = await User.findOne({ _id: userId, role: "BARBER" }).select("name grantedTier grantedUntil").lean<{ _id: mongoose.Types.ObjectId; name: string; grantedTier?: string; grantedUntil?: string } | null>();
+  if (!user) throw new PlanError(404, "Barber not found.");
+  const before = { tier: user.grantedTier ?? null, until: user.grantedUntil ?? null };
+  if (input.tier === "NONE") {
+    await User.updateOne({ _id: user._id }, { $unset: { grantedTier: 1, grantedUntil: 1 } });
+    await audit(admin, "PLAN_GRANT_REMOVED", user, { before, ...(shopName ? { shop: shopName } : {}) });
+    return { tier: null, until: null };
+  }
+  const today = getTodayISTString();
+  let until: string;
+  if (input.until) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(input.until) || Number.isNaN(Date.parse(`${input.until}T00:00:00Z`))) throw new PlanError(400, "Choose a valid end date.");
+    if (input.until < today) throw new PlanError(400, "The end date cannot be in the past.");
+    if (input.until > addDaysStr(today, 365 * 3)) throw new PlanError(400, "Free access can be given for at most 3 years at a time.");
+    until = input.until;
+  } else {
+    const months = input.months ?? 1;
+    until = addDaysStr(addMonthsStr(today, months), -1);
+  }
+  await User.updateOne({ _id: user._id }, { $set: { grantedTier: input.tier, grantedUntil: until } });
+  await audit(admin, "PLAN_GRANTED", user, { tier: input.tier, until, before, ...(shopName ? { shop: shopName } : {}) });
+  return { tier: input.tier, until };
+}

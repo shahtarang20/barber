@@ -22,7 +22,7 @@ interface AuditEntry {
   action: string;
   actorName: string;
   targetName?: string;
-  metadata?: { bookingsDeleted?: number; after?: { enabled?: boolean; months?: number }; amount?: number; months?: number; periodEnd?: string; reason?: string; changed?: Record<string, { from: unknown; to: unknown }> };
+  metadata?: { bookingsDeleted?: number; after?: { enabled?: boolean; months?: number }; amount?: number; months?: number; periodEnd?: string; reason?: string; tier?: string; until?: string; shop?: string; changed?: Record<string, { from: unknown; to: unknown }> };
   createdAt: string;
 }
 
@@ -36,6 +36,8 @@ function describeAudit(entry: AuditEntry) {
   const m = entry.metadata;
   if (entry.action === "PLAN_PAYMENT_RECORDED") return `recorded ₹${m?.amount ?? 0} for ${entry.targetName ?? "a barber"} (${m?.months ?? "?"} month(s), plan now ends ${m?.periodEnd ?? "?"})`;
   if (entry.action === "PLAN_PAYMENT_VOIDED") return `voided a ₹${m?.amount ?? 0} payment for ${entry.targetName ?? "a barber"} (${m?.reason ?? "no reason"})`;
+  if (entry.action === "PLAN_GRANTED") return `gave ${entry.targetName ?? "a barber"}${m?.shop ? ` (shop ${m.shop})` : ""} free ${String(m?.tier ?? "").toLowerCase()} access until ${m?.until ?? "?"}`;
+  if (entry.action === "PLAN_GRANT_REMOVED") return `removed the free access of ${entry.targetName ?? "a barber"}${m?.shop ? ` (shop ${m.shop})` : ""}`;
   if (entry.action === "PLAN_SETTINGS_CHANGED") return "changed plan sizes / grace period";
   if (entry.action === "BARBER_SETTINGS_CHANGED") return `changed ${Object.entries(m?.changed ?? {}).map(([k, v]) => `${k} ${String(v.from)} → ${String(v.to)}`).join(", ") || "settings"} for ${entry.targetName ?? "a barber"}`;
   return entry.action.toLowerCase().replace(/_/g, " ");

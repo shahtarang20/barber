@@ -26,7 +26,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     if (!mongoose.isValidObjectId(id)) return fail("Invalid barber.");
     await connectToDatabase();
     const [user, payments, cfg] = await Promise.all([
-      User.findOne({ _id: id, role: "BARBER" }).select("name premiumAmount premiumDueDay planEndsOn lastPaymentAt").lean<{ premiumAmount?: number; premiumDueDay?: number; planEndsOn?: string } | null>(),
+      User.findOne({ _id: id, role: "BARBER" }).select("name premiumAmount premiumDueDay planEndsOn lastPaymentAt grantedTier grantedUntil").lean<{ premiumAmount?: number; premiumDueDay?: number; planEndsOn?: string } | null>(),
       PlanPayment.find({ barberId: id }).sort({ createdAt: -1 }).limit(100).lean(),
       getPlansConfig(),
     ]);

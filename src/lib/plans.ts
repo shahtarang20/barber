@@ -119,24 +119,39 @@ export interface SubscriptionState {
   estimated: boolean;
   /** Show renewal reminders: the last 3 days, the grace period, and after expiry. */
   reminder: boolean;
+  /** True when the tier in force comes from free access given by the admin (and `endsOn` is when that access ends). */
+  granted: boolean;
 }
 
-export interface PlanUser { premiumAmount?: number; premiumDueDay?: number; planEndsOn?: string }
+export interface PlanUser { premiumAmount?: number; premiumDueDay?: number; planEndsOn?: string; grantedTier?: string; grantedUntil?: string }
 
 /**
  * Where a barber stands. A paid plan with no recorded payment yet keeps the old behaviour (renews on the monthly due day,
  * never expires) so nobody is cut off before the admin starts recording payments.
  */
 export function subscriptionState(u: PlanUser, cfg: PlansConfig, today = getTodayISTString()): SubscriptionState {
+  const paid = paidState(u, cfg, today);
+  // Free access from the admin: applies when it is better than what the barber's own payments give right now.
+  const gt = u.grantedTier === "PREMIUM" || u.grantedTier === "BUSINESS" ? u.grantedTier : null;
+  if (gt && u.grantedUntil && u.grantedUntil >= today && RANK[gt] > RANK[paid.tier]) {
+    const daysLeft = daysBetween(today, u.grantedUntil);
+    return { ...paid, status: "ACTIVE", tier: gt, paidTier: RANK[gt] > RANK[paid.paidTier] ? gt : paid.paidTier, endsOn: u.grantedUntil, graceEndsOn: null, daysLeft, estimated: false, reminder: daysLeft <= REMINDER_DAYS, granted: true };
+  }
+  return paid;
+}
+
+const RANK: Record<Tier, number> = { FREE: 0, PREMIUM: 1, BUSINESS: 2 };
+
+function paidState(u: PlanUser, cfg: PlansConfig, today: string): SubscriptionState {
   const amount = Number(u.premiumAmount) || 0;
   const paidTier = tierFor(amount, cfg);
-  if (paidTier === "FREE") return { status: "FREE", paidTier, tier: "FREE", amount, endsOn: null, graceEndsOn: null, daysLeft: null, estimated: false, reminder: false };
+  if (paidTier === "FREE") return { status: "FREE", paidTier, tier: "FREE", amount, endsOn: null, graceEndsOn: null, daysLeft: null, estimated: false, reminder: false, granted: false };
   const estimated = !u.planEndsOn;
   const endsOn = u.planEndsOn || nextDueDate(today, Number(u.premiumDueDay) || 28);
   const graceEndsOn = addDaysStr(endsOn, cfg.graceDays);
   const daysLeft = daysBetween(today, endsOn);
   const status: PlanStatus = today <= endsOn ? "ACTIVE" : today <= graceEndsOn ? "GRACE" : "EXPIRED";
-  return { status, paidTier, tier: status === "EXPIRED" ? "FREE" : paidTier, amount, endsOn, graceEndsOn, daysLeft, estimated, reminder: status !== "ACTIVE" || daysLeft <= REMINDER_DAYS };
+  return { status, paidTier, tier: status === "EXPIRED" ? "FREE" : paidTier, amount, endsOn, graceEndsOn, daysLeft, estimated, reminder: status !== "ACTIVE" || daysLeft <= REMINDER_DAYS, granted: false };
 }
 
 export function limitsOf(tier: Tier, cfg: PlansConfig): PlanLimits {
@@ -150,7 +165,7 @@ export const staffLevel = (tier: Tier): "NONE" | "BASIC" | "FULL" => (tier === "
 /** The limits in force for one user right now (expired plans fall back to Free; nothing is deleted). */
 export async function effectivePlan(userId: string): Promise<{ limits: PlanLimits; state: SubscriptionState }> {
   const [u, cfg] = await Promise.all([
-    User.findById(userId).select("premiumAmount premiumDueDay planEndsOn").lean<PlanUser | null>(),
+    User.findById(userId).select("premiumAmount premiumDueDay planEndsOn grantedTier grantedUntil").lean<PlanUser | null>(),
     getPlansConfig(),
   ]);
   const state = subscriptionState(u || {}, cfg);

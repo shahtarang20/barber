@@ -33,7 +33,7 @@ export function StaffAccess({ members, ownerId, staff, level, onChanged }: { mem
     <section className="space-y-3 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-8" aria-labelledby="staff-heading">
       <h2 id="staff-heading" className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">Staff access</h2>
       <p className="text-sm text-zinc-500">
-        {level === "NONE" ? "Letting other barbers help with the shop catalogue is part of the Premium plan." : level === "BASIC" ? "Premium: staff you allow can add and edit the shop's services, categories and pictures. Business adds access to the shop numbers, branding and customer messages." : "Business: staff you allow can edit the shop catalogue and branding, send customer messages and see the shop numbers."}
+        {level === "NONE" ? "Letting other barbers help with the shop catalogue is part of the Premium plan." : level === "BASIC" ? "Premium: staff you allow can add and edit the shop's services, categories and pictures. Business adds branding, offers, customer messages and the shop numbers." : "Business: staff you allow can edit the shop catalogue and branding, run offers, send customer messages and see the shop numbers."}
       </p>
       <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
         {others.map((m) => {

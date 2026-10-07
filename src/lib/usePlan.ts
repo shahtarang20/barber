@@ -6,7 +6,7 @@ export interface PlanPaymentRow { _id: string; amount: number; months: number; m
 export interface BarberPlan {
   status: "FREE" | "ACTIVE" | "GRACE" | "EXPIRED";
   tier: "FREE" | "PREMIUM" | "BUSINESS"; paidTier: "FREE" | "PREMIUM" | "BUSINESS";
-  amount: number; endsOn: string | null; graceEndsOn: string | null; daysLeft: number | null; estimated: boolean; reminder: boolean; graceDays: number;
+  amount: number; endsOn: string | null; graceEndsOn: string | null; daysLeft: number | null; estimated: boolean; reminder: boolean; granted: boolean; graceDays: number;
   payments: PlanPaymentRow[];
 }
 

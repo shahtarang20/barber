@@ -8,9 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/toast";
 import { showDate } from "@/lib/usePlan";
+import { PlanGrantPanel } from "@/components/admin/PlanGrantPanel";
 
 interface Row { _id: string; amount: number; months: number; method: string; periodStart: string; periodEnd: string; status: "PAID" | "VOID"; reference?: string; note?: string; voidReason?: string; recordedByName: string; createdAt: string }
-interface Plan { status: string; paidTier: string; endsOn: string | null; graceEndsOn: string | null; daysLeft: number | null; estimated: boolean }
+interface Plan { status: string; tier: string; paidTier: string; granted: boolean; endsOn: string | null; graceEndsOn: string | null; daysLeft: number | null; estimated: boolean }
 
 async function api<T>(url: string, method: string, body?: unknown): Promise<T> {
   const res = await fetch(url, { method, headers: body ? { "Content-Type": "application/json" } : undefined, body: body ? JSON.stringify(body) : undefined });
@@ -74,6 +75,9 @@ function Panel({ barber, onClose, onChanged }: { barber: Barber; onClose: () => 
           </DialogDescription>
         </DialogHeader>
 
+        <PlanGrantPanel endpoint={`/api/admin/barbers/${barber._id}/grant`} plan={plan} onChanged={() => { load(); onChanged(); }} label={barber.name} />
+
+        <h3 className="text-sm font-semibold">Record a payment</h3>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1"><Label htmlFor="pay-amount">Amount paid (₹)</Label><Input id="pay-amount" type="number" min="0" value={amount} onChange={(e) => setAmount(e.target.value)} /></div>
           <div className="space-y-1"><Label htmlFor="pay-months">Months covered</Label><Input id="pay-months" type="number" min="1" max="24" value={months} onChange={(e) => setMonths(e.target.value)} /></div>

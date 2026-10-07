@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { PlanGrantPanel } from "@/components/admin/PlanGrantPanel";
+import { showDate } from "@/lib/usePlan";
 import { toast } from "@/components/ui/toast";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 
@@ -14,6 +16,9 @@ interface ShopRow {
   memberCount: number;
   owner: { name: string; barberCode: string } | null;
   createdAt: string;
+  /** The shop's plan and catalogue switch are its owner's. */
+  plan?: { status: string; tier: string; granted: boolean; endsOn: string | null } | null;
+  catalogueEnabled?: boolean;
 }
 
 interface ShopMember {
@@ -209,6 +214,12 @@ export default function AdminShopsPage() {
                       <p className="text-sm text-zinc-500 mt-1">
                         /s/{shop.slug} &middot; {shop.memberCount} barber{shop.memberCount === 1 ? "" : "s"} &middot; Owner: {shop.owner?.name || "Unknown"}
                       </p>
+                      <p className="mt-1 flex flex-wrap gap-2 text-xs">
+                        <span className={`rounded-full px-2 py-0.5 font-semibold ${shop.plan && shop.plan.tier !== "FREE" ? "bg-green-100 text-green-800" : "bg-zinc-100 text-zinc-600"}`}>
+                          {shop.plan ? `${shop.plan.tier.charAt(0)}${shop.plan.tier.slice(1).toLowerCase()}${shop.plan.granted ? " · free access" : ""}${shop.plan.tier !== "FREE" && shop.plan.endsOn ? ` · until ${showDate(shop.plan.endsOn)}` : ""}` : "Free"}
+                        </span>
+                        <span className={`rounded-full px-2 py-0.5 font-semibold ${shop.catalogueEnabled === false ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-800"}`}>Catalogue {shop.catalogueEnabled === false ? "off" : "on"}</span>
+                      </p>
                     </div>
                     <div className="ml-auto mr-4 text-right" onClick={(e) => e.stopPropagation()}>
                       <input
@@ -246,6 +257,17 @@ export default function AdminShopsPage() {
                             <Button variant="outline" size="sm" onClick={() => handleToggleActive(shop)} disabled={busy}>
                               {shop.isActive ? "Suspend Shop" : "Reactivate Shop"}
                             </Button>
+                            <Button variant="outline" size="sm" disabled={busy} onClick={async () => {
+                              setBusy(true);
+                              try {
+                                const res = await fetch(`/api/admin/shops/${shop._id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ catalogueEnabled: shop.catalogueEnabled === false }) });
+                                const d = await res.json();
+                                toast.add(d.success ? { title: "Done", description: `Catalogue ${shop.catalogueEnabled === false ? "switched on" : "switched off"} for this shop.`, type: "success" } : { title: "Error", description: d.error?.message || "Could not save", type: "error" });
+                                fetchShops();
+                              } finally { setBusy(false); }
+                            }}>
+                              {shop.catalogueEnabled === false ? "Switch catalogue on" : "Switch catalogue off"}
+                            </Button>
                             <Link href={`/s/${shop.slug}`} target="_blank">
                               <Button variant="outline" size="sm">View Public Page</Button>
                             </Link>
@@ -253,6 +275,8 @@ export default function AdminShopsPage() {
                               Delete Shop
                             </Button>
                           </div>
+
+                          <PlanGrantPanel endpoint={`/api/admin/shops/${shop._id}/grant`} plan={shop.plan ? { ...shop.plan } : null} onChanged={fetchShops} label={`${shop.name} (owner ${shop.owner?.name ?? ""})`} />
 
                           <div>
                             <label className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Members</label>

@@ -12,7 +12,7 @@ export async function GET() {
     if (!payload) return NextResponse.json({ success: false, error: { message: "Unauthorized" } }, { status: 401 });
     await connectToDatabase();
     const [u, cfg, payments] = await Promise.all([
-      User.findById(payload.userId).select("premiumAmount premiumDueDay planEndsOn lastPaymentAt").lean<{ premiumAmount?: number; premiumDueDay?: number; planEndsOn?: string } | null>(),
+      User.findById(payload.userId).select("premiumAmount premiumDueDay planEndsOn lastPaymentAt grantedTier grantedUntil").lean<{ premiumAmount?: number; premiumDueDay?: number; planEndsOn?: string } | null>(),
       getPlansConfig(),
       PlanPayment.find({ barberId: payload.userId, status: "PAID" }).sort({ createdAt: -1 }).limit(10).select("amount months method periodStart periodEnd createdAt").lean(),
     ]);

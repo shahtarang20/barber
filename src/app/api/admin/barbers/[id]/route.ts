@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import mongoose from "mongoose";
 import { requireAuth } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import { User } from "@/models/User";
@@ -16,7 +17,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const resolvedParams = await params;
     const { id } = resolvedParams;
 
-    const body = await req.json();
+    if (!mongoose.isValidObjectId(id)) return NextResponse.json({ success: false, error: { message: "Invalid barber." } }, { status: 400 });
+    const body = await req.json().catch(() => null);
+    if (!body || typeof body !== "object") return NextResponse.json({ success: false, error: { message: "Invalid request." } }, { status: 400 });
     const updateData: any = {};
 
     if (body.premiumAmount !== undefined) {

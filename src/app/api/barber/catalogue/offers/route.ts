@@ -18,5 +18,5 @@ export async function POST(req: Request) {
     const serviceIds = await checkOffer(scope, parsed.data);
     const offer = await Offer.create({ ...parsed.data, serviceIds, ownerType: scope.ownerType, ownerId: scope.ownerId });
     return ok(offer, 201);
-  }, { write: true });
+  }, { write: true, ownerOrFullOnly: true });
 }

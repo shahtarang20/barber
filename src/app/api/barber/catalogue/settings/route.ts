@@ -6,13 +6,13 @@ import { planFor, safeUrl } from "@/lib/catalogue";
 import { fail, ok, ownerRoute } from "@/lib/catalogueApi";
 import { notifyBarber } from "@/lib/realtime";
 
-const urlOrEmpty = z.string().max(500).optional().transform((v) => (v ?? "").trim());
+// A field that is not sent stays undefined (and is left alone); sending "" clears it. Never turn "missing" into "".
+const urlOrEmpty = z.string().max(500).optional().transform((v) => (v === undefined ? undefined : v.trim()));
 const schema = z.object({
   enabled: z.boolean().optional(),
-  logoUrl: urlOrEmpty, coverUrl: urlOrEmpty, mapUrl: urlOrEmpty,
+  logoUrl: urlOrEmpty, coverUrl: urlOrEmpty, mapUrl: urlOrEmpty, instagram: urlOrEmpty, facebook: urlOrEmpty,
   intro: z.string().max(400).optional(), address: z.string().max(200).optional(),
   phone: z.string().max(20).optional(), whatsapp: z.string().max(20).optional(),
-  instagram: z.string().max(200).optional(), facebook: z.string().max(200).optional(),
   accent: z.enum(["indigo", "emerald", "rose", "amber", "sky", "zinc"]).optional(),
   layout: z.enum(["grid", "list"]).optional(),
   imageRatio: z.enum(["portrait", "square", "wide"]).optional(),
@@ -37,12 +37,12 @@ export async function PUT(req: Request) {
     if (!parsed.success) return fail(parsed.error.issues[0].message);
     const d = parsed.data;
     const set: Record<string, unknown> = {};
-    for (const k of ["logoUrl", "coverUrl", "mapUrl"] as const) {
+    for (const k of ["logoUrl", "coverUrl", "mapUrl", "instagram", "facebook"] as const) {
       if (d[k] === undefined) continue;
       if (d[k] === "") set[k] = "";
       else { const u = safeUrl(d[k]); if (!u) return fail("Pictures and links must be normal web addresses starting with https://"); set[k] = u; }
     }
-    for (const k of ["intro", "address", "phone", "whatsapp", "instagram", "facebook", "accent", "layout", "imageRatio"] as const) if (d[k] !== undefined) set[k] = typeof d[k] === "string" ? (d[k] as string).trim() : d[k];
+    for (const k of ["intro", "address", "phone", "whatsapp", "accent", "layout", "imageRatio"] as const) if (d[k] !== undefined) set[k] = typeof d[k] === "string" ? (d[k] as string).trim() : d[k];
     if (d.enabled !== undefined) set.enabled = d.enabled;
     const saved = await CatalogueSettings.findOneAndUpdate({ ownerType: scope.ownerType, ownerId: scope.ownerId }, { $set: set, $setOnInsert: { ownerType: scope.ownerType, ownerId: scope.ownerId } }, { upsert: true, new: true, setDefaultsOnInsert: true }).lean();
     notifyBarber(userId, "CATALOGUE_UPDATED");

@@ -45,10 +45,13 @@ export async function startVideo(scope: Scope, contentType: string, sizeBytes: n
   if (sizeBytes > VIDEO_MAX_BYTES) throw new CatalogueError(400, `Videos can be up to ${VIDEO_MAX_BYTES / MB} MB. Record a shorter clip.`);
   const plan = await planFor(scope);
   if (plan.maxVideosPerService === 0) throw new CatalogueError(403, "Videos are part of the Premium plan.");
+  // A few unfinished uploads at a time per owner (each one reserves quota with its announced size).
+  const pending = await MediaAsset.countDocuments({ ...owner(scope), status: "PENDING", createdAt: { $gte: new Date(Date.now() - MEDIA_GRACE_MS) } });
+  if (pending >= 3) throw new CatalogueError(429, "You have several uploads in progress. Wait for them to finish, then try again.");
   await assertQuota(scope, sizeBytes);
   const storageKey = keyFor(scope, contentType === "video/quicktime" ? "mov" : "mp4");
   const asset = await MediaAsset.create({ ...owner(scope), kind: "VIDEO", driver: "R2", storageKey, url: publicUrlFor("R2", storageKey), contentType, sizeBytes, status: "PENDING" });
-  return { id: String(asset._id), uploadUrl: await presignPut(storageKey, contentType) };
+  return { id: String(asset._id), uploadUrl: await presignPut(storageKey, contentType, sizeBytes) };
 }
 
 /** Step 2: the browser says it finished. Check what really arrived: size, that it is a video, and its length. */
@@ -59,6 +62,8 @@ export async function finishVideo(scope: Scope, id: string) {
   const head = await headObject(asset.storageKey);
   if (!head) throw new CatalogueError(400, "The video did not finish uploading. Please try again.");
   if (head.size > VIDEO_MAX_BYTES) return reject(`Videos can be up to ${VIDEO_MAX_BYTES / MB} MB.`);
+  // The storage quota was checked against the announced size, so the real file may not be bigger than that.
+  if (head.size > asset.sizeBytes) return reject("The uploaded video is larger than announced. Please try again.");
   const first = await readRange(asset.storageKey, 0, Math.min(head.size, 512 * 1024) - 1);
   if (!looksLikeMp4(first)) return reject("That file is not a valid MP4 or MOV video.");
   let seconds = mp4DurationSeconds(first);
@@ -84,8 +89,6 @@ export async function cleanupMedia(): Promise<{ removed: number }> {
   const { BarberService } = await import("@/models/BarberService");
   const { CatalogueSettings } = await import("@/models/CatalogueSettings");
   const cutoff = new Date(Date.now() - MEDIA_GRACE_MS);
-  const old = await MediaAsset.find({ createdAt: { $lt: cutoff } }).limit(500).lean();
-  if (old.length === 0) return { removed: 0 };
   const [svc, set] = await Promise.all([
     BarberService.find({ $or: [{ images: { $exists: true, $ne: [] } }, { videos: { $exists: true, $ne: [] } }] }, { images: 1, videos: 1 }).lean(),
     CatalogueSettings.find({}, { logoUrl: 1, coverUrl: 1 }).lean(),
@@ -93,12 +96,19 @@ export async function cleanupMedia(): Promise<{ removed: number }> {
   const used = new Set<string>();
   for (const s of svc) for (const u of [...(s.images || []), ...(s.videos || [])]) used.add(u);
   for (const s of set) { if (s.logoUrl) used.add(s.logoUrl); if (s.coverUrl) used.add(s.coverUrl); }
-  let removed = 0;
-  for (const a of old) {
-    if (a.status === "READY" && used.has(a.url)) continue;
-    await deleteObjects(a.driver, [a.storageKey, a.thumbKey]).catch(() => 0);
-    await MediaAsset.deleteOne({ _id: a._id });
-    removed++;
+  let removed = 0, last: unknown = null;
+  // Walk ALL old files in pages (so a long list of files in use can never hide the unused ones behind it), within a time budget.
+  const started = Date.now();
+  for (let page = 0; page < 40 && Date.now() - started < 40_000; page++) {
+    const old = await MediaAsset.find({ createdAt: { $lt: cutoff }, ...(last ? { _id: { $gt: last } } : {}) }).sort({ _id: 1 }).limit(500).lean();
+    if (old.length === 0) break;
+    for (const a of old) {
+      if (a.status === "READY" && used.has(a.url)) continue;
+      await deleteObjects(a.driver, [a.storageKey, a.thumbKey]).catch(() => 0);
+      await MediaAsset.deleteOne({ _id: a._id });
+      removed++;
+    }
+    last = old[old.length - 1]._id;
   }
   return { removed };
 }

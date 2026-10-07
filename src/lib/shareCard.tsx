@@ -2,6 +2,7 @@ import { ImageResponse } from "next/og";
 import connectToDatabase from "@/lib/mongodb";
 import { User } from "@/models/User";
 import { Shop } from "@/models/Shop";
+import { r2Config } from "@/lib/mediaConfig";
 import { loadPublicCatalogue } from "@/lib/cataloguePublic";
 import type { OwnerType } from "@/lib/catalogue";
 
@@ -23,8 +24,8 @@ export async function loadShareInfo(ownerType: OwnerType, slug: string): Promise
   return {
     name: owner.name,
     accent: cat.branding.accent,
-    // Only an https cover can be drawn into the card; a picture kept in our own database is served from a relative address.
-    cover: cat.available && cat.branding.coverUrl.startsWith("https://") ? cat.branding.coverUrl : "",
+    // Only a cover stored in OUR bucket is drawn into the card (the renderer fetches it from the server, so it must never be an arbitrary address).
+    cover: cat.available && (r2Config() !== null && cat.branding.coverUrl.startsWith(`${r2Config()!.publicBaseUrl}/`)) ? cat.branding.coverUrl : "",
     services: services.length,
     fromPrice: prices.length ? Math.min(...prices) : null,
     examples: services.slice(0, 3).map((s) => s.name),

@@ -24,7 +24,7 @@ export function PlanCard({ dueDay }: { dueDay: number }) {
       {plan.status === "FREE" ? <p className="text-xs text-zinc-500">{t("setSetByAdmin")}</p> : (
         <>
           <p className="text-sm text-zinc-700 dark:text-zinc-300">
-            {plan.estimated ? t("planRenewsDay").replace("{day}", String(dueDay)) : t("planEndsOn").replace("{date}", showDate(plan.endsOn))}
+            {plan.granted ? t("planGranted").replace("{date}", showDate(plan.endsOn)) : plan.estimated ? t("planRenewsDay").replace("{day}", String(dueDay)) : t("planEndsOn").replace("{date}", showDate(plan.endsOn))}
             {plan.status === "GRACE" && ` · ${t("planGrace")}: ${showDate(plan.graceEndsOn)}`}
           </p>
           {plan.reminder && <p className="text-xs text-zinc-500">{t("planHowRenew")}</p>}

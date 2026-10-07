@@ -61,6 +61,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       updateData.isActive = Boolean(body.isActive);
     }
 
+    if (body.catalogueEnabled !== undefined) {
+      if (typeof body.catalogueEnabled !== "boolean") return NextResponse.json({ success: false, error: { message: "catalogueEnabled must be true or false." } }, { status: 400 });
+      // The catalogue switch of a shop is its owner's (the owner's plan and switch govern the shop catalogue).
+      const shopDoc = await Shop.findById(id).select("ownerId").lean<{ ownerId: unknown } | null>();
+      if (!shopDoc) return NextResponse.json({ success: false, error: { message: "Shop not found" } }, { status: 404 });
+      await User.updateOne({ _id: shopDoc.ownerId }, { $set: { catalogueEnabled: body.catalogueEnabled } });
+    }
+
     const update: any = { $set: updateData };
     if (body.linkBookingLimit !== undefined) {
       if (body.linkBookingLimit === null || body.linkBookingLimit === "") {

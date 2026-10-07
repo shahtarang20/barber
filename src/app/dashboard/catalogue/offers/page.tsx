@@ -122,6 +122,7 @@ export default function OffersPage() {
   const [busy, setBusy] = useState(false);
   const today = data?.today ?? "";
   const live = useMemo(() => (data?.offers ?? []).filter((o) => stateOf(o, today) === "Live"), [data, today]);
+  // Offers change customer prices and messages reach customers: owner or full-access staff only (the server enforces it too).
   const canSend = scope === "me" || shop?.isOwner || shop?.myAccess?.level === "FULL";
   const svcList = (services.data ?? []).map((s) => ({ _id: s._id, name: s.name }));
 
@@ -149,9 +150,10 @@ export default function OffersPage() {
           <section className={`${card} space-y-4`} aria-labelledby="offers-heading">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 id="offers-heading" className="text-lg font-semibold">Your offers <span className="text-sm font-normal text-zinc-500">(up to {data.maxActiveOffers} live at a time)</span></h2>
-              {!editing && <Button className="h-11" onClick={() => setEditing("new")}><Plus /> New offer</Button>}
+              {!editing && canSend && <Button className="h-11" onClick={() => setEditing("new")}><Plus /> New offer</Button>}
             </div>
             {editing && <OfferForm key={editing === "new" ? "new" : editing._id} scope={scope} offer={editing === "new" ? null : editing} services={svcList} today={today} onDone={() => { setEditing(null); void mutate(); }} onCancel={() => setEditing(null)} />}
+            {!canSend && <p role="status" className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">Offers and messages for the shop are managed by the shop owner (or staff with full access).</p>}
             {data.offers.length === 0 && !editing ? <p className="rounded-xl border border-dashed border-zinc-300 p-6 text-center text-sm text-zinc-500">No offers yet. Create one for the next festival.</p> : (
               <ul className="divide-y divide-zinc-100 rounded-xl border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
                 {data.offers.map((o) => { const st = stateOf(o, today); return (
@@ -161,9 +163,9 @@ export default function OffersPage() {
                       <p className="text-xs text-zinc-500">{o.discountType === "PERCENTAGE" ? `${o.discountValue}% off` : `₹${o.discountValue} off`} · {showDate(o.startsOn)} – {showDate(o.endsOn)} · {o.serviceIds.length === 0 ? "all services" : `${o.serviceIds.length} service(s)`}</p>
                     </div>
                     <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${STATE_STYLE[st]}`}>{st}</span>
-                    {st !== "Ended" && <Button variant="outline" size="sm" onClick={() => toggle(o)}>{o.status === "ACTIVE" ? "Pause" : "Resume"}</Button>}
-                    <Button variant="ghost" size="icon" aria-label={`Edit ${o.title}`} onClick={() => setEditing(o)}><Pencil /></Button>
-                    <Button variant="ghost" size="icon" aria-label={`Delete ${o.title}`} className="text-red-600" onClick={() => setToDelete(o)}><Trash2 /></Button>
+                    {st !== "Ended" && <Button variant="outline" size="sm" disabled={!canSend} onClick={() => toggle(o)}>{o.status === "ACTIVE" ? "Pause" : "Resume"}</Button>}
+                    <Button variant="ghost" size="icon" disabled={!canSend} aria-label={`Edit ${o.title}`} onClick={() => setEditing(o)}><Pencil /></Button>
+                    <Button variant="ghost" size="icon" disabled={!canSend} aria-label={`Delete ${o.title}`} className="text-red-600" onClick={() => setToDelete(o)}><Trash2 /></Button>
                   </li>); })}
               </ul>
             )}

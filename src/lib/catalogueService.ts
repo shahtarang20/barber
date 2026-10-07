@@ -4,31 +4,34 @@ import { CatalogueCategory } from "@/models/CatalogueCategory";
 import { Shop } from "@/models/Shop";
 import { planFor, safeUrl, type Scope } from "@/lib/catalogue";
 
-const base = z.object({
+// No ".default()" in the shared shape: zod 4 applies defaults even inside .partial(), which would silently reset status/priceType on a partial edit.
+const shape = z.object({
   name: z.string().trim().min(2, "Service name must be at least 2 letters").max(80),
   categoryId: z.string().refine((v) => mongoose.isValidObjectId(v), "Choose a category"),
   description: z.string().trim().max(500).optional(),
   images: z.array(z.string()).max(20).optional(),
   videos: z.array(z.string()).max(10).optional(),
   durationMinutes: z.number({ error: "Enter the duration in minutes." }).int("Duration must be a whole number of minutes").min(5, "Duration must be at least 5 minutes").max(600, "Duration can be at most 600 minutes"),
-  priceType: z.enum(["FIXED_PRICE", "STARTING_FROM", "ASK_SHOP"]).default("FIXED_PRICE"),
+  priceType: z.enum(["FIXED_PRICE", "STARTING_FROM", "ASK_SHOP"]),
   price: z.number({ error: "Enter the price as a number." }).min(0, "The price cannot be negative.").max(1_000_000, "That price is too high.").optional(),
   originalPrice: z.number({ error: "Enter the original price as a number." }).min(0, "The original price cannot be negative.").max(1_000_000, "That price is too high.").optional(),
   discountType: z.enum(["PERCENTAGE", "FIXED"]).optional(),
   discountValue: z.number({ error: "Enter the discount as a number." }).min(0, "The discount cannot be negative.").max(1_000_000, "That discount is too high.").optional(),
   barberIds: z.array(z.string()).max(50).optional(),
   isFeatured: z.boolean().optional(), isPopular: z.boolean().optional(), isNew: z.boolean().optional(), isPremium: z.boolean().optional(),
-  status: z.enum(["DRAFT", "PUBLISHED"]).default("DRAFT"),
+  status: z.enum(["DRAFT", "PUBLISHED"]),
 });
-export const serviceCreateSchema = base;
-export const servicePatchSchema = base.partial();
-export type ServiceData = z.infer<typeof base>;
+/** A new service: price type and status default (fixed price, draft). */
+export const serviceCreateSchema = shape.extend({ priceType: shape.shape.priceType.default("FIXED_PRICE"), status: shape.shape.status.default("DRAFT") });
+/** An edit: only what is sent changes. */
+export const servicePatchSchema = shape.partial();
+export type ServiceData = z.infer<typeof serviceCreateSchema>;
 
 type Checked = { ok: true; data: ServiceData & { barberIds: string[]; images: string[]; videos: string[] } } | { ok: false; message: string; status: number };
 
 /** Checks a service coming from the owner: shape, prices and discount, picture/video limits of the plan, category ownership, who performs it. */
 export async function validateServiceInput(raw: unknown, scope: Scope, partialOf?: Partial<ServiceData>): Promise<Checked> {
-  const parsed = (partialOf ? base.partial() : base).safeParse(raw);
+  const parsed = (partialOf ? servicePatchSchema : serviceCreateSchema).safeParse(raw);
   if (!parsed.success) return { ok: false, message: parsed.error.issues[0].message, status: 400 };
   // A field that was not sent keeps its stored value (a missing key must never wipe it).
   const sent = Object.fromEntries(Object.entries(parsed.data).filter(([, v]) => v !== undefined));

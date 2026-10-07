@@ -31,6 +31,9 @@ export interface IUser extends Document {
   lastPaymentAt?: Date;
   /** The day (IST) a renewal reminder was last pushed, so the daily job sends one per day. */
   planReminderOn?: string;
+  /** Free access to a paid plan given by the admin (no payment): the tier and the last day (IST) it applies. */
+  grantedTier?: "PREMIUM" | "BUSINESS";
+  grantedUntil?: string;
   /** Last time this barber had the dashboard open (updated every few minutes). */
   lastSeenAt?: Date;
   premiumDueDay: number;
@@ -83,6 +86,8 @@ const UserSchema: Schema = new Schema(
     planEndsOn: { type: String, match: /^\d{4}-\d{2}-\d{2}$/ },
     lastPaymentAt: { type: Date },
     planReminderOn: { type: String },
+    grantedTier: { type: String, enum: ["PREMIUM", "BUSINESS"] },
+    grantedUntil: { type: String, match: /^\d{4}-\d{2}-\d{2}$/ },
     lastSeenAt: { type: Date },
     premiumDueDay: { type: Number, default: 28 }, // default 28th of month
     isActive: { type: Boolean, default: true },

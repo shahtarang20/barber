@@ -62,9 +62,10 @@ export async function deleteObjects(driver: Driver, keys: string[]): Promise<num
 }
 
 /** A short-lived address the browser can upload ONE file to directly (used for videos, which a function cannot receive). */
-export async function presignPut(key: string, contentType: string, expiresInSeconds = 900): Promise<string> {
+export async function presignPut(key: string, contentType: string, contentLength: number, expiresInSeconds = 900): Promise<string> {
   const cfg = needR2();
-  return getSignedUrl(s3(cfg), new PutObjectCommand({ Bucket: cfg.bucket, Key: key, ContentType: contentType }), { expiresIn: expiresInSeconds, signableHeaders: new Set(["content-type"]) });
+  // The exact length is signed in, so the address cannot be used to upload anything bigger than what was announced and checked.
+  return getSignedUrl(s3(cfg), new PutObjectCommand({ Bucket: cfg.bucket, Key: key, ContentType: contentType, ContentLength: contentLength }), { expiresIn: expiresInSeconds, signableHeaders: new Set(["content-type", "content-length"]) });
 }
 
 /** Size and type of a stored file, or null if it is not there. */

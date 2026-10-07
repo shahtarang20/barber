@@ -8,9 +8,19 @@ import { Shop } from "@/models/Shop";
 import { MAX_SUBSCRIBERS_PER_OWNER } from "@/lib/campaigns";
 
 const fail = (message: string, status = 400) => NextResponse.json({ success: false, error: { message } }, { status });
+/** Only the browsers' real push services are accepted as a device address (the server will POST to it), never an arbitrary host. */
+const PUSH_HOSTS = [/^fcm\.googleapis\.com$/, /(^|\.)push\.services\.mozilla\.com$/, /(^|\.)notify\.windows\.com$/, /(^|\.)push\.apple\.com$/, /^web\.push\.apple\.com$/];
+const allowedPushHost = (endpoint: string) => {
+  try {
+    const u = new URL(endpoint);
+    if (u.protocol !== "https:") return false;
+    if (process.env.PUSH_ALLOW_ANY_HOST === "1") return true; // any https host: local testing only, never set in production
+    return !u.port && PUSH_HOSTS.some((r) => r.test(u.hostname));
+  } catch { return false; }
+};
 const target = z.object({ kind: z.enum(["barber", "shop"]), slug: z.string().min(1).max(80) });
 const subscribe = target.extend({
-  subscription: z.object({ endpoint: z.string().url().max(600).refine((u) => u.startsWith("https://"), "Invalid device."), keys: z.object({ p256dh: z.string().min(1).max(200), auth: z.string().min(1).max(100) }) }),
+  subscription: z.object({ endpoint: z.string().url().max(600).refine(allowedPushHost, "Invalid device."), keys: z.object({ p256dh: z.string().min(1).max(200), auth: z.string().min(1).max(100) }) }),
 });
 const unsubscribe = target.extend({ endpoint: z.string().url().max(600) });
 

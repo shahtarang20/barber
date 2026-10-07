@@ -11,6 +11,7 @@ import { isLive } from "@/lib/offers";
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const ONE_PER_DEVICE_MS = 20 * 60 * 60 * 1000; // a phone gets at most one message a day from the same owner
+const SEND_BUDGET_MS = 45_000;
 export const MAX_SUBSCRIBERS_PER_OWNER = 20_000;
 
 export const campaignSchema = z.object({
@@ -62,14 +63,20 @@ export async function sendCampaign(scope: Scope, userId: string, input: z.infer<
 
   const cutoff = new Date(Date.now() - ONE_PER_DEVICE_MS);
   const devices = await CustomerPush.find({ ownerType: scope.ownerType, ownerId: scope.ownerId, $or: [{ lastSentAt: { $exists: false } }, { lastSentAt: { $lt: cutoff } }] }).limit(MAX_SUBSCRIBERS_PER_OWNER).lean<{ _id: unknown; endpoint: string; keys: { p256dh: string; auth: string } }[]>();
-  let delivered = 0, failed = 0;
-  const gone: unknown[] = [], sent: unknown[] = [];
-  for (let i = 0; i < devices.length; i += 25) {
-    const results = await Promise.all(devices.slice(i, i + 25).map((d) => sendToSubscription(d, { title: target.name, body: input.message, url: link, tag: `offer-${scope.ownerId}` })));
-    results.forEach((r, j) => { const d = devices[i + j]; if (r === "ok") { delivered++; sent.push(d._id); } else if (r === "gone") { failed++; gone.push(d._id); } else failed++; });
+  let delivered = 0, failed = 0, tried = 0;
+  const started = Date.now();
+  for (let i = 0; i < devices.length; i += 50) {
+    // The route may run for at most 60 s: stop with time to spare, and record what was done after EVERY batch so a cut-off never re-sends to the same phones.
+    if (Date.now() - started > SEND_BUDGET_MS) break;
+    const batch = devices.slice(i, i + 50);
+    const results = await Promise.all(batch.map((d) => sendToSubscription(d, { title: target.name, body: input.message, url: link, tag: `offer-${scope.ownerId}` })));
+    const sent: unknown[] = [], gone: unknown[] = [];
+    results.forEach((r, j) => { if (r === "ok") { delivered++; sent.push(batch[j]._id); } else { failed++; if (r === "gone") gone.push(batch[j]._id); } });
+    tried += batch.length;
+    if (sent.length) await CustomerPush.updateMany({ _id: { $in: sent } }, { $set: { lastSentAt: new Date() } });
+    if (gone.length) await CustomerPush.deleteMany({ _id: { $in: gone } });
+    await Campaign.updateOne({ _id: campaign._id }, { $set: { audience: devices.length, delivered, failed } });
   }
-  if (sent.length) await CustomerPush.updateMany({ _id: { $in: sent } }, { $set: { lastSentAt: new Date() } });
-  if (gone.length) await CustomerPush.deleteMany({ _id: { $in: gone } });
   await Campaign.updateOne({ _id: campaign._id }, { $set: { audience: devices.length, delivered, failed } });
-  return { audience: devices.length, delivered, failed };
+  return { audience: devices.length, delivered, failed, notReached: devices.length - tried };
 }

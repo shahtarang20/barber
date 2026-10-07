@@ -178,7 +178,7 @@ export async function POST(req: Request) {
           date: newBooking.date,
           startTime: newBooking.startTime,
           customerName: customer.name,
-          ...(service ? { serviceName: service.name } : {}),
+          ...(service ? { serviceName: service.name, servicePrice: service.price } : {}),
         } 
       }, { status: 201 });
 

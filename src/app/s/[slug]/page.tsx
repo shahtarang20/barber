@@ -50,6 +50,7 @@ interface BookingSuccessView {
   customerName?: string;
   name?: string;
   serviceName?: string;
+  servicePrice?: number | null;
   isWaitlist?: boolean;
 }
 
@@ -269,6 +270,12 @@ export default function ShopBookingPage() {
                 <>
                   <div className="text-zinc-500">{t('catSelectedService')}</div>
                   <div className="font-medium text-right">{bookingSuccess.serviceName}</div>
+                  {typeof bookingSuccess.servicePrice === "number" && (
+                    <>
+                      <div className="text-zinc-500">{t('catYourPrice')}</div>
+                      <div className="font-medium text-right">₹{new Intl.NumberFormat("en-IN").format(bookingSuccess.servicePrice)}</div>
+                    </>
+                  )}
                 </>
               )}
             </div>

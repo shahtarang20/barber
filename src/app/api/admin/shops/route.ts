@@ -3,6 +3,7 @@ import { requireAuth } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import { Shop } from "@/models/Shop";
 import { User } from "@/models/User";
+import { getPlansConfig, subscriptionState } from "@/lib/plans";
 import { shopLinkUsage, getDefaultLinkLimit } from "@/lib/linkLimit";
 
 export async function GET(req: Request) {
@@ -28,7 +29,8 @@ export async function GET(req: Request) {
       .lean();
 
     const ownerIds = shops.map((s) => s.ownerId);
-    const owners = await User.find({ _id: { $in: ownerIds } }).select("name barberCode").lean();
+    const owners = await User.find({ _id: { $in: ownerIds } }).select("name barberCode premiumAmount premiumDueDay planEndsOn grantedTier grantedUntil catalogueEnabled").lean();
+    const plansCfg = await getPlansConfig();
     const ownerById = new Map(owners.map((o) => [o._id.toString(), o]));
 
     const defaultLinkLimit = await getDefaultLinkLimit();
@@ -39,7 +41,10 @@ export async function GET(req: Request) {
       slug: s.slug,
       isActive: s.isActive,
       memberCount: s.barberIds?.length || 0,
-      owner: ownerById.get(s.ownerId.toString()) || null,
+      owner: (() => { const o = ownerById.get(s.ownerId.toString()); return o ? { name: o.name, barberCode: o.barberCode } : null; })(),
+      // The plan and the catalogue switch of a shop are its OWNER'S.
+      plan: (() => { const o = ownerById.get(s.ownerId.toString()); return o ? subscriptionState(o, plansCfg) : null; })(),
+      catalogueEnabled: ownerById.get(s.ownerId.toString())?.catalogueEnabled !== false,
       createdAt: s.createdAt,
       linkBookingLimit: s.linkBookingLimit ?? null,
       linkUsed: usages[i].used,

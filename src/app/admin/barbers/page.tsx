@@ -200,10 +200,10 @@ export default function AdminBarbersPage() {
                       />
                     </td>
                     <td className="px-6 py-4">
-                      {b.plan && b.plan.status !== "FREE" ? (
+                      {b.plan && (b.plan.status !== "FREE" || b.plan.granted) ? (
                         <div>
-                          <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${b.plan.status === "ACTIVE" ? "bg-green-100 text-green-700" : b.plan.status === "GRACE" ? "bg-amber-100 text-amber-800" : "bg-red-100 text-red-700"}`}>{b.plan.status}</span>
-                          <div className="mt-1 text-xs text-zinc-500">{b.plan.estimated ? "due" : "ends"} {showDate(b.plan.endsOn)}{b.plan.daysLeft !== null && b.plan.daysLeft <= 3 ? ` (${b.plan.daysLeft < 0 ? `${-b.plan.daysLeft}d ago` : `${b.plan.daysLeft}d`})` : ""}</div>
+                          <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${b.plan.status === "ACTIVE" ? "bg-green-100 text-green-700" : b.plan.status === "GRACE" ? "bg-amber-100 text-amber-800" : "bg-red-100 text-red-700"}`}>{b.plan.granted ? "FREE ACCESS" : b.plan.status}</span>
+                          <div className="mt-1 text-xs text-zinc-500">{b.plan.granted ? `${b.plan.tier.toLowerCase()} until` : b.plan.estimated ? "due" : "ends"} {showDate(b.plan.endsOn)}{b.plan.daysLeft !== null && b.plan.daysLeft <= 3 ? ` (${b.plan.daysLeft < 0 ? `${-b.plan.daysLeft}d ago` : `${b.plan.daysLeft}d`})` : ""}</div>
                         </div>
                       ) : <span className="text-xs text-zinc-500">Free</span>}
                       <button type="button" className="mt-1 block text-xs text-blue-600 underline" onClick={() => setPayFor({ _id: b._id, name: b.name, premiumAmount: b.premiumAmount || 0 })}>Payments</button>
