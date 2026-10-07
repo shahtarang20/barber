@@ -6,7 +6,7 @@ import connectToDatabase from "@/lib/mongodb";
 import { User } from "@/models/User";
 import { Shop } from "@/models/Shop";
 import { bookSlotForStaff } from "@/lib/staffBooking";
-import { pushToBarber } from "@/lib/push";
+import { pushToBarberLater } from "@/lib/push";
 
 const schema = z.object({
   barberId: z.string().min(1),
@@ -42,7 +42,7 @@ export async function POST(req: Request) {
 
     // Tell the barber whose chair it is — it's not on his own phone otherwise.
     if (barberId !== payload.userId) {
-      await pushToBarber(barberId, { title: "New booking (front desk)", body: `${name} at ${result.slot.startTime} on ${result.slot.date}` });
+      pushToBarberLater(barberId, { title: "New booking (front desk)", body: `${name} at ${result.slot.startTime} on ${result.slot.date}` });
     }
     return NextResponse.json({ success: true, data: { bookingNumber: result.bookingNumber, barberName: target.name, startTime: result.slot.startTime, date: result.slot.date } }, { status: 201 });
   } catch (error) {

@@ -79,7 +79,8 @@ export async function POST(req: Request) {
 
     // Add to waitlist array using atomic push
     const slot = await Slot.findOneAndUpdate(
-      { _id: slotId, status: { $ne: "BLOCKED" } },
+      // "waitlist.199" missing = fewer than 200 people waiting: one slot document can never grow without limit.
+      { _id: slotId, status: { $ne: "BLOCKED" }, "waitlist.199": { $exists: false } },
       {
         $push: {
           waitlist: { name, phone, joinedAt: new Date(), ...(anyShopId ? { anyBarber: true, shopId: anyShopId } : {}) }
@@ -89,6 +90,9 @@ export async function POST(req: Request) {
     );
 
     if (!slot) {
+      if (await Slot.exists({ _id: slotId, status: { $ne: "BLOCKED" } })) {
+        return NextResponse.json({ success: false, error: { message: "This waitlist is full. Please pick another time." } }, { status: 409 });
+      }
       return NextResponse.json({
         success: false,
         error: { message: "Slot is no longer available for waitlisting." }

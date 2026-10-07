@@ -44,7 +44,7 @@ export async function autoGenerateFutureSlots(
   const existingSlots = await Slot.find({
     barberId,
     date: { $gte: todayStr, $lte: windowEnd },
-  });
+  }).lean();
 
   // A day the barber shifted ("running late") is deliberately off the normal
   // grid. Reconciling it would recreate the early slots and delete the shifted
@@ -189,8 +189,8 @@ export async function autoGenerateFutureSlots(
     deletedCount = toDelete.length;
   }
 
-  for (const update of toUpdateCapacity) {
-    await Slot.updateOne({ _id: update._id }, { $set: { capacity: update.capacity, status: update.status } });
+  if (toUpdateCapacity.length > 0) {
+    await Slot.bulkWrite(toUpdateCapacity.map((u) => ({ updateOne: { filter: { _id: u._id }, update: { $set: { capacity: u.capacity, status: u.status } } } })), { ordered: false });
   }
 
   if (newSlots.length > 0) {

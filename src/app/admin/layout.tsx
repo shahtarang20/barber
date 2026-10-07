@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { verifyToken } from "@/lib/auth";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import { SWRProvider } from "@/components/SWRProvider";
 import { AdminMobileNav } from "@/components/admin/AdminMobileNav";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -18,7 +19,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <AdminMobileNav />
       <main className="flex-1 overflow-auto pb-20 md:pb-0 md:ml-64">
         <div className="p-4 md:p-8 max-w-6xl mx-auto">
-          {children}
+          <SWRProvider>{children}</SWRProvider>
         </div>
       </main>
     </div>

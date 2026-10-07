@@ -120,7 +120,9 @@ UserSchema.pre("save", async function () {
   }
 });
 
-UserSchema.index({ role: 1, isActive: 1 });
+// Also serves the daily job, which walks active barbers in _id order in batches.
+UserSchema.index({ role: 1, isActive: 1, _id: 1 });
+UserSchema.index({ role: 1, createdAt: -1 }); // admin barber list
 // Emails stay unique, but only when one was given (many barbers can have none).
 UserSchema.index({ email: 1 }, { unique: true, partialFilterExpression: { email: { $type: "string" } } });
 

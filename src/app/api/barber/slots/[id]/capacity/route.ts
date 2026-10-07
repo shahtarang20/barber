@@ -14,7 +14,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const body = await req.json();
     const { capacity } = body;
 
-    if (!capacity || typeof capacity !== 'number' || !Number.isFinite(capacity) || capacity < 1 || capacity > 50) {
+    if (!capacity || typeof capacity !== 'number' || !Number.isInteger(capacity) || capacity < 1 || capacity > 50) {
       return NextResponse.json({ success: false, error: { message: "Invalid capacity. Must be a whole number between 1 and 50." } }, { status: 400 });
     }
 

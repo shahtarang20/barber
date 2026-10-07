@@ -1,7 +1,11 @@
-import { Metadata } from "next";
+import { Metadata, Viewport } from "next";
+import { notFound } from "next/navigation";
 import connectToDatabase from "@/lib/mongodb";
 import { User } from "@/models/User";
 import { loadShareInfo } from "@/lib/shareCard";
+
+/** The browser bar colour belongs in the viewport export (Next.js 16 warns when it is in the metadata). */
+export const viewport: Viewport = { themeColor: "#09090b" };
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
@@ -30,7 +34,6 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       description,
     },
     manifest: `/api/public/barbers/${slug}/manifest`,
-    themeColor: "#09090b",
     icons: { apple: "/apple-touch-icon.png" },
     appleWebApp: {
       capable: true,
@@ -42,17 +45,24 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { MyBookingBanner } from "@/components/MyBookingBanner";
+import { TemplateScope } from "@/components/catalogue/templates/TemplateScope";
+import { TEMPLATE_FONT_CLASS } from "@/components/catalogue/templates/fonts";
+import { loadPageStyle } from "@/lib/catalogueTemplateServer";
+import { resolveTemplate } from "@/lib/catalogueTemplate";
 
 export default async function BarberLayout({ children, params }: { children: React.ReactNode; params: Promise<{ slug: string }> }) {
   const { slug } = await params;
 
   await connectToDatabase();
-  const barber = await User.findOne({ slug }).select("name").lean();
+  const barber = await User.findOne({ slug }).select("name").lean<{ _id: unknown; name?: string } | null>();
+  if (!barber) notFound();
+  const style = barber ? await loadPageStyle("BARBER", String(barber._id)) : null;
+  const template = style?.template ?? resolveTemplate(undefined, slug);
 
   return (
     <>
       <MyBookingBanner />
-      {children}
+      <TemplateScope template={template} fontClass={TEMPLATE_FONT_CLASS[template]} enabled={style?.enabled ?? false} branding={style?.branding ?? null}>{children}</TemplateScope>
       <InstallPrompt isCustomer={true} appName={barber?.name || "this barber"} />
     </>
   );

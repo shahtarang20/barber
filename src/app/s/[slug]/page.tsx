@@ -17,6 +17,8 @@ import { Label } from "@/components/ui/label";
 import { useTranslation } from "@/lib/i18n";
 import { useDateFormat } from "@/lib/dateLocale";
 import { LanguageSelector } from "@/components/LanguageSelector";
+import { TemplateHero } from "@/components/catalogue/templates/Hero";
+import { usePageScope } from "@/components/catalogue/templates/TemplateScope";
 import useSWR from "swr";
 import { saveLastBooking } from "@/lib/lastBooking";
 
@@ -60,7 +62,10 @@ export default function ShopBookingPage() {
   const { slug } = useParams();
   const { t } = useTranslation();
   // Booking / Catalogue switch, and the catalogue service the customer picked (carried into the booking).
+  const pageScope = usePageScope();
   const cat = useCatalogueView("shop", typeof slug === "string" ? slug : undefined);
+  // While the catalogue is still loading, draw what the address asked for (header, switch, skeleton) so nothing jumps when it arrives.
+  const shownView = cat.catalogue ? cat.view : cat.loading && pageScope.enabled ? cat.intendedView : "booking";
 
   const [selectedDate, setSelectedDate] = useState<Date>(() => parseDateOnly(getTodayISTString()));
   const [selectedBarberId, setSelectedBarberId] = useState<string | "ANY">("ANY");
@@ -291,26 +296,16 @@ export default function ShopBookingPage() {
   const upcomingDates = Array.from({ length: 7 }).map((_, i) => addDays(parseDateOnly(getTodayISTString()), i));
 
   return (
-    <div className="min-h-screen bg-zinc-50 pb-20">
-      <div className="absolute top-4 right-4 z-10">
+    <div className="tp-page">
+      {/* Shop header, in this shop's page style */}
+      <TemplateHero name={shop?.name || t("loading")} subtitle={shop?.barbers?.length === 1 ? t("shopBarberOne") : t("shopBarbersN").replace("{n}", String(shop?.barbers?.length || 0))} branding={cat.catalogue?.branding ?? (pageScope.enabled ? pageScope.branding : null)} compact={shownView !== "catalogue"}>
         <LanguageSelector />
-      </div>
+      </TemplateHero>
 
-      {/* Shop Header */}
-      <div className="bg-white border-b border-zinc-200 pt-12 pb-8 px-4 text-center">
-        <div className="w-20 h-20 bg-zinc-200 rounded-full mx-auto mb-4 overflow-hidden border-4 border-white shadow-sm flex items-center justify-center text-2xl font-bold text-zinc-400">
-          {shop?.name?.charAt(0)}
-        </div>
-        <h1 className="text-2xl font-bold text-zinc-900">{shop?.name || t("loading")}</h1>
-        <p className="text-zinc-500 mt-2 max-w-md mx-auto">
-          {shop?.barbers?.length === 1 ? t("shopBarberOne") : t("shopBarbersN").replace("{n}", String(shop?.barbers?.length || 0))}
-        </p>
-      </div>
-
-      <div className="max-w-2xl mx-auto px-4 mt-8">
-        {cat.available && <ViewSwitch view={cat.view} onChange={cat.setView} />}
-        {cat.view === "catalogue" && <PublicCatalogue catalogue={cat.catalogue} loading={cat.loading} onBook={cat.bookService} allowedBarberIds={undefined} notifyTarget={{ kind: "shop", slug: String(slug) }} />}
-        {cat.view !== "catalogue" && (
+      <div className="tp-wrap">
+        {(cat.available || (pageScope.enabled && cat.loading)) && <ViewSwitch view={shownView} onChange={cat.setView} pending={!cat.available} />}
+        {shownView === "catalogue" && <PublicCatalogue catalogue={cat.catalogue} loading={cat.loading} onBook={cat.bookService} allowedBarberIds={undefined} notifyTarget={{ kind: "shop", slug: String(slug) }} />}
+        {shownView !== "catalogue" && (
         <div id="view-panel-booking" role={cat.available ? "tabpanel" : undefined} aria-labelledby={cat.available ? "view-tab-booking" : undefined}>
         {cat.selectedService && <SelectedServiceChip service={cat.selectedService} onChange={() => cat.setView("catalogue")} onRemove={cat.clearService} restrictedToSomeBarbers={performers.length > 0} />}
         {(shop?.linkClosed) ? (

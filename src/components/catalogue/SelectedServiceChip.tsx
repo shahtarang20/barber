@@ -9,15 +9,15 @@ export function SelectedServiceChip({ service, onChange, onRemove, restrictedToS
   const { t } = useTranslation();
   const price = service.priceType === "ASK_SHOP" || service.finalPrice === null ? "" : ` · ₹${service.finalPrice}`;
   return (
-    <div className="mb-6 flex items-center gap-3 rounded-2xl border border-indigo-200 bg-indigo-50 p-3" role="status">
-      <Scissors className="h-5 w-5 shrink-0 text-indigo-700" aria-hidden="true" />
+    <div className="tp-selected" role="status">
+      <Scissors className="tp-selected__icon" size={20} aria-hidden="true" />
       <div className="min-w-0 flex-1">
-        <p className="text-xs text-indigo-800">{t("catSelectedService")}</p>
-        <p className="truncate text-sm font-semibold text-indigo-950">{service.name}{price} · {t("catMinutes").replace("{n}", String(service.durationMinutes))}</p>
-        {restrictedToSomeBarbers && <p className="text-xs text-indigo-800">{t("catOnlyThese")}</p>}
+        <p className="tp-selected__label">{t("catSelectedService")}</p>
+        <p className="tp-selected__name">{service.name}{price} · {t("catMinutes").replace("{n}", String(service.durationMinutes))}</p>
+        {restrictedToSomeBarbers && <p className="tp-selected__label">{t("catOnlyThese")}</p>}
       </div>
-      <button type="button" onClick={onChange} className="min-h-11 px-2 text-sm font-medium text-indigo-800 underline">{t("catChangeService")}</button>
-      <button type="button" onClick={onRemove} className="min-h-11 px-2 text-sm font-medium text-zinc-600">{t("catRemoveService")}</button>
+      <button type="button" className="tp-link" onClick={onChange}>{t("catChangeService")}</button>
+      <button type="button" onClick={onRemove}>{t("catRemoveService")}</button>
     </div>
   );
 }

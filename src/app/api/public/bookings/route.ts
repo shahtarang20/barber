@@ -8,7 +8,7 @@ import { z } from "zod";
 import mongoose from "mongoose";
 import { rateLimit, getClientIp } from "@/lib/rateLimit";
 import { notifyBarber } from "@/lib/realtime";
-import { pushToBarber } from "@/lib/push";
+import { pushToBarberLater } from "@/lib/push";
 import { heldByOthersExpr, activeHoldCount } from "@/lib/waitlistHold";
 import { normalizePhone } from "@/lib/phone";
 import { User } from "@/models/User";
@@ -165,7 +165,7 @@ export async function POST(req: Request) {
       }
 
       notifyBarber(slot.barberId.toString(), "BOOKINGS_UPDATED");
-      await pushToBarber(slot.barberId.toString(), {
+      pushToBarberLater(slot.barberId.toString(), {
         title: "New booking",
         body: `${customer.name} booked ${newBooking.startTime} on ${newBooking.date}${service ? ` for ${service.name}` : ""}`,
       });

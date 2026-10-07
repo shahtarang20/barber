@@ -22,4 +22,7 @@ const AuditLogSchema: Schema = new Schema(
   { timestamps: { createdAt: true, updatedAt: false } }
 );
 
+// The trail is kept for a year; older entries are removed by the database itself. (This index also serves the newest-first list.)
+AuditLogSchema.index({ createdAt: 1 }, { expireAfterSeconds: 365 * 24 * 3600 });
+
 export const AuditLog = mongoose.models.AuditLog || mongoose.model<IAuditLog>("AuditLog", AuditLogSchema);

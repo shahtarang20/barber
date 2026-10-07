@@ -4,12 +4,14 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { CalendarCheck } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
+import { useDateFormat } from "@/lib/dateLocale";
 import { getTodayISTString } from "@/lib/istTime";
 import { loadLastBooking, clearLastBooking, type LastBooking } from "@/lib/lastBooking";
 
 /** Shown on the booking pages when this phone already has an upcoming booking: its ID, and a link to change or cancel it. */
 export function MyBookingBanner() {
   const { t } = useTranslation();
+  const fmt = useDateFormat();
   const [b, setB] = useState<LastBooking | null>(null);
 
   useEffect(() => {
@@ -26,7 +28,7 @@ export function MyBookingBanner() {
         <CalendarCheck className="w-5 h-5 shrink-0" />
         <span className="flex-1 text-sm">
           <span className="font-semibold">{t("myBookingTitle")} {b.id}</span>
-          <span className="block text-xs opacity-80">{new Date(`${b.date}T00:00:00`).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })} · {b.time}{b.barber ? ` · ${b.barber}` : ""}</span>
+          <span className="block text-xs opacity-80">{fmt(new Date(`${b.date}T00:00:00`), "EEE, d MMM")} · {b.time}{b.barber ? ` · ${b.barber}` : ""}</span>
         </span>
         <span className="text-sm font-medium underline">{t("myBookingManage")}</span>
       </Link>

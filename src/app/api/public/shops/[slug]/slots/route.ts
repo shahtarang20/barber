@@ -4,6 +4,7 @@ import { Shop } from "@/models/Shop";
 import { User } from "@/models/User";
 import { Slot } from "@/models/Slot";
 import { sortByStartTime } from "@/lib/timeSort";
+import { memo } from "@/lib/memo";
 import { rateLimit, getClientIp } from "@/lib/rateLimit";
 import { admitVisitor } from "@/lib/visitorLimit";
 
@@ -24,13 +25,14 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
       return NextResponse.json({ success: false, error: { message: "Date is required" } }, { status: 400 });
     }
 
-    const shop = await Shop.findOne({ slug, isActive: true });
+    const shop = await memo(`pub:shop:${slug}`, 10_000, () =>
+      Shop.findOne({ slug, isActive: true }).select("name slug barberIds linkBookingLimit visitorLimit").lean<{ _id: import("mongoose").Types.ObjectId; name: string; slug: string; barberIds: import("mongoose").Types.ObjectId[]; linkBookingLimit?: number; visitorLimit?: number } | null>());
     if (!shop) {
       return NextResponse.json({ success: false, error: { message: "Shop not found" } }, { status: 404 });
     }
     if (!(await admitVisitor(req, "SHOP", shop._id, shop.visitorLimit ?? null)).allowed) return NextResponse.json({ success: false, error: { code: "VISITOR_LIMIT", message: "This page is not available right now. Please contact the barber directly." } }, { status: 403 });
 
-    const activeBarbers = await User.find({ _id: { $in: shop.barberIds }, isActive: true }).select("name slug").lean();
+    const activeBarbers = await memo(`pub:shop-barbers-lite:${slug}`, 10_000, () => User.find({ _id: { $in: shop.barberIds }, isActive: true }).select("name slug").lean());
     if (activeBarbers.length === 0) {
       return NextResponse.json({ success: false, error: { message: "Shop not found" } }, { status: 404 });
     }

@@ -22,9 +22,13 @@ export async function POST(req: Request) {
     if (!date) {
       return NextResponse.json({ success: false, error: { message: "Date is required" } }, { status: 400 });
     }
+    // Slots are keyed by an exact "YYYY-MM-DD" string; anything else would be stored under a date nobody looks up.
+    if (typeof date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return NextResponse.json({ success: false, error: { message: "Invalid date." } }, { status: 400 });
+    }
 
     const capacity = Number(rawCapacity);
-    if (!Number.isFinite(capacity) || capacity < 1 || capacity > 50) {
+    if (!Number.isInteger(capacity) || capacity < 1 || capacity > 50) {
       return NextResponse.json({ success: false, error: { message: "Capacity must be a whole number between 1 and 50." } }, { status: 400 });
     }
 

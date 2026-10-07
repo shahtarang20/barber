@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/toast";
 import { copyText } from "@/lib/shareLink";
 import { useTranslation } from "@/lib/i18n";
+import { QrCode, downloadQrPng } from "@/components/dashboard/QrCode";
 
 export default function PublicLinkPage() {
   const { t } = useTranslation();
@@ -38,9 +39,16 @@ export default function PublicLinkPage() {
   if (loading) {
     return <div className="p-12 text-center text-zinc-500">{t('loading')}</div>;
   }
+  // Without a profile the link would read "/b/undefined" and saving would corrupt state.
+  if (!profile) {
+    return (
+      <div className="p-12 text-center">
+        <p className="text-zinc-500">{t('genericError')}</p>
+      </div>
+    );
+  }
 
   const publicUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/b/${profile?.slug}`;
-  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(publicUrl)}`;
 
   const handleCopy = async () => {
     if (await copyText(publicUrl)) {
@@ -70,19 +78,7 @@ export default function PublicLinkPage() {
 
   const downloadQR = async () => {
     try {
-      const response = await fetch(qrCodeUrl);
-      if (!response.ok) {
-        throw new Error(`QR service returned ${response.status}`);
-      }
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${profile?.slug}-qrcode.png`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      await downloadQrPng(publicUrl, `${profile?.slug}-qrcode.png`);
     } catch (error) {
       console.error("Failed to download QR code", error);
       toast.add({ title: t('error'), description: t('linkQrError'), type: "error" });
@@ -145,7 +141,7 @@ export default function PublicLinkPage() {
         </p>
         
         <div className="p-4 bg-white border border-zinc-200 rounded-xl shadow-sm mb-6">
-          <img src={qrCodeUrl} alt="QR Code" className="w-48 h-48 sm:w-64 sm:h-64" />
+          <QrCode value={publicUrl} className="w-48 h-48 sm:w-64 sm:h-64" />
         </div>
         
         <Button variant="outline" onClick={downloadQR} className="w-full sm:w-auto">

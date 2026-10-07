@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback, memo } from "react";
 import { format, addDays, subDays } from "date-fns";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { useTranslation } from "@/lib/i18n";
+import { useTranslation, type TranslationKey } from "@/lib/i18n";
 import { useDateFormat } from "@/lib/dateLocale";
 import { getISTNow, getTodayISTString, minutesUntilSlotEnd } from "@/lib/istTime";
 import { parseDateOnly } from "@/lib/timeSort";
@@ -60,12 +60,12 @@ export default function DashboardPage() {
 
   // Finished slots (everyone served) fold into one line so a busy day stays short; tap to open.
   const [expandedSlots, setExpandedSlots] = useState<Set<string>>(new Set());
-  const toggleSlot = (id: string) =>
+  const toggleSlot = useCallback((id: string) =>
     setExpandedSlots((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id); else next.add(id);
       return next;
-    });
+    }), []);
 
   // A booking being updated ignores further taps, so a double-tap never sends a second request.
   const busyRef = useRef<Set<string>>(new Set());
@@ -190,7 +190,7 @@ export default function DashboardPage() {
              window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msgStr)}`, '_blank');
              
              if (data.cancelledCustomers.length > 1) {
-               toast.add({ title: "Notice", description: `Note: Only the first customer (${cust.name}) was messaged via WhatsApp automatically to prevent browser pop-up blocking. Please message the others manually.`, type: "info" });
+               toast.add({ title: t('dashNoticeTitle'), description: t('dashWaOnlyFirst').replace('{name}', cust.name), type: "info" });
              }
            }
         }
@@ -284,6 +284,26 @@ export default function DashboardPage() {
 
   const availableSlots = slots.filter((s: SlotView) => s.status === "AVAILABLE").length;
   const bookedSlots = slots.filter((s: SlotView) => s.status === "BOOKED").length;
+
+  // The day's bookings grouped by time, in the order people booked (first come, first served). Only redone when the data changes.
+  const bookingsBySlot = useMemo(() => {
+    const map = new Map<string, DayBooking[]>();
+    for (const b of dayBookings) {
+      const key = String(b.slotId);
+      const list = map.get(key);
+      if (list) list.push(b); else map.set(key, [b]);
+    }
+    map.forEach((list) => list.sort((x, y) => new Date(x.createdAt || 0).getTime() - new Date(y.createdAt || 0).getTime()));
+    return map;
+  }, [dayBookings]);
+
+  // Same function identity on every render, always calling the latest handler, so the memoized rows below stay still.
+  const latest = useRef({ handleBlockSlot, handleUnblockSlot, handleInlineCapacityChange, handleBookingAction });
+  useEffect(() => { latest.current = { handleBlockSlot, handleUnblockSlot, handleInlineCapacityChange, handleBookingAction }; });
+  const onBlock = useCallback((id: string) => { latest.current.handleBlockSlot(id); }, []);
+  const onUnblock = useCallback((id: string) => { latest.current.handleUnblockSlot(id); }, []);
+  const onCapacity = useCallback((id: string, value: number) => { latest.current.handleInlineCapacityChange(id, value); }, []);
+  const onBookingAction = useCallback((id: string, action: "complete" | "no-show") => { latest.current.handleBookingAction(id, action); }, []);
 
   if (profile && profile.isActive === false) {
     return (
@@ -425,91 +445,21 @@ export default function DashboardPage() {
               }
 
               return visibleSlots.map((slot) => {
-                // First come, first served: the order people booked this time slot in.
-                const slotBookings = dayBookings
-                  .filter((b) => String(b.slotId) === String(slot._id))
-                  .sort((x, y) => new Date(x.createdAt || 0).getTime() - new Date(y.createdAt || 0).getTime());
-                const finished = slotBookings.length > 0 && slotBookings.every((b) => b.status === "COMPLETED");
-                if (finished && !expandedSlots.has(slot._id)) {
-                  return (
-                    <button
-                      key={slot._id}
-                      onClick={() => toggleSlot(slot._id)}
-                      className="w-full p-4 sm:px-6 flex items-center justify-between text-left hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
-                    >
-                      <span className="text-base font-semibold text-zinc-900 dark:text-zinc-50">{slot.startTime}</span>
-                      <span className="text-sm font-medium text-green-600 dark:text-green-400">✓ {slotBookings.length} {t('apptCompleted')} ▾</span>
-                    </button>
-                  );
-                }
+                const slotBookings = bookingsBySlot.get(String(slot._id)) ?? NO_BOOKINGS;
                 return (
-                <div key={slot._id}>
-                <div className="p-4 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors gap-4 sm:gap-0">
-                  <div className="flex items-center gap-3 sm:gap-6 w-full sm:w-auto justify-between sm:justify-start">
-                    <div className="text-base sm:text-lg font-semibold w-20 sm:w-24 text-zinc-900 dark:text-zinc-50">
-                      {slot.startTime}
-                    </div>
-                    
-                    {slot.status === "AVAILABLE" && (
-                      <span className="px-2 sm:px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                        {t('available')} ({slot.bookingsCount || 0}/{slot.capacity || 1})
-                      </span>
-                    )}
-                    {slot.status === "BOOKED" && (
-                      <span className="px-2 sm:px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
-                        {t('booked')}
-                      </span>
-                    )}
-                    {slot.status === "BLOCKED" && (
-                      <span className="px-2 sm:px-3 py-1 rounded-full text-xs font-medium bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">
-                        {t('blocked')}
-                      </span>
-                    )}
-                  </div>
-                  
-                  <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-end border-t border-zinc-100 dark:border-zinc-800/50 sm:border-0 pt-4 sm:pt-0">
-                    <div className="flex items-center gap-2 px-2 sm:px-3 py-1 sm:py-1.5 bg-zinc-100 dark:bg-zinc-800/60 hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors rounded-lg border border-zinc-200/80 dark:border-zinc-700/80 group" title="Maximum Capacity for this slot">
-                      <CapacityEditor 
-                        slot={slot} 
-                        onSave={(val) => handleInlineCapacityChange(slot._id, val)} 
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {slot.status === "AVAILABLE" && <Button variant="outline" size="sm" className="font-medium shadow-sm hover:bg-zinc-50 text-sm h-11 px-4" onClick={() => handleBlockSlot(slot._id)}>{t('blockSlot')}</Button>}
-                      {slot.status === "BLOCKED" && <Button variant="outline" size="sm" className="font-medium shadow-sm hover:bg-zinc-50 text-sm h-11 px-4" onClick={() => handleUnblockSlot(slot._id)}>{t('unblock')}</Button>}
-                    </div>
-                  </div>
-                </div>
-                {slotBookings.length > 0 && (
-                  <div className="px-4 sm:px-6 pb-4 space-y-2">
-                    {slotBookings.map((b, idx) => (
-                      <div key={b._id} className="rounded-xl bg-zinc-50 dark:bg-zinc-800/50 p-3 space-y-2">
-                        <div className="flex items-start gap-3">
-                          <span className="shrink-0 mt-0.5 w-8 h-8 rounded-full bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 text-sm font-bold flex items-center justify-center" title={t('turnNumber')}>
-                            {idx + 1}
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <div className="font-medium text-zinc-900 dark:text-zinc-100 break-words">{b.customerId?.name || "—"}</div>
-                            {b.customerId?.phone && <a href={`tel:${b.customerId.phone}`} className="text-sm text-zinc-500 inline-block py-3">{b.customerId.phone}</a>}
-                          </div>
-                          {b.status !== "CONFIRMED" && (
-                            <span className="text-sm font-medium text-green-600 dark:text-green-400 shrink-0">✓ {t('apptCompleted')}</span>
-                          )}
-                        </div>
-                        {b.status === "CONFIRMED" && (
-                          <div className="grid grid-cols-2 gap-2">
-                            <Button className="h-11 bg-green-600 hover:bg-green-700 text-white" disabled={busyIds.includes(b._id)} onClick={() => handleBookingAction(b._id, "complete")}>✓ {t('done')}</Button>
-                            <Button variant="outline" className="h-11" disabled={busyIds.includes(b._id)} onClick={() => handleBookingAction(b._id, "no-show")}>{t('apptNoShow')}</Button>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                    {finished && (
-                      <button onClick={() => toggleSlot(slot._id)} className="text-sm text-zinc-500 underline">{t('hideFinished')}</button>
-                    )}
-                  </div>
-                )}
-                </div>
+                  <SlotRow
+                    key={slot._id}
+                    slot={slot}
+                    bookings={slotBookings}
+                    expanded={expandedSlots.has(slot._id)}
+                    busyKey={slotBookings.filter((b) => busyIds.includes(b._id)).map((b) => b._id).join(",")}
+                    t={t}
+                    onToggle={toggleSlot}
+                    onBlock={onBlock}
+                    onUnblock={onUnblock}
+                    onCapacity={onCapacity}
+                    onBookingAction={onBookingAction}
+                  />
                 );
               });
             })()
@@ -640,7 +590,128 @@ export default function DashboardPage() {
   );
 }
 
+
+type DayBooking = { _id: string; slotId: string; status: string; createdAt?: string; customerId?: { name?: string; phone?: string } };
+const NO_BOOKINGS: DayBooking[] = [];
+
+/**
+ * One time slot with its bookings. Memoized: tapping Done on one customer (or a refresh that changes one slot)
+ * redraws only that row instead of the whole day's schedule, which is what keeps taps instant on a slow phone.
+ */
+type SlotRowProps = {
+  slot: SlotView;
+  bookings: DayBooking[];
+  expanded: boolean;
+  busyKey: string;
+  t: (key: TranslationKey) => string;
+  onToggle: (id: string) => void;
+  onBlock: (id: string) => void;
+  onUnblock: (id: string) => void;
+  onCapacity: (id: string, value: number) => void;
+  onBookingAction: (id: string, action: "complete" | "no-show") => void;
+};
+
+const SlotRow = memo(function SlotRow({ slot, bookings: slotBookings, expanded, busyKey, t, onToggle, onBlock, onUnblock, onCapacity, onBookingAction }: SlotRowProps) {
+  const busy = new Set(busyKey ? busyKey.split(",") : []);
+  const finished = slotBookings.length > 0 && slotBookings.every((b) => b.status === "COMPLETED");
+  if (finished && !expanded) {
+    return (
+      <button
+        key={slot._id}
+        onClick={() => onToggle(slot._id)}
+        className="w-full p-4 sm:px-6 flex items-center justify-between text-left hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
+      >
+        <span className="text-base font-semibold text-zinc-900 dark:text-zinc-50">{slot.startTime}</span>
+        <span className="text-sm font-medium text-green-600 dark:text-green-400">✓ {slotBookings.length} {t('apptCompleted')} ▾</span>
+      </button>
+    );
+  }
+  return (
+  <div key={slot._id}>
+  <div className="p-4 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors gap-4 sm:gap-0">
+    <div className="flex items-center gap-3 sm:gap-6 w-full sm:w-auto justify-between sm:justify-start">
+      <div className="text-base sm:text-lg font-semibold w-20 sm:w-24 text-zinc-900 dark:text-zinc-50">
+        {slot.startTime}
+      </div>
+      
+      {slot.status === "AVAILABLE" && (
+        <span className="px-2 sm:px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+          {t('available')} ({slot.bookingsCount || 0}/{slot.capacity || 1})
+        </span>
+      )}
+      {slot.status === "BOOKED" && (
+        <span className="px-2 sm:px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+          {t('booked')}
+        </span>
+      )}
+      {slot.status === "BLOCKED" && (
+        <span className="px-2 sm:px-3 py-1 rounded-full text-xs font-medium bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">
+          {t('blocked')}
+        </span>
+      )}
+    </div>
+    
+    <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-end border-t border-zinc-100 dark:border-zinc-800/50 sm:border-0 pt-4 sm:pt-0">
+      <div className="flex items-center gap-2 px-2 sm:px-3 py-1 sm:py-1.5 bg-zinc-100 dark:bg-zinc-800/60 hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors rounded-lg border border-zinc-200/80 dark:border-zinc-700/80 group" title="Maximum Capacity for this slot">
+        <CapacityEditor 
+          slot={slot} 
+          onSave={(val) => onCapacity(slot._id, val)} 
+        />
+      </div>
+      <div className="flex items-center gap-2">
+        {slot.status === "AVAILABLE" && <Button variant="outline" size="sm" className="font-medium shadow-sm hover:bg-zinc-50 text-sm h-11 px-4" onClick={() => onBlock(slot._id)}>{t('blockSlot')}</Button>}
+        {slot.status === "BLOCKED" && <Button variant="outline" size="sm" className="font-medium shadow-sm hover:bg-zinc-50 text-sm h-11 px-4" onClick={() => onUnblock(slot._id)}>{t('unblock')}</Button>}
+      </div>
+    </div>
+  </div>
+  {slotBookings.length > 0 && (
+    <div className="px-4 sm:px-6 pb-4 space-y-2">
+      {slotBookings.map((b, idx) => (
+        <div key={b._id} className="rounded-xl bg-zinc-50 dark:bg-zinc-800/50 p-3 space-y-2">
+          <div className="flex items-start gap-3">
+            <span className="shrink-0 mt-0.5 w-8 h-8 rounded-full bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 text-sm font-bold flex items-center justify-center" title={t('turnNumber')}>
+              {idx + 1}
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="font-medium text-zinc-900 dark:text-zinc-100 break-words">{b.customerId?.name || "—"}</div>
+              {b.customerId?.phone && <a href={`tel:${b.customerId.phone}`} className="text-sm text-zinc-500 inline-block py-3">{b.customerId.phone}</a>}
+            </div>
+            {b.status !== "CONFIRMED" && (
+              <span className="text-sm font-medium text-green-600 dark:text-green-400 shrink-0">✓ {t('apptCompleted')}</span>
+            )}
+          </div>
+          {b.status === "CONFIRMED" && (
+            <div className="grid grid-cols-2 gap-2">
+              <Button className="h-11 bg-green-600 hover:bg-green-700 text-white" disabled={busy.has(b._id)} onClick={() => onBookingAction(b._id, "complete")}>✓ {t('done')}</Button>
+              <Button variant="outline" className="h-11" disabled={busy.has(b._id)} onClick={() => onBookingAction(b._id, "no-show")}>{t('apptNoShow')}</Button>
+            </div>
+          )}
+        </div>
+      ))}
+      {finished && (
+        <button onClick={() => onToggle(slot._id)} className="text-sm text-zinc-500 underline">{t('hideFinished')}</button>
+      )}
+    </div>
+  )}
+  </div>
+  );
+}, sameRow);
+
+/** A refresh hands back brand-new objects even when nothing changed; compare what is actually shown. */
+function sameRow(a: SlotRowProps, b: SlotRowProps): boolean {
+  if (a.expanded !== b.expanded || a.busyKey !== b.busyKey || a.t !== b.t || a.onToggle !== b.onToggle || a.onBlock !== b.onBlock
+    || a.onUnblock !== b.onUnblock || a.onCapacity !== b.onCapacity || a.onBookingAction !== b.onBookingAction) return false;
+  const x = a.slot, y = b.slot;
+  if (x._id !== y._id || x.status !== y.status || x.capacity !== y.capacity || x.bookingsCount !== y.bookingsCount || x.startTime !== y.startTime || x.endTime !== y.endTime) return false;
+  if (a.bookings.length !== b.bookings.length) return false;
+  return a.bookings.every((p, i) => {
+    const q = b.bookings[i];
+    return p._id === q._id && p.status === q.status && p.customerId?.name === q.customerId?.name && p.customerId?.phone === q.customerId?.phone;
+  });
+}
+
 function CapacityEditor({ slot, onSave }: { slot: SlotView, onSave: (val: number) => void }) {
+  const { t } = useTranslation();
   const [val, setVal] = useState<number | string>(slot.capacity || 1);
 
   useEffect(() => {
@@ -693,7 +764,7 @@ function CapacityEditor({ slot, onSave }: { slot: SlotView, onSave: (val: number
           onClick={handleSave}
           onMouseDown={(e) => e.preventDefault()}
           className="ml-1 bg-zinc-900 text-white rounded-lg p-2 hover:bg-zinc-800 transition-colors"
-          title="Save Capacity"
+          title={t('dashSaveCapacity')}
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />

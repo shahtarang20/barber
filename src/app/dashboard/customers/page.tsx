@@ -44,7 +44,8 @@ export default function CustomersPage() {
 
   const { data: customersData, isLoading: loading, mutate: mutateCustomers } = useSWR(
     `/api/barber/customers?page=${page}&limit=${limit}&search=${encodeURIComponent(debouncedSearch)}`,
-    fetcher
+    fetcher,
+    { keepPreviousData: true } // paging / typing a search keeps the old rows on screen until the new ones arrive (no flashing "Loading…")
   );
 
   useRealtimeRefresh(() => mutateCustomers());

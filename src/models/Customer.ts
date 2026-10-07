@@ -38,6 +38,9 @@ const CustomerSchema: Schema = new Schema(
 );
 
 CustomerSchema.index({ phone: 1, name: 1 });
+// createConfirmedBooking looks a customer up with a case-insensitive collation. MongoDB can only use an index for such a
+// query if the index was built with the SAME collation, otherwise every booking scans the whole customers collection.
+CustomerSchema.index({ phone: 1, name: 1, ownerBarberId: 1 }, { collation: { locale: "en", strength: 2 }, name: "phone_name_owner_ci" });
 
 export const Customer =
   mongoose.models.Customer || mongoose.model<ICustomer>("Customer", CustomerSchema);

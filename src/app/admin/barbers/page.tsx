@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { CustomerStyleSelect } from "@/components/admin/CustomerStyleSelect";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
-import { PlanPaymentsDialog } from "@/components/admin/PlanPaymentsDialog";
+import dynamic from "next/dynamic";
+const PlanPaymentsDialog = dynamic(() => import("@/components/admin/PlanPaymentsDialog").then((m) => m.PlanPaymentsDialog), { ssr: false });
 import { showDate } from "@/lib/usePlan";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 
@@ -283,6 +285,7 @@ export default function AdminBarbersPage() {
                         />
                         {b.catalogueEnabled !== false ? "On" : "Off"}
                       </label>
+                      <div className="mt-2"><CustomerStyleSelect ownerType="BARBER" ownerId={b._id} name={b.name} /></div>
                     </td>
                     <td className="px-6 py-4 text-right space-x-2">
                       <Button variant="outline" size="sm" onClick={() => handleResetPassword(b._id, b.name)}>Reset Password</Button>
@@ -296,7 +299,7 @@ export default function AdminBarbersPage() {
             </table>
           </div>
         )}
-        <PlanPaymentsDialog barber={payFor} onClose={() => setPayFor(null)} onChanged={fetchBarbers} />
+        {payFor && <PlanPaymentsDialog barber={payFor} onClose={() => setPayFor(null)} onChanged={fetchBarbers} />}
         <PaginationControls
           pagination={pagination}
           onPageChange={setPage}

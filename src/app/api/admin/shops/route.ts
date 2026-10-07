@@ -3,9 +3,9 @@ import { requireAuth } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import { Shop } from "@/models/Shop";
 import { User } from "@/models/User";
-import { visitorUsage, getDefaultVisitorLimit } from "@/lib/visitorLimit";
+import { visitorUsedMap, getDefaultVisitorLimit } from "@/lib/visitorLimit";
 import { getPlansConfig, subscriptionState } from "@/lib/plans";
-import { shopLinkUsage, getDefaultLinkLimit } from "@/lib/linkLimit";
+import { shopLinkUsedMap, getDefaultLinkLimit, effectiveLimit } from "@/lib/linkLimit";
 
 export async function GET(req: Request) {
   try {
@@ -17,8 +17,8 @@ export async function GET(req: Request) {
     await connectToDatabase();
 
     const { searchParams } = new URL(req.url);
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = Math.min(parseInt(searchParams.get("limit") || "10"), 100);
+    const page = Math.max(parseInt(searchParams.get("page") || "1") || 1, 1);
+    const limit = Math.min(Math.max(parseInt(searchParams.get("limit") || "10") || 10, 1), 100);
     const skip = (page - 1) * limit;
 
     const total = await Shop.countDocuments();
@@ -35,9 +35,12 @@ export async function GET(req: Request) {
     const ownerById = new Map(owners.map((o) => [o._id.toString(), o]));
 
     const defaultLinkLimit = await getDefaultLinkLimit();
-    const usages = await Promise.all(shops.map((s) => shopLinkUsage(s._id, s.linkBookingLimit ?? null, defaultLinkLimit)));
     const defaultVisitorLimit = await getDefaultVisitorLimit();
-    const visitors = await Promise.all(shops.map((s) => visitorUsage("SHOP", s._id, s.visitorLimit ?? null, defaultVisitorLimit)));
+    // Two grouped queries for the whole page (not two counts per shop).
+    const shopIds = shops.map((s) => s._id);
+    const [linkUsed, visitorUsed] = await Promise.all([shopLinkUsedMap(shopIds), visitorUsedMap("SHOP", shopIds)]);
+    const usages = shops.map((s) => ({ used: linkUsed.get(String(s._id)) ?? 0, limit: effectiveLimit(s.linkBookingLimit ?? null, defaultLinkLimit) }));
+    const visitors = shops.map((s) => ({ used: visitorUsed.get(String(s._id)) ?? 0, limit: effectiveLimit(s.visitorLimit ?? null, defaultVisitorLimit) }));
     const data = shops.map((s, i) => ({
       _id: s._id,
       name: s.name,

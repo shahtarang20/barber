@@ -9,7 +9,7 @@ import { rateLimit, getClientIp } from "@/lib/rateLimit";
 import { normalizePhone } from "@/lib/phone";
 import { minutesUntilSlot } from "@/lib/istTime";
 import { notifyBarber } from "@/lib/realtime";
-import { pushToBarber } from "@/lib/push";
+import { pushToBarberLater } from "@/lib/push";
 import { findOwnBooking, withinDailyOwnBookingLimit } from "@/lib/ownBooking";
 import { freeSlotSeat } from "@/lib/cancelBooking";
 import { heldByOthersExpr } from "@/lib/waitlistHold";
@@ -109,7 +109,7 @@ export async function POST(req: Request) {
       holdMinutes: freed.holdMinutes,
     });
 
-    await pushToBarber(booking.barberId.toString(), {
+    pushToBarberLater(booking.barberId.toString(), {
       title: "Booking moved",
       body: `${customer.name} moved from ${freed.slotTime} to ${moved.startTime} on ${moved.date}`,
     });

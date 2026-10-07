@@ -4,6 +4,7 @@ import connectToDatabase from "@/lib/mongodb";
 import { User } from "@/models/User";
 import { Slot } from "@/models/Slot";
 import { CronState } from "@/models/CronState";
+import { AppSetting } from "@/models/AppSetting";
 import { autoGenerateFutureSlots } from "@/lib/slotGenerator";
 import { autoCompleteStaleBookings } from "@/lib/bookingMaintenance";
 import { Booking } from "@/models/Booking";
@@ -77,7 +78,8 @@ export async function GET(req: Request) {
       const barbers = await User.find({ role: "BARBER", isActive: true, ...(cursor ? { _id: { $gt: cursor } } : {}) })
         .sort({ _id: 1 })
         .limit(BATCH)
-        .select("workingHours slotDuration defaultCapacity");
+        .select("workingHours slotDuration defaultCapacity")
+        .lean();
       if (barbers.length === 0) { finished = true; break; }
 
       for (let i = 0; i < barbers.length; i += CONCURRENCY) {
@@ -101,9 +103,15 @@ export async function GET(req: Request) {
       const autoCompleted = await autoCompleteStaleBookings();
       await refreshAdminStats();
       // One-off catch-up for bookings made before time-of-day sorting existed.
-      const missing = await Booking.find({ startMinutes: { $exists: false } }).select("startTime").limit(5000);
-      if (missing.length) {
-        await Booking.bulkWrite(missing.map((b) => ({ updateOne: { filter: { _id: b._id }, update: { $set: { startMinutes: timeStringToMinutes(b.startTime) } } } })));
+      // Every booking write sets startMinutes now, so once a pass finds nothing left it is recorded and never scanned again
+      // (the check below has no index and would walk the whole bookings collection every day).
+      const BACKFILL_KEY = "backfill:startMinutes";
+      if (!(await AppSetting.exists({ key: BACKFILL_KEY }))) {
+        const missing = await Booking.find({ startMinutes: { $exists: false } }).select("startTime").limit(5000).lean();
+        if (missing.length) {
+          await Booking.bulkWrite(missing.map((b) => ({ updateOne: { filter: { _id: b._id }, update: { $set: { startMinutes: timeStringToMinutes(b.startTime) } } } })));
+        }
+        if (missing.length < 5000) await AppSetting.updateOne({ key: BACKFILL_KEY }, { $set: { value: true } }, { upsert: true });
       }
       cleanup = { oldSlotsDeleted: deleted.deletedCount, autoCompleted };
       // Admin-controlled cleanup of finished bookings older than the configured age (off by default).

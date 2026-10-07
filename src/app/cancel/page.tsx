@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { format, addDays } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -72,7 +72,10 @@ export default function ManageBookingPage() {
     setSlotId("");
   });
 
+  // Only the latest date picked may fill the list (a slow earlier answer must not overwrite it).
+  const slotsReq = useRef(0);
   const loadSlots = async (newDate: string) => {
+    const reqId = ++slotsReq.current;
     setDate(newDate);
     setSlotId("");
     setSlots([]);
@@ -81,6 +84,7 @@ export default function ManageBookingPage() {
     try {
       const res = await fetch(`/api/public/barbers/${found.barberSlug}/slots?date=${newDate}`);
       const data = await res.json();
+      if (reqId !== slotsReq.current) return;
       if (data.success) {
         setSlots(data.data.filter((s: OpenSlot) => s.status === "AVAILABLE" && s.bookingsCount < s.capacity));
       }

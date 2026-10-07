@@ -9,6 +9,8 @@ import { Offer } from "@/models/Offer";
 import { offerPrice } from "@/lib/offers";
 import { getTodayISTString } from "@/lib/istTime";
 import { discountLabel, finalPrice, type OwnerType } from "@/lib/catalogue";
+import { MediaAsset } from "@/models/MediaAsset";
+import { resolveTemplate, type TemplateId } from "@/lib/catalogueTemplate";
 
 /** What a customer is allowed to see of one service. Never contains owner ids, drafts or internal fields. */
 export interface PublicService {
@@ -17,6 +19,8 @@ export interface PublicService {
   name: string;
   description: string;
   images: string[];
+  /** 480px thumbnail of the first picture (cards use this; "" = none known, use the picture itself). */
+  thumb: string;
   videos: string[];
   durationMinutes: number;
   priceType: "FIXED_PRICE" | "STARTING_FROM" | "ASK_SHOP";
@@ -40,6 +44,8 @@ export interface PublicOffer { id: string; title: string; description: string; e
 export interface PublicCatalogue {
   /** True only when the owner switched it on, the admin allows it, and at least one published service exists. */
   available: boolean;
+  /** Customer page style 1-5 (stored, else a stable hash of the owner id). Always present, even when the catalogue is off. */
+  template: TemplateId;
   branding: { name: string; logoUrl: string; coverUrl: string; intro: string; address: string; mapUrl: string; phone: string; whatsapp: string; instagram: string; facebook: string; accent: string; layout: string; imageRatio: string };
   categories: PublicCategory[];
   /** Offers that are on today (shown as a strip above the services). */
@@ -58,6 +64,7 @@ const toPublicService = (s: Lean): PublicService => {
     name: String(s.name),
     description: (s.description as string) || "",
     images: (s.images as string[]) || [],
+    thumb: "",
     videos: (s.videos as string[]) || [],
     durationMinutes: Number(s.durationMinutes),
     priceType: s.priceType as PublicService["priceType"],
@@ -96,7 +103,7 @@ async function governingUserId(ownerType: OwnerType, ownerId: mongoose.Types.Obj
 
 /** The published catalogue of one barber or one shop, as customers see it. */
 export async function loadPublicCatalogue(ownerType: OwnerType, ownerId: mongoose.Types.ObjectId, displayName: string): Promise<PublicCatalogue> {
-  const unavailable: PublicCatalogue = { available: false, branding: { name: displayName, ...EMPTY_BRANDING }, categories: [], offers: [] };
+  const unavailable: PublicCatalogue = { available: false, template: resolveTemplate(undefined, ownerId), branding: { name: displayName, ...EMPTY_BRANDING }, categories: [], offers: [] };
   const governing = await governingUserId(ownerType, ownerId);
   if (!governing) return unavailable;
 
@@ -104,6 +111,8 @@ export async function loadPublicCatalogue(ownerType: OwnerType, ownerId: mongoos
     CatalogueSettings.findOne({ ownerType, ownerId }).lean<Lean | null>(),
     User.findById(governing).select("isActive catalogueEnabled").lean<{ isActive?: boolean; catalogueEnabled?: boolean } | null>(),
   ]);
+  const template = resolveTemplate(settings?.template, ownerId);
+  unavailable.template = template;
   const branding = { name: displayName, ...EMPTY_BRANDING, ...Object.fromEntries(Object.entries(settings || {}).filter(([k, v]) => k in EMPTY_BRANDING && typeof v === "string")) } as PublicCatalogue["branding"];
   if (!settings?.enabled || !owner || owner.isActive === false || owner.catalogueEnabled === false) return { ...unavailable, branding };
 
@@ -128,7 +137,14 @@ export async function loadPublicCatalogue(ownerType: OwnerType, ownerId: mongoos
     .map((c) => ({ id: String(c._id), name: String(c.name), slug: String(c.slug), description: (c.description as string) || "", coverUrl: (c.coverUrl as string) || "", services: byCategory.get(String(c._id)) || [] }))
     .filter((c) => c.services.length > 0); // an empty category is not shown to customers
   const offers: PublicOffer[] = liveOffers.map((o) => ({ id: String(o._id), title: String(o.title), description: (o.description as string) || "", endsOn: String(o.endsOn), discount: { type: o.discountType as "PERCENTAGE" | "FIXED", value: Number(o.discountValue) }, allServices: ((o.serviceIds as unknown[]) || []).length === 0 }));
-  return { available: shown.length > 0, branding, categories: shown, offers };
+  // Cards use the 480px thumbnail of each service's first picture (looked up by the owner's index, matched in memory).
+  const firstImages = new Set(shown.flatMap((c) => c.services.map((s) => s.images[0])).filter(Boolean));
+  if (firstImages.size > 0) {
+    const assets = await MediaAsset.find({ ownerType, ownerId, kind: "IMAGE" }).select("url thumbUrl").lean<{ url: string; thumbUrl?: string }[]>();
+    const thumbOf = new Map(assets.filter((a) => a.thumbUrl && firstImages.has(a.url)).map((a) => [a.url, a.thumbUrl as string]));
+    for (const c of shown) for (const s of c.services) s.thumb = thumbOf.get(s.images[0]) || "";
+  }
+  return { available: shown.length > 0, template, branding, categories: shown, offers };
 }
 
 export interface ServiceSnapshot { serviceId: mongoose.Types.ObjectId; name: string; durationMinutes: number; price: number | null }

@@ -24,7 +24,11 @@ export function timeStringToMinutes(timeStr: string): number {
 }
 
 export function sortByStartTime<T extends { startTime: string }>(slots: T[]): T[] {
-  return [...slots].sort((a, b) => timeStringToMinutes(a.startTime) - timeStringToMinutes(b.startTime));
+  // Parse each time once (not on every comparison): a shop page sorts hundreds of slots per request.
+  return slots
+    .map((s) => ({ s, m: timeStringToMinutes(s.startTime) }))
+    .sort((a, b) => a.m - b.m)
+    .map((x) => x.s);
 }
 
 /**

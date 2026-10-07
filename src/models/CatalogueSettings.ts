@@ -1,4 +1,5 @@
 import mongoose, { Schema } from "mongoose";
+import { randomTemplate } from "@/lib/catalogueTemplate";
 
 /** Switch and branding of one barber's / shop's public catalogue. */
 const CatalogueSettingsSchema = new Schema(
@@ -17,6 +18,8 @@ const CatalogueSettingsSchema = new Schema(
     facebook: { type: String, maxlength: 200 },
     layout: { type: String, enum: ["grid", "list"], default: "grid" },
     imageRatio: { type: String, enum: ["portrait", "square", "wide"], default: "portrait" },
+    // Customer page style 1-5: random when the record is first created; older records have none and use a hash of the owner id.
+    template: { type: Number, min: 1, max: 5, default: () => randomTemplate() },
     accent: { type: String, enum: ["indigo", "emerald", "rose", "amber", "sky", "zinc"], default: "indigo" },
   },
   { timestamps: true }

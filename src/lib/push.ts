@@ -1,4 +1,5 @@
 import webpush from "web-push";
+import { after } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import { PushSubscription } from "@/models/PushSubscription";
 
@@ -20,7 +21,7 @@ export async function pushToBarber(barberId: string, payload: { title: string; b
   if (!isPushConfigured) return;
   try {
     await connectToDatabase();
-    const subs = await PushSubscription.find({ barberId });
+    const subs = await PushSubscription.find({ barberId }).select("endpoint keys").lean<{ _id: unknown; endpoint: string; keys: { p256dh: string; auth: string } }[]>();
     await Promise.allSettled(
       subs.map(async (s) => {
         try {
@@ -38,6 +39,19 @@ export async function pushToBarber(barberId: string, payload: { title: string; b
     );
   } catch (err) {
     console.error("Push error:", err);
+  }
+}
+
+/**
+ * Same as pushToBarber, but does not make the request wait: the notification goes out after the response is sent
+ * (`after` keeps the serverless function alive until it is done). Use this inside request handlers.
+ */
+export function pushToBarberLater(barberId: string, payload: { title: string; body: string; url?: string }) {
+  if (!isPushConfigured) return;
+  try {
+    after(() => pushToBarber(barberId, payload));
+  } catch {
+    void pushToBarber(barberId, payload); // not inside a request (script / test)
   }
 }
 

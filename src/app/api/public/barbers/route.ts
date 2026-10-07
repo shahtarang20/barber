@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import { User } from "@/models/User";
+import { rateLimit, getClientIp } from "@/lib/rateLimit";
 
 const escapeRegex = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 export async function GET(req: Request) {
   try {
+    if (!(await rateLimit(`public-barber-list:${getClientIp(req)}`, 120, 60_000))) {
+      return NextResponse.json({ success: false, error: { message: "Too many requests. Please try again shortly." } }, { status: 429 });
+    }
     const { searchParams } = new URL(req.url);
     const page = Math.max(parseInt(searchParams.get("page") || "1") || 1, 1);
     const limit = Math.min(Math.max(parseInt(searchParams.get("limit") || "20") || 20, 1), 100);
@@ -31,7 +35,7 @@ export async function GET(req: Request) {
       success: true,
       data: barbers,
       pagination: { total, page, limit, pages: Math.ceil(total / limit) },
-    });
+    }, { headers: { "Cache-Control": "public, max-age=0, s-maxage=60, stale-while-revalidate=300" } }); // the same public list for everyone
   } catch (error) {
     console.error("Fetch public barbers error:", error);
     return NextResponse.json({ success: false, error: { message: "Internal server error" } }, { status: 500 });

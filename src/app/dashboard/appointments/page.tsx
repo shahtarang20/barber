@@ -10,6 +10,7 @@ import { PaginationControls } from "@/components/ui/pagination-controls";
 import { useRealtimeRefresh } from "@/lib/useRealtimeRefresh";
 import { getWhatsAppNumber } from "@/lib/phone";
 import useSWR from "swr";
+import dynamic from "next/dynamic";
 import { minutesUntilSlotEnd, getTodayISTString } from "@/lib/istTime";
 import { sortByStartTime, parseDateOnly } from "@/lib/timeSort";
 import { Check, X, Phone, MessageCircle, UserPlus } from "lucide-react";
@@ -30,14 +31,11 @@ interface BookingView {
   serviceDurationSnapshot?: number;
 }
 
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+// The dialogs (and the dialog library) are downloaded only when one is first opened.
+const CancelBookingDialog = dynamic(() => import("@/components/dashboard/AppointmentDialogs").then((m) => m.CancelBookingDialog), { ssr: false });
+const WalkInDialog = dynamic(() => import("@/components/dashboard/AppointmentDialogs").then((m) => m.WalkInDialog), { ssr: false });
+const WhatsappPromptDialog = dynamic(() => import("@/components/dashboard/AppointmentDialogs").then((m) => m.WhatsappPromptDialog), { ssr: false });
+import type { WhatsappPromptData } from "@/components/dashboard/AppointmentDialogs";
 
 export default function AppointmentsPage() {
   const fmt = useDateFormat();
@@ -47,78 +45,12 @@ export default function AppointmentsPage() {
   const { t } = useTranslation();
 
   const [cancelBookingId, setCancelBookingId] = useState<string | null>(null);
-  const [whatsappPromptData, setWhatsappPromptData] = useState<{
-    phone: string;
-    name: string;
-    time: string;
-    prompt: string;
-    waitlistCustomers?: { name: string, phone: string }[];
-    byCustomer?: boolean;
-    holdMinutes?: number;
-  } | null>(null);
+  const [whatsappPromptData, setWhatsappPromptData] = useState<WhatsappPromptData | null>(null);
 
   const [walkInOpen, setWalkInOpen] = useState(false);
-  const [walkInName, setWalkInName] = useState("");
-  const [walkInPhone, setWalkInPhone] = useState("");
-  const [walkInSlotId, setWalkInSlotId] = useState("");
-  const [walkInSaving, setWalkInSaving] = useState(false);
-
+  // Keep a dialog mounted after its first use so it can play its closing animation.
+  const [walkInUsed, setWalkInUsed] = useState(false);
   const todayStr = getTodayISTString();
-  // The barber can book for any day in the next two weeks (a customer who phoned for tomorrow, or who is here now).
-  const [walkInDate, setWalkInDate] = useState(todayStr);
-  const dayChoices = Array.from({ length: 14 }).map((_, i) => {
-    const d = addDays(parseDateOnly(todayStr), i);
-    return { value: format(d, "yyyy-MM-dd"), label: `${i === 0 ? t('apptToday') + " · " : ""}${fmt(d, "EEE d MMM")}` };
-  });
-  const { data: walkInSlotsData, isLoading: walkInSlotsLoading, mutate: mutateWalkInSlots } = useSWR(walkInOpen ? `/api/barber/slots?date=${walkInDate}` : null, fetcher);
-  const walkInSlots: { _id: string; startTime: string; endTime: string; status: string; bookingsCount: number; capacity: number }[] = walkInSlotsData?.success
-    ? walkInSlotsData.data.filter((sl: { status: string; endTime: string; bookingsCount: number; capacity: number }) =>
-        sl.status === "AVAILABLE" && sl.bookingsCount < sl.capacity && minutesUntilSlotEnd(walkInDate, sl.endTime) > 0)
-    : [];
-  // Use the chosen time only while it is still open; otherwise fall back to the first open time.
-  const selectedWalkInSlot = walkInSlots.some((sl) => sl._id === walkInSlotId) ? walkInSlotId : walkInSlots[0]?._id || "";
-  const walkInDigits = walkInPhone.replace(/\D/g, "");
-  const walkInNameBad = walkInName.trim().length > 0 && walkInName.trim().length < 2;
-  const walkInPhoneBad = walkInDigits.length > 0 && walkInDigits.length < 10;
-
-  const handleWalkIn = async () => {
-    setWalkInSaving(true);
-    try {
-      const res = await fetch("/api/barber/bookings/walk-in", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slotId: selectedWalkInSlot, name: walkInName, phone: walkInPhone }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        // Say exactly what was booked and for which day, so a booking made for another day is not mistaken for "nothing happened".
-        const pickedSlot = walkInSlots.find((sl) => sl._id === selectedWalkInSlot);
-        toast.add({
-          title: t('bookingAddedTitle'),
-          description: `${walkInName.trim()} · ${fmt(parseDateOnly(walkInDate), "EEE d MMM")}${pickedSlot ? ` · ${pickedSlot.startTime}` : ""} · ${data.data.bookingNumber}`,
-          type: "success",
-        });
-        // A booking for a later day lives under Upcoming, not Today: take the barber there so he can see it.
-        if (walkInDate !== todayStr) { setFilter("UPCOMING"); setPage(1); }
-        setWalkInOpen(false);
-        setWalkInName("");
-        setWalkInPhone("");
-        setWalkInSlotId("");
-        setWalkInDate(todayStr);
-        mutateBookings();
-        mutateWalkInSlots();
-      } else {
-        // Most likely someone else took the time meanwhile: refresh the list so a free time can be picked.
-        mutateWalkInSlots();
-        setWalkInSlotId("");
-        toast.add({ title: t('error'), description: data.error?.message || t('genericError'), type: "error" });
-      }
-    } catch {
-      toast.add({ title: t('error'), description: t('genericError'), type: "error" });
-    } finally {
-      setWalkInSaving(false);
-    }
-  };
 
   const { data: profileData } = useSWR("/api/barber/profile", fetcher);
   const myProfile: { slug?: string; name?: string } | undefined = profileData?.success ? profileData.data : undefined;
@@ -209,16 +141,6 @@ export default function AppointmentsPage() {
     return `https://wa.me/${getWhatsAppNumber(b.customerId?.phone || '')}?text=${encodeURIComponent(msg)}`;
   };
 
-  const handleSendWhatsApp = () => {
-    if (!whatsappPromptData) return;
-    const { phone, name, time } = whatsappPromptData;
-    const cleanPhone = getWhatsAppNumber(phone);
-    const msgStr = t('cancelMessage' as any).replace('{name}', name).replace('{time}', time);
-    const msg = encodeURIComponent(msgStr);
-    window.open(`https://wa.me/${cleanPhone}?text=${msg}`, '_blank');
-    setWhatsappPromptData(null);
-  };
-
   // The server already applied the tab filter (and paging), so the rows are used as they come.
   const filteredBookingsRaw = bookings;
 
@@ -300,7 +222,7 @@ export default function AppointmentsPage() {
       <div>
         <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">{t('appointments')}</h1>
         <p className="text-zinc-500 dark:text-zinc-400 mt-2">{t('apptSubtitle')}</p>
-        <Button className="mt-4 h-12 text-base w-full sm:w-auto" onClick={() => setWalkInOpen(true)}>
+        <Button className="mt-4 h-12 text-base w-full sm:w-auto" onClick={() => { setWalkInUsed(true); setWalkInOpen(true); }}>
           <UserPlus className="w-5 h-5 mr-2" /> {t('addBookingTitle')}
         </Button>
       </div>
@@ -411,129 +333,25 @@ export default function AppointmentsPage() {
         />
       </div>
 
-      <Dialog open={!!cancelBookingId} onOpenChange={(open) => !open && setCancelBookingId(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t('apptCancelTitle')}</DialogTitle>
-            <DialogDescription>
-              {t('apptCancelDesc')}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => setCancelBookingId(null)}>
-              {t('apptKeepIt')}
-            </Button>
-            <Button variant="default" className="bg-red-600 hover:bg-red-700 text-white" onClick={executeCancel}>
-              Yes, cancel booking
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {cancelBookingId && (
+        <CancelBookingDialog open onClose={() => setCancelBookingId(null)} onConfirm={executeCancel} />
+      )}
 
-      <Dialog open={walkInOpen} onOpenChange={setWalkInOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t('addBookingTitle')}</DialogTitle>
-            <DialogDescription>{t('addBookingDesc')}</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <input
-              className="w-full h-12 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-base"
-              placeholder={t('yourName')}
-              value={walkInName}
-              onChange={(e) => setWalkInName(e.target.value)}
-            />
-            {walkInNameBad && <p className="text-sm text-red-600">{t('nameRequired')}</p>}
-            <input
-              className="w-full h-12 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-base"
-              placeholder={t('phoneOptional')}
-              type="tel"
-              inputMode="numeric"
-              value={walkInPhone}
-              onChange={(e) => setWalkInPhone(e.target.value)}
-            />
-            {walkInPhoneBad && <p className="text-sm text-red-600">{t('phoneInvalid')}</p>}
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">{t('chooseDay')}</label>
-            <select
-              className="w-full h-12 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-base"
-              value={walkInDate}
-              onChange={(e) => { setWalkInDate(e.target.value); setWalkInSlotId(""); }}
-            >
-              {dayChoices.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
-            </select>
-            {walkInSlotsLoading ? (
-              <p className="text-sm text-zinc-500">{t('loading')}</p>
-            ) : walkInSlots.length === 0 ? (
-              <p className="text-sm text-zinc-500">{walkInDate === todayStr ? t('noOpenSlots') : t('noOpenSlotsDay')}</p>
-            ) : (
-              <>
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">{t('chooseTime')}</label>
-              <select
-                className="w-full h-12 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-base"
-                value={selectedWalkInSlot}
-                onChange={(e) => setWalkInSlotId(e.target.value)}
-              >
-                {walkInSlots.map((sl) => (
-                  <option key={sl._id} value={sl._id}>{sl.startTime} – {sl.endTime}</option>
-                ))}
-              </select>
-              </>
-            )}
-          </div>
-          <DialogFooter className="mt-2">
-            <Button variant="ghost" onClick={() => setWalkInOpen(false)}>{t('apptClose')}</Button>
-            <Button
-              disabled={walkInSaving || !selectedWalkInSlot || walkInName.trim().length < 2 || walkInPhoneBad}
-              onClick={handleWalkIn}
-            >
-              {walkInSaving ? t('loading') : t('addBookingTitle')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {(walkInOpen || walkInUsed) && (
+        <WalkInDialog
+          open={walkInOpen}
+          onOpenChange={setWalkInOpen}
+          onBooked={(bookedDate) => {
+            // A booking for a later day lives under Upcoming, not Today: take the barber there so he can see it.
+            if (bookedDate !== todayStr) { setFilter("UPCOMING"); setPage(1); }
+            mutateBookings();
+          }}
+        />
+      )}
 
-      <Dialog open={!!whatsappPromptData} onOpenChange={(open) => !open && setWhatsappPromptData(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{whatsappPromptData?.byCustomer ? t('customerCancelledTitle') : t('apptCancelledOk')}</DialogTitle>
-            <DialogDescription>
-              {whatsappPromptData?.prompt}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col gap-2 mt-2">
-            {!whatsappPromptData?.byCustomer && (
-              <Button variant="default" onClick={handleSendWhatsApp}>
-                {t('apptMessageCustomer').replace('{name}', whatsappPromptData?.name || '')}
-              </Button>
-            )}
-            
-            {whatsappPromptData?.waitlistCustomers && whatsappPromptData.waitlistCustomers.length > 0 && (
-              <div className="mt-4 border-t pt-4">
-                <h4 className="text-sm font-semibold mb-2">{t('apptWaitlistTitle')}</h4>
-                {whatsappPromptData.waitlistCustomers.map((wc, i) => (
-                  <Button 
-                    key={i} 
-                    variant="outline" 
-                    className="w-full justify-start mb-2 border-green-200 bg-green-50 text-green-700 hover:bg-green-100" 
-                    onClick={() => {
-                      const cleanPhone = getWhatsAppNumber(wc.phone);
-                      const msgStr = t('apptWaitlistMessage').replace('{name}', wc.name).replace('{time}', whatsappPromptData.time).replace('{mins}', String(whatsappPromptData.holdMinutes ?? 15)).replace('{link}', `${window.location.origin}${myProfile?.slug ? `/b/${myProfile.slug}` : ""}`);
-                      window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msgStr)}`, '_blank');
-                    }}
-                  >
-                    {t('apptMessagePerson').replace('{name}', wc.name).replace('{phone}', wc.phone)}
-                  </Button>
-                ))}
-              </div>
-            )}
-          </div>
-          <DialogFooter className="mt-2">
-            <Button variant="ghost" onClick={() => setWhatsappPromptData(null)}>
-              {t('apptClose')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {whatsappPromptData && (
+        <WhatsappPromptDialog data={whatsappPromptData} onClose={() => setWhatsappPromptData(null)} profileSlug={myProfile?.slug} />
+      )}
     </div>
   );
 }

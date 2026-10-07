@@ -53,7 +53,7 @@ export function FrontDeskBooking({ shopSlug, members, onBooked }: { shopSlug: st
       });
       const r = await res.json();
       if (r.success) {
-        toast.add({ title: t("bookingAddedTitle"), description: `${t("shopBookedOk").replace("{barber}", r.data.barberName).replace("{time}", r.data.startTime)} · ${new Date(`${r.data.date}T00:00:00`).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })}`, type: "success" });
+        toast.add({ title: t("bookingAddedTitle"), description: `${t("shopBookedOk").replace("{barber}", r.data.barberName).replace("{time}", r.data.startTime)} · ${fmt(new Date(`${r.data.date}T00:00:00`), "EEE, d MMM")}`, type: "success" });
         setName(""); setPhone(""); setSlotId("");
         mutate();
         onBooked?.();

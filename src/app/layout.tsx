@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toast";
 import { cookies } from "next/headers";
 import { LanguageProvider } from "@/components/LanguageProvider";
 import type { Language } from "@/lib/i18n";
+import { siteUrl } from "@/lib/siteUrl";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,18 +16,21 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  preload: false,
 });
 
 export const viewport: Viewport = {
   themeColor: "#09090b",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
 };
 
 export const metadata: Metadata = {
-  title: "BarberSaaS",
+  metadataBase: new URL(siteUrl()),
+  title: { default: "BarberSaaS", template: "%s | BarberSaaS" },
   description: "Book your barber appointments effortlessly.",
+  openGraph: { type: "website", siteName: "BarberSaaS", title: "BarberSaaS", description: "Book your barber appointments effortlessly." },
+  twitter: { card: "summary", title: "BarberSaaS", description: "Book your barber appointments effortlessly." },
   manifest: "/manifest.json",
   icons: { apple: "/apple-touch-icon.png" },
   // The app is designed in light colours only; stops phone browsers' "force dark" from inverting it.

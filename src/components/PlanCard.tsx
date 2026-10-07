@@ -18,7 +18,7 @@ export function PlanCard({ dueDay }: { dueDay: number }) {
     <section aria-labelledby="plan-title" className="space-y-3">
       <div className="flex flex-wrap items-center gap-3">
         <h3 id="plan-title" className="text-sm font-medium">{t("setPremium")}</h3>
-        <span className="rounded-full bg-zinc-100 px-3 py-1 text-sm font-semibold text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200">₹{plan.amount} / month</span>
+        <span className="rounded-full bg-zinc-100 px-3 py-1 text-sm font-semibold text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200">{t("planPerMonth").replace("{n}", String(plan.amount))}</span>
         <span className={`rounded-full px-3 py-1 text-sm font-medium ${BADGE[plan.status]}`}>{plan.paidTier !== "FREE" ? `${plan.paidTier[0]}${plan.paidTier.slice(1).toLowerCase()} · ` : ""}{label}</span>
       </div>
       {plan.status === "FREE" ? <p className="text-xs text-zinc-500">{t("setSetByAdmin")}</p> : (

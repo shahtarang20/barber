@@ -37,7 +37,7 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        setError(data.error?.message || t('genericError'));
+        setError(res.status === 401 ? t('authLoginInvalid') : res.status === 429 ? t('err_RATE_LIMITED') : data.error?.message || t('genericError'));
         setLoading(false);
         return;
       }

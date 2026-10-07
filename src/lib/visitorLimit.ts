@@ -3,6 +3,7 @@ import { AppSetting } from "@/models/AppSetting";
 import { LinkVisitor } from "@/models/LinkVisitor";
 import { getClientIp } from "@/lib/rateLimit";
 import { getTodayISTString } from "@/lib/istTime";
+import { memo, forget } from "@/lib/memo";
 
 /**
  * Monthly cap on UNIQUE VISITORS (network addresses) that may open a barber's or shop's public link.
@@ -13,13 +14,17 @@ import { getTodayISTString } from "@/lib/istTime";
 const KEY = "visitorLimit";
 export type OwnerKind = "BARBER" | "SHOP";
 
+// Read on every public page view; cached for a few seconds per server instance (see memo.ts).
 export async function getDefaultVisitorLimit(): Promise<number> {
-  const doc = await AppSetting.findOne({ key: KEY }).lean<{ value?: { defaultLimit?: number } } | null>();
-  const n = Number(doc?.value?.defaultLimit);
-  return Number.isFinite(n) && n >= 0 ? n : 0;
+  return memo(`setting:${KEY}`, 15_000, async () => {
+    const doc = await AppSetting.findOne({ key: KEY }).lean<{ value?: { defaultLimit?: number } } | null>();
+    const n = Number(doc?.value?.defaultLimit);
+    return Number.isFinite(n) && n >= 0 ? n : 0;
+  });
 }
 export async function setDefaultVisitorLimit(defaultLimit: number) {
   await AppSetting.findOneAndUpdate({ key: KEY }, { $set: { value: { defaultLimit } } }, { upsert: true });
+  forget(`setting:${KEY}`);
 }
 
 const monthKey = () => getTodayISTString().slice(0, 7);
@@ -70,4 +75,14 @@ export async function admitVisitor(req: Request, ownerType: OwnerKind, ownerId: 
   }
   remember(key);
   return { allowed: true };
+}
+
+/** Unique visitors this month for many barbers in ONE query (admin list). */
+export async function visitorUsedMap(ownerType: OwnerKind, ownerIds: unknown[]): Promise<Map<string, number>> {
+  if (ownerIds.length === 0) return new Map();
+  const rows = await LinkVisitor.aggregate([
+    { $match: { ownerType, ownerId: { $in: ownerIds }, month: monthKey() } },
+    { $group: { _id: "$ownerId", n: { $sum: 1 } } },
+  ]);
+  return new Map(rows.map((r: { _id: unknown; n: number }) => [String(r._id), r.n]));
 }

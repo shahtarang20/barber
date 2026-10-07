@@ -7,6 +7,7 @@ import { slugFromName, uniqueSlug } from "@/lib/slug";
 import { ensureUserEmailIndex } from "@/lib/ensureIndexes";
 import { autoGenerateFutureSlots } from "@/lib/slotGenerator";
 import { z } from "zod";
+import { rateLimit, getClientIp } from "@/lib/rateLimit";
 
 const registerSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -21,6 +22,10 @@ const registerSchema = z.object({
 
 export async function POST(req: Request) {
   try {
+    // Stops a script creating accounts (and their slots) in bulk; generous because a carrier's shared IP may serve many real barbers.
+    if (!(await rateLimit(`register:${getClientIp(req)}`, 30, 60 * 60_000))) {
+      return NextResponse.json({ success: false, error: { message: "Too many sign-ups from this network. Please try again later." } }, { status: 429 });
+    }
     await connectToDatabase();
     
     const body = await req.json();
@@ -31,7 +36,8 @@ export async function POST(req: Request) {
     }
     
     const { name, password } = result.data;
-    const email = result.data.email || undefined;
+    // Login looks emails up in lower case, so store them that way (otherwise "Rahul@x.com" could never log in by email).
+    const email = result.data.email ? result.data.email.toLowerCase() : undefined;
     await ensureUserEmailIndex();
     let slug = result.data.slug || (await uniqueSlug(slugFromName(name)));
     

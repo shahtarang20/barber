@@ -30,4 +30,6 @@ const ShopSchema: Schema = new Schema(
   { timestamps: true }
 );
 
+ShopSchema.index({ createdAt: -1 }); // admin list
+
 export const Shop = mongoose.models.Shop || mongoose.model<IShop>("Shop", ShopSchema);

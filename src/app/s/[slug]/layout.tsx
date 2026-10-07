@@ -1,9 +1,14 @@
 import { Metadata } from "next";
+import { notFound } from "next/navigation";
 import connectToDatabase from "@/lib/mongodb";
 import { Shop } from "@/models/Shop";
 import { loadShareInfo } from "@/lib/shareCard";
 import { MyBookingBanner } from "@/components/MyBookingBanner";
 import { InstallPrompt } from "@/components/InstallPrompt";
+import { TemplateScope } from "@/components/catalogue/templates/TemplateScope";
+import { TEMPLATE_FONT_CLASS } from "@/components/catalogue/templates/fonts";
+import { loadPageStyle } from "@/lib/catalogueTemplateServer";
+import { resolveTemplate } from "@/lib/catalogueTemplate";
 
 /** The preview a customer sees when a shop link is shared on WhatsApp: the shop's own name. */
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
@@ -30,11 +35,14 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 export default async function ShopLayout({ children, params }: { children: React.ReactNode; params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   await connectToDatabase();
-  const shop = await Shop.findOne({ slug, isActive: true }).select("name").lean<{ name: string } | null>();
+  const shop = await Shop.findOne({ slug, isActive: true }).select("name").lean<{ _id: unknown; name: string } | null>();
+  if (!shop) notFound();
+  const style = shop ? await loadPageStyle("SHOP", String(shop._id)) : null;
+  const template = style?.template ?? resolveTemplate(undefined, slug);
   return (
     <>
       <MyBookingBanner />
-      {children}
+      <TemplateScope template={template} fontClass={TEMPLATE_FONT_CLASS[template]} enabled={style?.enabled ?? false} branding={style?.branding ?? null}>{children}</TemplateScope>
       <InstallPrompt isCustomer={true} appName={shop?.name || "this shop"} />
     </>
   );

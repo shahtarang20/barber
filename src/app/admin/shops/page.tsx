@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { PlanGrantPanel } from "@/components/admin/PlanGrantPanel";
 import { ShopCustomersPanel } from "@/components/admin/ShopCustomersPanel";
+import { CustomerStyleSelect } from "@/components/admin/CustomerStyleSelect";
 import { showDate } from "@/lib/usePlan";
 import { toast } from "@/components/ui/toast";
 import { PaginationControls } from "@/components/ui/pagination-controls";
@@ -279,6 +280,7 @@ export default function AdminShopsPage() {
                         <div className="py-6 text-center text-zinc-500 text-sm">Loading details...</div>
                       ) : (
                         <div className="space-y-4 pt-4">
+                          <CustomerStyleSelect ownerType="SHOP" ownerId={shop._id} name={shop.name} />
                           <div className="flex flex-wrap gap-2">
                             <Button variant="outline" size="sm" onClick={() => handleToggleActive(shop)} disabled={busy}>
                               {shop.isActive ? "Suspend Shop" : "Reactivate Shop"}

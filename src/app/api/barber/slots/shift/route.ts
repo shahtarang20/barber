@@ -16,9 +16,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: { message: "Unauthorized" } }, { status: 401 });
     }
 
-    const { date, shiftMinutes } = await req.json();
+    const body = await req.json();
+    const { date } = body;
+    // A string like "15" would be concatenated ("540" + "15") instead of added below, so make it a real whole number.
+    const shiftMinutes = Math.floor(Number(body.shiftMinutes));
 
-    if (!date || !shiftMinutes || isNaN(shiftMinutes) || shiftMinutes <= 0) {
+    if (typeof date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(shiftMinutes) || shiftMinutes <= 0) {
       return NextResponse.json({ success: false, error: { message: "Valid date and shiftMinutes are required." } }, { status: 400 });
     }
 

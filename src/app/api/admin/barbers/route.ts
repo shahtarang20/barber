@@ -4,14 +4,14 @@ import connectToDatabase from "@/lib/mongodb";
 import { User } from "@/models/User";
 import { Booking } from "@/models/Booking";
 import { getPlansConfig, subscriptionState } from "@/lib/plans";
-import { visitorUsage, getDefaultVisitorLimit } from "@/lib/visitorLimit";
-import { barberLinkUsage, getDefaultLinkLimit } from "@/lib/linkLimit";
+import { visitorUsedMap, getDefaultVisitorLimit } from "@/lib/visitorLimit";
+import { barberLinkUsedMap, getDefaultLinkLimit, effectiveLimit } from "@/lib/linkLimit";
 
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = Math.min(parseInt(searchParams.get("limit") || "10"), 100);
+    const page = Math.max(parseInt(searchParams.get("page") || "1") || 1, 1);
+    const limit = Math.min(Math.max(parseInt(searchParams.get("limit") || "10") || 10, 1), 100);
     const skip = (page - 1) * limit;
     const search = (searchParams.get("search") || "").trim().slice(0, 60);
     const rx = search ? new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i") : null;
@@ -46,8 +46,11 @@ export async function GET(req: Request) {
     const defaultLinkLimit = await getDefaultLinkLimit();
     const plansCfg = await getPlansConfig();
     const defaultVisitorLimit = await getDefaultVisitorLimit();
-    const visitors = await Promise.all(barbers.map((b) => visitorUsage("BARBER", b._id, b.visitorLimit ?? null, defaultVisitorLimit)));
-    const usages = await Promise.all(barbers.map((b) => barberLinkUsage(b._id, b.linkBookingLimit ?? null, defaultLinkLimit)));
+    // Two grouped queries for the whole page (not two counts per barber).
+    const ids = barbers.map((b) => b._id);
+    const [visitorUsed, linkUsed] = await Promise.all([visitorUsedMap("BARBER", ids), barberLinkUsedMap(ids)]);
+    const visitors = barbers.map((b) => ({ used: visitorUsed.get(String(b._id)) ?? 0, limit: effectiveLimit(b.visitorLimit ?? null, defaultVisitorLimit) }));
+    const usages = barbers.map((b) => ({ used: linkUsed.get(String(b._id)) ?? 0, limit: effectiveLimit(b.linkBookingLimit ?? null, defaultLinkLimit) }));
     const barbersWithStats = barbers.map((barber, i) => ({
       ...barber,
       bookingCount: countByBarber.get(String(barber._id)) ?? 0,

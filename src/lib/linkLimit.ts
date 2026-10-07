@@ -3,6 +3,7 @@ import { Booking } from "@/models/Booking";
 import { Shop } from "@/models/Shop";
 import { User } from "@/models/User";
 import { getTodayISTString } from "@/lib/istTime";
+import { memo, forget } from "@/lib/memo";
 
 /**
  * Monthly cap on bookings that come in through a barber's or a shop's public link.
@@ -11,14 +12,18 @@ import { getTodayISTString } from "@/lib/istTime";
  */
 const KEY = "linkLimit";
 
+// Read on every public page view; cached for a few seconds per server instance (see memo.ts).
 export async function getDefaultLinkLimit(): Promise<number> {
-  const doc = await AppSetting.findOne({ key: KEY }).lean<{ value?: { defaultLimit?: number } } | null>();
-  const n = Number(doc?.value?.defaultLimit);
-  return Number.isFinite(n) && n >= 0 ? n : 0;
+  return memo(`setting:${KEY}`, 15_000, async () => {
+    const doc = await AppSetting.findOne({ key: KEY }).lean<{ value?: { defaultLimit?: number } } | null>();
+    const n = Number(doc?.value?.defaultLimit);
+    return Number.isFinite(n) && n >= 0 ? n : 0;
+  });
 }
 
 export async function setDefaultLinkLimit(defaultLimit: number) {
   await AppSetting.findOneAndUpdate({ key: KEY }, { $set: { value: { defaultLimit } } }, { upsert: true });
+  forget(`setting:${KEY}`);
 }
 
 /** Start of this month in India, as a UTC Date. */
@@ -74,3 +79,25 @@ export async function isOverLinkLimit(bookingId: unknown, barberId: unknown, via
   }
   return false;
 }
+
+/** Bookings through each barber's link this month, for many barbers in ONE query (admin list). */
+export async function barberLinkUsedMap(barberIds: unknown[]): Promise<Map<string, number>> {
+  if (barberIds.length === 0) return new Map();
+  const rows = await Booking.aggregate([
+    { $match: { barberId: { $in: barberIds }, viaLink: true, status: { $ne: "CANCELLED" }, createdAt: { $gte: monthStart() } } },
+    { $group: { _id: "$barberId", n: { $sum: 1 } } },
+  ]);
+  return new Map(rows.map((r) => [String(r._id), r.n as number]));
+}
+
+/** Bookings through each shop's link this month, for many shops in ONE query (admin list). */
+export async function shopLinkUsedMap(shopIds: unknown[]): Promise<Map<string, number>> {
+  if (shopIds.length === 0) return new Map();
+  const rows = await Booking.aggregate([
+    { $match: { viaShopId: { $in: shopIds }, status: { $ne: "CANCELLED" }, createdAt: { $gte: monthStart() } } },
+    { $group: { _id: "$viaShopId", n: { $sum: 1 } } },
+  ]);
+  return new Map(rows.map((r) => [String(r._id), r.n as number]));
+}
+
+export { effective as effectiveLimit };

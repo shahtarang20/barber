@@ -1,12 +1,16 @@
-"use client";
-
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { Button } from "@/components/ui/button";
 import { LanguageSelector } from "@/components/LanguageSelector";
-import { useTranslation } from "@/lib/i18n";
+import { loadDict, lookup, type Language, type TranslationKey } from "@/lib/i18n-load";
 
-export default function Home() {
-  const { t } = useTranslation();
+// A server page: the home page is words and links only, so it needs no script of its own on the phone
+// (only the language picker is interactive).
+export default async function Home() {
+  const cookieLang = (await cookies()).get("lang")?.value;
+  const language: Language = cookieLang === "hi" || cookieLang === "gu" || cookieLang === "mr" ? cookieLang : "en";
+  await loadDict(language);
+  const t = (key: TranslationKey) => lookup(language, key);
   const steps = [
     { title: t("landingStep1T"), text: t("landingStep1D") },
     { title: t("landingStep2T"), text: t("landingStep2D") },
@@ -31,7 +35,7 @@ export default function Home() {
       {/* Hero Section */}
       <main className="pt-24 sm:pt-28 pb-16 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto text-center">
         <div className="flex justify-center mb-6">
-          <LanguageSelector />
+          <LanguageSelector refresh />
         </div>
         <h1 className="text-balance text-3xl min-[400px]:text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight mb-4 sm:mb-6 leading-[1.1] sm:leading-tight">
           {t("landingHeroA")} <span className="text-green-500 block sm:inline mt-1 sm:mt-0">{t("landingHeroB")}</span>

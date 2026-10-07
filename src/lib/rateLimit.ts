@@ -50,6 +50,8 @@ export async function rateLimit(key: string, limit: number, windowMs: number): P
   const entry = hits.get(key);
 
   if (!entry || now > entry.resetAt) {
+    // Expired counters are never read again, so sweep them now and then instead of letting the map grow for ever.
+    if (hits.size > 10_000) for (const [k, v] of hits) if (now > v.resetAt) hits.delete(k);
     hits.set(key, { count: 1, resetAt: now + windowMs });
     return true;
   }

@@ -4,11 +4,16 @@ import { User } from "@/models/User";
 import { Slot } from "@/models/Slot";
 import { sortByStartTime } from "@/lib/timeSort";
 import { admitVisitor } from "@/lib/visitorLimit";
+import { memo } from "@/lib/memo";
+import { rateLimit, getClientIp } from "@/lib/rateLimit";
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request, { params }: { params: Promise<{ slug: string }> }) {
   try {
+    if (!(await rateLimit(`public-barber-slots:${getClientIp(req)}`, 600, 60_000))) {
+      return NextResponse.json({ success: false, error: { message: "Too many requests. Please try again shortly." } }, { status: 429 });
+    }
     await connectToDatabase();
     
     const resolvedParams = await params;
@@ -21,7 +26,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
       return NextResponse.json({ success: false, error: { message: "Date is required" } }, { status: 400 });
     }
 
-    const barber = await User.findOne({ slug, role: "BARBER" });
+    const barber = await memo(`pub:barber-lite:${slug}`, 10_000, () =>
+      User.findOne({ slug, role: "BARBER" }).select("isActive visitorLimit").lean<{ _id: import("mongoose").Types.ObjectId; isActive?: boolean; visitorLimit?: number } | null>());
 
     if (!barber || barber.isActive === false) {
       return NextResponse.json({ success: false, error: { message: "Barber not found" } }, { status: 404 });
@@ -34,7 +40,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
     const slots = await Slot.find({
       barberId: barber._id,
       date: date
-    }).select("startTime endTime status capacity bookingsCount");
+    }).select("startTime endTime status capacity bookingsCount").lean();
 
     return NextResponse.json({ success: true, data: sortByStartTime(slots) });
   } catch (error) {

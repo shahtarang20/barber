@@ -5,7 +5,8 @@ import { SessionGuard } from "@/components/dashboard/SessionGuard";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { MobileNav } from "@/components/dashboard/MobileNav";
 import { Header } from "@/components/dashboard/Header";
-import { InstallPrompt } from "@/components/InstallPrompt";
+import { InstallPromptLazy } from "@/components/InstallPromptLazy";
+import { SWRProvider } from "@/components/SWRProvider";
 import { OfflineBanner } from "@/components/dashboard/OfflineBanner";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -36,9 +37,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <OfflineBanner />
         <Header />
         <div className="p-4 md:p-8 max-w-5xl mx-auto">
-          {children}
+          <SWRProvider>{children}</SWRProvider>
         </div>
-        <InstallPrompt />
+        <InstallPromptLazy />
       </main>
     </div>
   );

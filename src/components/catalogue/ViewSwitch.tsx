@@ -14,7 +14,7 @@ const TABS: { id: CatalogueView; label: "catBookTab" | "catCatalogueTab" }[] = [
  * "Book Appointment" | "Catalogue". It is a proper tab list (arrow keys, Home/End, screen-reader labels),
  * each half is at least 48px tall for easy tapping, and it sits in the page flow, never over the booking content.
  */
-export function ViewSwitch({ view, onChange }: { view: CatalogueView; onChange: (v: CatalogueView) => void }) {
+export function ViewSwitch({ view, onChange, pending }: { view: CatalogueView; onChange: (v: CatalogueView) => void; pending?: boolean }) {
   const { t } = useTranslation();
   const refs = useRef<Record<string, HTMLButtonElement | null>>({});
 
@@ -32,7 +32,7 @@ export function ViewSwitch({ view, onChange }: { view: CatalogueView; onChange: 
   };
 
   return (
-    <div role="tablist" aria-label={t("catSwitchLabel")} onKeyDown={onKeyDown} className="grid grid-cols-2 w-full rounded-2xl bg-zinc-200/70 p-1 mb-6">
+    <div role="tablist" aria-label={t("catSwitchLabel")} onKeyDown={onKeyDown} className="tp-switch" data-view={view} aria-busy={pending || undefined}>
       {TABS.map((tab) => {
         const active = tab.id === view;
         return (
@@ -45,9 +45,9 @@ export function ViewSwitch({ view, onChange }: { view: CatalogueView; onChange: 
             aria-selected={active}
             aria-controls={`view-panel-${tab.id}`}
             tabIndex={active ? 0 : -1}
+            disabled={pending}
             onClick={() => onChange(tab.id)}
-            className={`min-h-12 rounded-xl px-2 text-sm sm:text-base font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 ${active ? "bg-zinc-900 text-white shadow-sm" : "text-zinc-700 hover:bg-white/70"}`}
-          >
+            className="tp-tab">
             {t(tab.label)}
           </button>
         );

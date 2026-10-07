@@ -11,7 +11,7 @@ export async function autoCompleteStaleBookings(barberId?: string): Promise<numb
     ...(barberId ? { barberId } : {}),
     status: "CONFIRMED",
     date: { $lte: getTodayISTString() },
-  }).select("date endTime");
+  }).select("date endTime").lean();
 
   const staleIds = pastConfirmed
     .filter((b) => minutesUntilSlotEnd(b.date, b.endTime) <= -AUTO_COMPLETE_AFTER_MINUTES)

@@ -25,11 +25,11 @@ export interface ISlot extends Document {
 
 const SlotSchema: Schema = new Schema(
   {
-    barberId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
-    date: { type: String, required: true, index: true },
+    barberId: { type: Schema.Types.ObjectId, ref: "User", required: true }, // covered by the unique compound index below
+    date: { type: String, required: true }, // covered by the compound indexes below
     startTime: { type: String, required: true },
     endTime: { type: String, required: true },
-    status: { type: String, enum: ["AVAILABLE", "BOOKED", "BLOCKED"], default: "AVAILABLE", index: true },
+    status: { type: String, enum: ["AVAILABLE", "BOOKED", "BLOCKED"], default: "AVAILABLE" },
     capacity: { type: Number, default: 1 },
     bookingsCount: { type: Number, default: 0 },
     waitlist: [

@@ -30,7 +30,7 @@ export async function GET(req: Request) {
     const slots = await Slot.find({
       barberId: payload.userId,
       date: date
-    });
+    }).lean();
 
     return NextResponse.json({ success: true, data: sortByStartTime(slots) });
   } catch (error) {

@@ -6,6 +6,8 @@ Sign in at `/login` with the admin code and password. The admin area is at `/adm
 - **Creating the first admin:** run `ADMIN_CODE=<code> ADMIN_PASSWORD='<a long private password>' npx tsx scripts/create-admin.ts`. The code and password come from the command line (nothing secret is stored in the script), and the script tells you which database it is about to change. Then change the password at **Settings → Change My Password**.
 - **Staying signed in:** a login lasts 7 days.
 
+- **Going live:** follow `LAUNCH_CHECKLIST.md` (domain, environment variables, Atlas access and backups, R2 CORS, VAPID keys, test booking, rollback). Every environment variable is listed in `README.md`. The address `/api/health` tells an uptime monitor whether the database is reachable.
+
 ## 1. Overview (`/admin`)
 - Totals: barbers, bookings, customers, today's bookings.
 - Bookings by Status and Last 7 Days charts.

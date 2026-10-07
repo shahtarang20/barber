@@ -9,8 +9,8 @@ import { autoCompleteStaleBookings } from "@/lib/bookingMaintenance";
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = Math.min(parseInt(searchParams.get("limit") || "10"), 100);
+    const page = Math.max(parseInt(searchParams.get("page") || "1") || 1, 1);
+    const limit = Math.min(Math.max(parseInt(searchParams.get("limit") || "10") || 10, 1), 100);
     const skip = (page - 1) * limit;
 
     const payload = await requireAuth(["BARBER"]);
@@ -56,7 +56,7 @@ export async function GET(req: Request) {
     }
 
     // How many confirmed bookings have already ended and still need Done / No Show.
-    const pastConfirmed = await Booking.find({ ...base, status: "CONFIRMED", date: { $lte: todayStr } }).select("date endTime");
+    const pastConfirmed = await Booking.find({ ...base, status: "CONFIRMED", date: { $lte: todayStr } }).select("date endTime").lean();
     const needsAction = pastConfirmed.filter((b) => minutesUntilSlotEnd(b.date, b.endTime) < 0).length;
 
     // Coming-up views read chronologically (date, then real time of day); history reads newest day first.
@@ -71,7 +71,8 @@ export async function GET(req: Request) {
       .populate({ path: 'customerId', model: Customer, select: 'name phone' })
       .sort(sort)
       .skip(skip)
-      .limit(limit);
+      .limit(limit)
+      .lean();
 
     return NextResponse.json({ 
       success: true, 

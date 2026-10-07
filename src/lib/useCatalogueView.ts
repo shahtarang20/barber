@@ -51,5 +51,5 @@ export function useCatalogueView(kind: CatalogueKind, slug: string | undefined) 
   const stillPublished = !!selectedService && !!catalogue && catalogue.categories.some((c) => c.services.some((s) => s.id === selectedService.id));
   const activeService = stillPublished ? selectedService : null;
 
-  return { catalogue, available, loading: isLoading, view: available ? view : "booking" as CatalogueView, setView, selectedService: activeService, bookService, clearService };
+  return { catalogue, available, loading: isLoading, view: available ? view : "booking" as CatalogueView, /** what the address asked for, even before the catalogue has loaded (so the header can be drawn right at once) */ intendedView: view, setView, selectedService: activeService, bookService, clearService };
 }

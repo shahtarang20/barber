@@ -10,8 +10,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/toast";
 import { useTranslation } from "@/lib/i18n";
 import { useDateFormat } from "@/lib/dateLocale";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { AlertTriangle, LogOut, Share2 } from "lucide-react";
+import dynamic from "next/dynamic";
+const SettingsWarningDialog = dynamic(() => import("@/components/dashboard/SettingsWarningDialog"), { ssr: false });
+import { LogOut, Share2 } from "lucide-react";
 import { shareOrCopy } from "@/lib/shareLink";
 import { MyBarberCode } from "@/components/dashboard/MyBarberCode";
 import { useRouter } from "next/navigation";
@@ -242,7 +243,7 @@ export default function SettingsPage() {
           {t('settingsCatalogueBtn')}
         </Link>
         <Link href="/dashboard/analytics" className="ml-2 inline-flex h-11 items-center justify-center rounded-lg border border-zinc-300 px-5 text-sm font-semibold text-zinc-800 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-100">
-          Your numbers
+          {t('ownYourNumbers')}
         </Link>
       </section>
 
@@ -380,24 +381,7 @@ export default function SettingsPage() {
         </Button>
       </div>
 
-      <Dialog open={showWarningModal} onOpenChange={setShowWarningModal}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-orange-600">
-              <AlertTriangle className="w-5 h-5" />
-              {t('settingsWarningTitle')}
-            </DialogTitle>
-            <DialogDescription className="text-zinc-600 dark:text-zinc-400 pt-2 text-base leading-relaxed">
-              {t('settingsWarningDesc').replace('{count}', warningCount.toString())}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="mt-6 flex gap-3 sm:justify-end">
-            <Button variant="default" onClick={() => setShowWarningModal(false)} className="w-full sm:w-auto">
-              {t('done')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {showWarningModal && <SettingsWarningDialog open onOpenChange={setShowWarningModal} count={warningCount} />}
     </div>
   );
 }
