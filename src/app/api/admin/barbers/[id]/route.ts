@@ -51,6 +51,19 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       }
     }
 
+    if (body.visitorLimit !== undefined) {
+      // null / empty = use the platform default; 0 = unlimited.
+      if (body.visitorLimit === null || body.visitorLimit === "") {
+        updateData.$unset = { ...(updateData.$unset || {}), visitorLimit: 1 };
+      } else {
+        const n = Number(body.visitorLimit);
+        if (!Number.isInteger(n) || n < 0 || n > 100_000_000) {
+          return NextResponse.json({ success: false, error: { message: "Visitor limit must be a whole number (0 = unlimited)." } }, { status: 400 });
+        }
+        updateData.visitorLimit = n;
+      }
+    }
+
     let suspending = false;
     if (body.phone !== undefined) {
       const raw = String(body.phone ?? "").trim();
@@ -89,7 +102,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if ($unset) updateQuery.$unset = $unset;
     if ($inc) updateQuery.$inc = $inc;
 
-    const before = await User.findById(id).select("premiumAmount premiumDueDay catalogueEnabled isActive linkBookingLimit").lean<Record<string, unknown> | null>();
+    const before = await User.findById(id).select("premiumAmount premiumDueDay catalogueEnabled isActive linkBookingLimit visitorLimit").lean<Record<string, unknown> | null>();
     const updatedUser = await User.findByIdAndUpdate(id, updateQuery, { new: true }).select("-passwordHash -tokenVersion");
 
     if (!updatedUser) {
@@ -98,7 +111,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     // Audit trail: money, access and limits are recorded with the before/after values.
     const changed: Record<string, { from: unknown; to: unknown }> = {};
-    for (const k of ["premiumAmount", "premiumDueDay", "catalogueEnabled", "isActive", "linkBookingLimit"] as const) {
+    for (const k of ["premiumAmount", "premiumDueDay", "catalogueEnabled", "isActive", "linkBookingLimit", "visitorLimit"] as const) {
       const to = (updatedUser as unknown as Record<string, unknown>)[k];
       if (before && before[k] !== to) changed[k] = { from: before[k] ?? null, to: to ?? null };
     }

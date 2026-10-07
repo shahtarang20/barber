@@ -10,6 +10,8 @@ export interface IShop extends Document {
   staff?: { userId: mongoose.Types.ObjectId; catalogue: boolean; analytics: boolean }[];
   /** Bookings per month allowed through the shop link. undefined = platform default, 0 = unlimited. */
   linkBookingLimit?: number;
+  /** Unique visitors (network addresses) allowed to open the shop link per month. undefined = platform default, 0 = unlimited. */
+  visitorLimit?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -23,6 +25,7 @@ const ShopSchema: Schema = new Schema(
     isActive: { type: Boolean, default: true },
     staff: [{ userId: { type: Schema.Types.ObjectId, ref: "User", required: true }, catalogue: { type: Boolean, default: false }, analytics: { type: Boolean, default: false }, _id: false }],
     linkBookingLimit: { type: Number, min: 0 },
+    visitorLimit: { type: Number, min: 0 },
   },
   { timestamps: true }
 );

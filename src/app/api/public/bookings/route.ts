@@ -14,6 +14,7 @@ import { normalizePhone } from "@/lib/phone";
 import { User } from "@/models/User";
 import { minutesUntilSlot } from "@/lib/istTime";
 import { barberLinkUsage, shopLinkUsage, isOverLinkLimit } from "@/lib/linkLimit";
+import { admitVisitor } from "@/lib/visitorLimit";
 import { Shop } from "@/models/Shop";
 
 // Two layers: a generous per-IP ceiling that only stops an actual scripted
@@ -69,12 +70,18 @@ export async function POST(req: Request) {
         error: { code: "LINK_LIMIT", message: "Online booking is closed for now. Please contact the barber directly." },
       }, { status: 403 });
       if ((await barberLinkUsage(slotOwner.barberId)).closed) return linkClosedResponse;
+      // The admin's cap on unique visitors: a visitor already counted this month is let through; a new one beyond the cap is not.
+      const visitorClosedResponse = NextResponse.json({ success: false, error: { code: "VISITOR_LIMIT", message: "This page is not available right now. Please contact the barber directly." } }, { status: 403 });
       if (shopSlug) {
-        const shop = await Shop.findOne({ slug: shopSlug, isActive: true, barberIds: slotOwner.barberId }).select("_id").lean<{ _id: unknown } | null>();
+        const shop = await Shop.findOne({ slug: shopSlug, isActive: true, barberIds: slotOwner.barberId }).select("_id visitorLimit").lean<{ _id: unknown; visitorLimit?: number } | null>();
         if (shop) {
           if ((await shopLinkUsage(shop._id)).closed) return linkClosedResponse;
+          if (!(await admitVisitor(req, "SHOP", shop._id, shop.visitorLimit ?? null)).allowed) return visitorClosedResponse;
           viaShopId = shop._id;
         }
+      } else {
+        const b = await User.findById(slotOwner.barberId).select("visitorLimit").lean<{ visitorLimit?: number } | null>();
+        if (!(await admitVisitor(req, "BARBER", slotOwner.barberId, b?.visitorLimit ?? null)).allowed) return visitorClosedResponse;
       }
     }
 

@@ -3,6 +3,7 @@ import connectToDatabase from "@/lib/mongodb";
 import { User } from "@/models/User";
 import { Slot } from "@/models/Slot";
 import { sortByStartTime } from "@/lib/timeSort";
+import { admitVisitor } from "@/lib/visitorLimit";
 
 export const dynamic = 'force-dynamic';
 
@@ -25,6 +26,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
     if (!barber || barber.isActive === false) {
       return NextResponse.json({ success: false, error: { message: "Barber not found" } }, { status: 404 });
     }
+    if (!(await admitVisitor(req, "BARBER", barber._id, barber.visitorLimit ?? null)).allowed) return NextResponse.json({ success: false, error: { code: "VISITOR_LIMIT", message: "This page is not available right now. Please contact the barber directly." } }, { status: 403 });
 
     // Only return AVAILABLE and BOOKED slots. Exclude BLOCKED or keep them to show unavailability?
     // Requirements: "Customers must never be able to book blocked slots. Do not show unavailable dates as if they contain bookable slots."

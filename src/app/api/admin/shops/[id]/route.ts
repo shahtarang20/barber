@@ -3,6 +3,7 @@ import { requireAuth } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import { Shop } from "@/models/Shop";
 import { User } from "@/models/User";
+import { audit } from "@/lib/planAdmin";
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -82,9 +83,33 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       }
     }
 
+    if (body.visitorLimit !== undefined) {
+      if (body.visitorLimit === null || body.visitorLimit === "") {
+        update.$unset = { ...(update.$unset || {}), visitorLimit: 1 };
+      } else {
+        const n = Number(body.visitorLimit);
+        if (!Number.isInteger(n) || n < 0 || n > 100_000_000) {
+          return NextResponse.json({ success: false, error: { message: "Visitor limit must be a whole number (0 = unlimited)." } }, { status: 400 });
+        }
+        updateData.visitorLimit = n;
+      }
+    }
+
+    const before = await Shop.findById(id).select("linkBookingLimit visitorLimit name").lean<{ linkBookingLimit?: number; visitorLimit?: number; name: string } | null>();
     const shop = await Shop.findByIdAndUpdate(id, update, { new: true });
     if (!shop) {
       return NextResponse.json({ success: false, error: { message: "Shop not found" } }, { status: 404 });
+    }
+
+    // Audit trail for the two caps (who changed what, from and to).
+    const changed: Record<string, { from: unknown; to: unknown }> = {};
+    for (const k of ["linkBookingLimit", "visitorLimit"] as const) {
+      const to = (shop as unknown as Record<string, unknown>)[k];
+      if (before && before[k] !== to) changed[k] = { from: before[k] ?? null, to: to ?? null };
+    }
+    if (Object.keys(changed).length > 0) {
+      const admin = await User.findById(payload.userId).select("name").lean<{ name: string } | null>();
+      await audit({ id: payload.userId, name: admin?.name || "Admin" }, "SHOP_LIMITS_CHANGED", { _id: shop._id, name: shop.name }, { changed });
     }
 
     return NextResponse.json({ success: true, data: shop });

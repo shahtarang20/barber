@@ -38,6 +38,7 @@ function describeAudit(entry: AuditEntry) {
   if (entry.action === "PLAN_PAYMENT_VOIDED") return `voided a ₹${m?.amount ?? 0} payment for ${entry.targetName ?? "a barber"} (${m?.reason ?? "no reason"})`;
   if (entry.action === "PLAN_GRANTED") return `gave ${entry.targetName ?? "a barber"}${m?.shop ? ` (shop ${m.shop})` : ""} free ${String(m?.tier ?? "").toLowerCase()} access until ${m?.until ?? "?"}`;
   if (entry.action === "PLAN_GRANT_REMOVED") return `removed the free access of ${entry.targetName ?? "a barber"}${m?.shop ? ` (shop ${m.shop})` : ""}`;
+  if (entry.action === "SHOP_LIMITS_CHANGED") return `changed the link limits of shop ${entry.targetName ?? ""}: ${Object.entries(m?.changed ?? {}).map(([k, v]) => `${k === "visitorLimit" ? "visitors" : "bookings"} ${String(v.from ?? "default")} → ${String(v.to ?? "default")}`).join(", ")}`;
   if (entry.action === "PLAN_SETTINGS_CHANGED") return "changed plan sizes / grace period";
   if (entry.action === "BARBER_SETTINGS_CHANGED") return `changed ${Object.entries(m?.changed ?? {}).map(([k, v]) => `${k} ${String(v.from)} → ${String(v.to)}`).join(", ") || "settings"} for ${entry.targetName ?? "a barber"}`;
   return entry.action.toLowerCase().replace(/_/g, " ");

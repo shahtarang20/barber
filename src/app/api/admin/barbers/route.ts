@@ -4,6 +4,7 @@ import connectToDatabase from "@/lib/mongodb";
 import { User } from "@/models/User";
 import { Booking } from "@/models/Booking";
 import { getPlansConfig, subscriptionState } from "@/lib/plans";
+import { visitorUsage, getDefaultVisitorLimit } from "@/lib/visitorLimit";
 import { barberLinkUsage, getDefaultLinkLimit } from "@/lib/linkLimit";
 
 export async function GET(req: Request) {
@@ -44,6 +45,8 @@ export async function GET(req: Request) {
     const countByBarber = new Map<string, number>(counts.map((c) => [String(c._id), c.count]));
     const defaultLinkLimit = await getDefaultLinkLimit();
     const plansCfg = await getPlansConfig();
+    const defaultVisitorLimit = await getDefaultVisitorLimit();
+    const visitors = await Promise.all(barbers.map((b) => visitorUsage("BARBER", b._id, b.visitorLimit ?? null, defaultVisitorLimit)));
     const usages = await Promise.all(barbers.map((b) => barberLinkUsage(b._id, b.linkBookingLimit ?? null, defaultLinkLimit)));
     const barbersWithStats = barbers.map((barber, i) => ({
       ...barber,
@@ -51,12 +54,15 @@ export async function GET(req: Request) {
       linkUsed: usages[i].used,
       linkLimitEffective: usages[i].limit,
       plan: subscriptionState(barber, plansCfg),
+      visitorUsed: visitors[i].used,
+      visitorLimitEffective: visitors[i].limit,
     }));
 
     return NextResponse.json({
       success: true,
       data: barbersWithStats,
       defaultLinkLimit,
+      defaultVisitorLimit,
       pagination: {
         total,
         page,

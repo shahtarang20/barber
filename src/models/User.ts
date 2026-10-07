@@ -25,6 +25,8 @@ export interface IUser extends Document {
   premiumAmount: number;
   /** Bookings per month allowed through this barber's link. undefined = platform default, 0 = unlimited. */
   linkBookingLimit?: number;
+  /** Unique visitors (network addresses) allowed to open this barber's link per month. undefined = platform default, 0 = unlimited. */
+  visitorLimit?: number;
   catalogueEnabled?: boolean;
   /** Last day (IST, "YYYY-MM-DD") the paid plan covers. Unset = not tracked yet: the monthly due day is used instead. */
   planEndsOn?: string;
@@ -81,6 +83,7 @@ const UserSchema: Schema = new Schema(
     defaultCapacity: { type: Number, default: 1, min: 1, max: 50 },
     premiumAmount: { type: Number, default: 0 },
     linkBookingLimit: { type: Number, min: 0 },
+    visitorLimit: { type: Number, min: 0 },
     // The admin can switch the premium catalogue off for one barber (the barber's data is kept).
     catalogueEnabled: { type: Boolean, default: true },
     planEndsOn: { type: String, match: /^\d{4}-\d{2}-\d{2}$/ },

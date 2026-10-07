@@ -3,6 +3,7 @@ import { requireAuth } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import { Shop } from "@/models/Shop";
 import { User } from "@/models/User";
+import { visitorUsage, getDefaultVisitorLimit } from "@/lib/visitorLimit";
 import { getPlansConfig, subscriptionState } from "@/lib/plans";
 import { shopLinkUsage, getDefaultLinkLimit } from "@/lib/linkLimit";
 
@@ -35,6 +36,8 @@ export async function GET(req: Request) {
 
     const defaultLinkLimit = await getDefaultLinkLimit();
     const usages = await Promise.all(shops.map((s) => shopLinkUsage(s._id, s.linkBookingLimit ?? null, defaultLinkLimit)));
+    const defaultVisitorLimit = await getDefaultVisitorLimit();
+    const visitors = await Promise.all(shops.map((s) => visitorUsage("SHOP", s._id, s.visitorLimit ?? null, defaultVisitorLimit)));
     const data = shops.map((s, i) => ({
       _id: s._id,
       name: s.name,
@@ -49,12 +52,16 @@ export async function GET(req: Request) {
       linkBookingLimit: s.linkBookingLimit ?? null,
       linkUsed: usages[i].used,
       linkLimitEffective: usages[i].limit,
+      visitorLimit: s.visitorLimit ?? null,
+      visitorUsed: visitors[i].used,
+      visitorLimitEffective: visitors[i].limit,
     }));
 
     return NextResponse.json({
       success: true,
       data,
       defaultLinkLimit,
+      defaultVisitorLimit,
       pagination: { total, page, limit, pages: Math.ceil(total / limit) },
     });
   } catch (error) {

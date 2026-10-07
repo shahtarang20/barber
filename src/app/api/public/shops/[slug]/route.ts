@@ -3,6 +3,7 @@ import connectToDatabase from "@/lib/mongodb";
 import { Shop } from "@/models/Shop";
 import { User } from "@/models/User";
 import { shopLinkUsage } from "@/lib/linkLimit";
+import { admitVisitor } from "@/lib/visitorLimit";
 import { rateLimit, getClientIp } from "@/lib/rateLimit";
 
 export async function GET(req: Request, { params }: { params: Promise<{ slug: string }> }) {
@@ -36,7 +37,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
         name: shop.name,
         slug: shop.slug,
         barbers,
-        linkClosed: (await shopLinkUsage(shop._id, shop.linkBookingLimit ?? null)).closed,
+        linkClosed: (await shopLinkUsage(shop._id, shop.linkBookingLimit ?? null)).closed || !(await admitVisitor(req, "SHOP", shop._id, shop.visitorLimit ?? null)).allowed,
       },
     });
   } catch (error) {

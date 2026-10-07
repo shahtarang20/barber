@@ -453,6 +453,21 @@ Money is collected **outside the app** (cash, UPI, bank); the admin records it a
 
 **Honest limits:** voiding an older payment while later ones exist keeps the latest end date (periods are not re-chained); if the only payment is voided the barber goes back to the old due-day behaviour; push reminders are English only (the in-app notice is translated); there is no automatic payment collection or invoice/GST receipt; `videoUploadsEnabled` / `maxVideoDurationSeconds` from the plan are not separate switches (video length is fixed at 5–120 s, and a plan with 0 videos blocks videos).
 
+### Visitor cap per link (unique IP addresses)
+
+Besides the monthly **booking** cap (`linkLimit.ts`, unchanged), the admin can cap how many **different visitors (unique IP addresses)** may open a link in a month.
+
+| Part | How it works |
+|---|---|
+| Setting | Per shop (Admin → Multi-Barber Shops, box on each shop row), per barber (Admin → Stores, column "Visitors (IPs) / month") and a platform default (Stores, "Visitor limit (default)"). Empty = default, **0 = unlimited**. Each box shows "N visitors / limit" for the month. Changes are audited (`SHOP_LIMITS_CHANGED`, `BARBER_SETTINGS_CHANGED`) |
+| Counting | The first time an address opens the page (page data, slots, catalogue or a booking), it is counted for that shop/barber for the India calendar month (`LinkVisitor`, unique per owner+month+address). The count restarts on the 1st; old records expire after 100 days |
+| At the cap | An address already counted keeps full access all month. A **new** address sees the orange "Online booking is closed for now" page, and the slots, catalogue and booking APIs answer 403 `VISITOR_LIMIT`. Lowering the limit never locks out visitors already counted |
+| Races | Many new visitors arriving at the same instant are ranked by arrival after saving, so no more than the cap are admitted; one visitor's own simultaneous requests are never split |
+| Privacy | Only a one-way hash of the address is stored (never the address) |
+| Not counted | The barber's dashboard, link-preview crawlers (they fetch the page HTML, not the data APIs), and the waitlist API on its own |
+
+**Honest limits:** an IP address is not a person. Many phones on one mobile network or Wi-Fi share one address (so 200 addresses can be far more than 200 people), and one person on Wi-Fi and then mobile data counts twice. The owner opening their own link counts too. Use it as a rough volume cap, and keep the booking cap for real limits.
+
 ### Pre-launch hardening (review findings fixed)
 
 - Editing one field of a service (or the Publish/Unpublish button) no longer resets its status or price type (zod 4 applies `.default()` inside `.partial()`; defaults now exist only on the create schema).

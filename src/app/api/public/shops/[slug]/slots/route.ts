@@ -5,6 +5,7 @@ import { User } from "@/models/User";
 import { Slot } from "@/models/Slot";
 import { sortByStartTime } from "@/lib/timeSort";
 import { rateLimit, getClientIp } from "@/lib/rateLimit";
+import { admitVisitor } from "@/lib/visitorLimit";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
     if (!shop) {
       return NextResponse.json({ success: false, error: { message: "Shop not found" } }, { status: 404 });
     }
+    if (!(await admitVisitor(req, "SHOP", shop._id, shop.visitorLimit ?? null)).allowed) return NextResponse.json({ success: false, error: { code: "VISITOR_LIMIT", message: "This page is not available right now. Please contact the barber directly." } }, { status: 403 });
 
     const activeBarbers = await User.find({ _id: { $in: shop.barberIds }, isActive: true }).select("name slug").lean();
     if (activeBarbers.length === 0) {

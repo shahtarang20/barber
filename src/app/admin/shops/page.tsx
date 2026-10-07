@@ -19,6 +19,9 @@ interface ShopRow {
   /** The shop's plan and catalogue switch are its owner's. */
   plan?: { status: string; tier: string; granted: boolean; endsOn: string | null } | null;
   catalogueEnabled?: boolean;
+  visitorLimit?: number | null;
+  visitorUsed?: number;
+  visitorLimitEffective?: number;
 }
 
 interface ShopMember {
@@ -240,6 +243,28 @@ export default function AdminShopsPage() {
                       />
                       <div className={`text-xs mt-1 ${(shop as any).linkLimitEffective > 0 && (shop as any).linkUsed >= (shop as any).linkLimitEffective ? "text-red-600 font-medium" : "text-zinc-500"}`}>
                         {(shop as any).linkUsed ?? 0} this month{(shop as any).linkLimitEffective > 0 ? ` / ${(shop as any).linkLimitEffective}` : ""}
+                      </div>
+                    </div>
+                    <div className="mr-4 text-right" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="number" min="0"
+                        aria-label={`Visitor limit for ${shop.name}`}
+                        key={`${shop._id}-v${shop.visitorLimit ?? "d"}`}
+                        defaultValue={shop.visitorLimit ?? ""}
+                        placeholder="Default"
+                        title="Different visitors (unique IP addresses) who may open the shop link per month (empty = platform default, 0 = unlimited)"
+                        onBlur={async (e) => {
+                          const v = e.target.value.trim();
+                          if (v === String(shop.visitorLimit ?? "")) return;
+                          const res = await fetch(`/api/admin/shops/${shop._id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ visitorLimit: v === "" ? null : Number(v) }) });
+                          const d = await res.json();
+                          toast.add(d.success ? { title: "Success", description: "Visitor limit saved", type: "success" } : { title: "Error", description: d.error?.message || "Could not save", type: "error" });
+                          fetchShops();
+                        }}
+                        className="w-24 px-2 py-1 border border-zinc-200 dark:border-zinc-700 rounded-md bg-transparent text-sm"
+                      />
+                      <div className={`text-xs mt-1 ${(shop.visitorLimitEffective ?? 0) > 0 && (shop.visitorUsed ?? 0) >= (shop.visitorLimitEffective ?? 0) ? "text-red-600 font-medium" : "text-zinc-500"}`}>
+                        {(shop.visitorUsed ?? 0)} visitors{(shop.visitorLimitEffective ?? 0) > 0 ? ` / ${(shop.visitorLimitEffective ?? 0)}` : ""}
                       </div>
                     </div>
                     <svg className={`w-5 h-5 text-zinc-400 transform transition-transform ${isExpanded ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
