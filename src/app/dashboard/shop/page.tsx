@@ -1,5 +1,6 @@
 "use client";
 
+import { copyText } from "@/lib/shareLink";
 import { StaffAccess } from "@/components/dashboard/StaffAccess";
 import { useState } from "react";
 import { Copy, Share2 } from "lucide-react";
@@ -176,16 +177,9 @@ export default function ShopPage() {
   const shopUrl = (slug: string) => `${window.location.origin}/s/${slug}`;
 
   const copyShopLink = async (slug: string) => {
-    try {
-      await navigator.clipboard.writeText(shopUrl(slug));
-    } catch {
-      // Some browsers block the clipboard (or the site is not on https): fall back to the old copy command.
-      const box = document.createElement("textarea");
-      box.value = shopUrl(slug);
-      document.body.appendChild(box);
-      box.select();
-      document.execCommand("copy");
-      document.body.removeChild(box);
+    if (!(await copyText(shopUrl(slug)))) {
+      toast.add({ title: t('error'), description: shopUrl(slug), type: "error" }); // refused: show it so it can be copied by hand
+      return;
     }
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);

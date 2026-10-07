@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Copy, ExternalLink, Share2, Download } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/toast";
+import { copyText } from "@/lib/shareLink";
 import { useTranslation } from "@/lib/i18n";
 
 export default function PublicLinkPage() {
@@ -41,10 +42,14 @@ export default function PublicLinkPage() {
   const publicUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/b/${profile?.slug}`;
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(publicUrl)}`;
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(publicUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopy = async () => {
+    if (await copyText(publicUrl)) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } else {
+      // Some browsers (older ones, in-app browsers) refuse: show the link so it can be selected and copied by hand.
+      toast.add({ title: t('error'), description: publicUrl, type: "error" });
+    }
   };
 
   const handleShare = async () => {

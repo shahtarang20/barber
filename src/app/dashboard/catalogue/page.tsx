@@ -119,7 +119,7 @@ export default function CatalogueManagerPage() {
                 <p className="break-all text-sm text-blue-700">{publicUrl}</p>
                 <div className="flex flex-wrap gap-2">
                   <Button variant="outline" className="h-11" onClick={() => window.open(publicUrl, "_blank", "noopener")}><ExternalLink /> Preview</Button>
-                  <Button variant="outline" className="h-11" onClick={async () => { await copyText(publicUrl); toast.add({ title: "Copied", description: "Catalogue link copied.", type: "success" }); }}><Copy /> Copy link</Button>
+                  <Button variant="outline" className="h-11" onClick={async () => { const ok = await copyText(publicUrl); toast.add(ok ? { title: "Copied", description: "Catalogue link copied.", type: "success" } : { title: "Could not copy", description: publicUrl, type: "error" }); }}><Copy /> Copy link</Button>
                   <Button variant="outline" className="h-11" onClick={async () => { const r = await shareOrCopy({ title: scope === "shop" && shop ? shop.name : mine?.name || "Catalogue", text: "See our services and styles:", url: publicUrl }); if (r === "copied") toast.add({ title: "Copied", description: "Link copied. Paste it in WhatsApp.", type: "success" }); }}><Share2 /> Share</Button>
                 </div>
               </>

@@ -23,8 +23,8 @@ export function InstallHelp({ help, className = "" }: { help: Help; className?: 
     : "#";
 
   const copy = async () => {
-    await copyText(window.location.href);
-    toast.add({ title: t("linkCopy"), description: t("installLinkCopiedHint"), type: "success" });
+    const ok = await copyText(window.location.href);
+    toast.add(ok ? { title: t("linkCopy"), description: t("installLinkCopiedHint"), type: "success" } : { title: t("error"), description: window.location.href, type: "error" });
   };
 
   return (

@@ -1,5 +1,6 @@
 "use client";
 
+import { copyText } from "@/lib/shareLink";
 import useSWR from "swr";
 import { Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,10 +17,8 @@ export function MyBarberCode() {
   if (!code) return null;
 
   const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(code);
-      toast.add({ title: t("myCodeCopied"), description: code, type: "success" });
-    } catch {}
+    if (await copyText(code)) toast.add({ title: t("myCodeCopied"), description: code, type: "success" });
+    else toast.add({ title: t("error"), description: code, type: "error" }); // refused: show the code so it can be copied by hand
   };
 
   return (
