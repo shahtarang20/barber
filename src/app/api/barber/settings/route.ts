@@ -48,6 +48,10 @@ export async function PUT(req: Request) {
     const body = await req.json();
     const { bio, workingHours, slotDuration, defaultCapacity } = body;
 
+    if (bio !== undefined && (typeof bio !== "string" || bio.length > 1000)) {
+      return NextResponse.json({ success: false, error: { message: "The bio must be text of at most 1000 characters." } }, { status: 400 });
+    }
+
     if (workingHours !== undefined) {
       const validationError = validateWorkingHours(workingHours);
       if (validationError) {

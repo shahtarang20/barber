@@ -3,9 +3,10 @@ import { z } from "zod";
 import { requireAuth } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import { PushSubscription } from "@/models/PushSubscription";
+import { allowedPushHost } from "@/lib/push";
 
 const schema = z.object({
-  endpoint: z.string().url(),
+  endpoint: z.string().url().max(600).refine(allowedPushHost, "Invalid device."),
   keys: z.object({ p256dh: z.string().min(1), auth: z.string().min(1) }),
 });
 

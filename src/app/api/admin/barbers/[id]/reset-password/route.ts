@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import mongoose from "mongoose";
 import { requireAuth } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import { User } from "@/models/User";
@@ -21,6 +22,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const resolvedParams = await params;
     const { id } = resolvedParams;
 
+    if (!mongoose.isValidObjectId(id)) {
+      return NextResponse.json({ success: false, error: { message: "Barber not found" } }, { status: 404 });
+    }
     const user = await User.findById(id);
     if (!user || user.role !== "BARBER") {
       return NextResponse.json({ success: false, error: { message: "Barber not found" } }, { status: 404 });

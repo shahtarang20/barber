@@ -129,7 +129,7 @@ export default function PublicLinkPage() {
             </div>
           )}
           {profile.linkUsage.limit > 0 && profile.linkUsage.used / profile.linkUsage.limit >= 0.8 && (
-            <p className="mt-3 text-sm text-red-600">{t('linkNearLimit')}</p>
+            <p className="mt-3 text-sm text-red-600">{profile.linkUsage.used >= profile.linkUsage.limit ? t('linkLimitReached') : t('linkNearLimit')}</p>
           )}
         </div>
       )}

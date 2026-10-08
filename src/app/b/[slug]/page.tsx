@@ -133,6 +133,13 @@ export default function BarberBookingPage() {
         setBookingError(
           data.error?.code === "LINK_LIMIT" ? t("linkClosedMsg")
           : data.error?.code === "SEAT_HELD" ? t("seatHeld")
+          : data.error?.code === "SLOT_ALREADY_BOOKED" ? t("err_SLOT_UNAVAILABLE")
+          : data.error?.code === "VISITOR_LIMIT" ? t("linkClosedMsg")
+          : data.error?.code === "WAITLIST_STILL_OPEN" ? t("errWaitlistOpen")
+          : data.error?.code === "WAITLIST_DUPLICATE" ? t("errWaitlistDup")
+          : data.error?.code === "WAITLIST_FULL" ? t("errWaitlistFull")
+          : res.status === 429 ? t("err_RATE_LIMITED")
+          : res.status === 410 && /passed/i.test(data.error?.message || "") ? t("err_SLOT_PASSED")
           : res.status === 400 && /phone/i.test(data.error?.message || "") ? t("phoneInvalid")
           : res.status === 400 && /name/i.test(data.error?.message || "") ? t("nameRequired")
           : data.error?.message || t("genericError")
@@ -227,26 +234,26 @@ export default function BarberBookingPage() {
               {!bookingSuccess.isWaitlist && (
                 <>
                   <div className="text-zinc-500">{t('bookingId')}</div>
-                  <div className="font-medium text-right">{bookingSuccess.bookingNumber}</div>
+                  <div className="font-medium text-right min-w-0 break-words">{bookingSuccess.bookingNumber}</div>
                 </>
               )}
               
               <div className="text-zinc-500">{t('date')}</div>
-              <div className="font-medium text-right">{fmt(new Date(bookingSuccess.date || selectedDate), "d MMMM yyyy")}</div>
+              <div className="font-medium text-right min-w-0 break-words">{fmt(bookingSuccess.date ? parseDateOnly(bookingSuccess.date) : selectedDate, "d MMMM yyyy")}</div>
               
               <div className="text-zinc-500">{t('time')}</div>
-              <div className="font-medium text-right">{bookingSuccess.startTime || selectedSlot?.startTime}</div>
+              <div className="font-medium text-right min-w-0 break-words">{bookingSuccess.startTime || selectedSlot?.startTime}</div>
               
               <div className="text-zinc-500">{t('customer')}</div>
-              <div className="font-medium text-right">{bookingSuccess.customerName || bookingSuccess.name}</div>
+              <div className="font-medium text-right min-w-0 break-words">{bookingSuccess.customerName || bookingSuccess.name}</div>
               {bookingSuccess.serviceName && (
                 <>
                   <div className="text-zinc-500">{t('catSelectedService')}</div>
-                  <div className="font-medium text-right">{bookingSuccess.serviceName}</div>
+                  <div className="font-medium text-right min-w-0 break-words">{bookingSuccess.serviceName}</div>
                   {typeof bookingSuccess.servicePrice === "number" && (
                     <>
                       <div className="text-zinc-500">{t('catYourPrice')}</div>
-                      <div className="font-medium text-right">₹{new Intl.NumberFormat("en-IN").format(bookingSuccess.servicePrice)}</div>
+                      <div className="font-medium text-right min-w-0 break-words">₹{new Intl.NumberFormat("en-IN").format(bookingSuccess.servicePrice)}</div>
                     </>
                   )}
                 </>
@@ -376,7 +383,7 @@ export default function BarberBookingPage() {
             <div className="bg-zinc-50 p-4 rounded-xl mb-8 flex justify-between items-center border border-zinc-100">
               <div>
                 <p className="text-sm text-zinc-500">{t('time')}</p>
-                <p className="font-semibold text-zinc-900 mt-1">{fmt(selectedDate, "d MMM yyyy")} at {selectedSlot.startTime}</p>
+                <p className="font-semibold text-zinc-900 mt-1">{fmt(selectedDate, "d MMM yyyy")} · {selectedSlot.startTime}</p>
               </div>
               <button onClick={() => setSelectedSlot(null)} className="text-blue-600 text-sm font-medium">{t('cancel')}</button>
             </div>
@@ -390,7 +397,7 @@ export default function BarberBookingPage() {
               
               <div className="space-y-2">
                 <Label htmlFor="name">{t('yourName')}</Label>
-                <Input id="name" name="name" placeholder={t('yourNamePlaceholder')} autoComplete="name" aria-invalid={!!fieldErrors.name} aria-describedby={fieldErrors.name ? "name-error" : undefined} onChange={() => fieldErrors.name && setFieldErrors((x) => ({ ...x, name: undefined }))} className={`h-12 text-base ${fieldErrors.name ? "border-red-500" : ""}`} />
+                <Input id="name" name="name" maxLength={80} placeholder={t('yourNamePlaceholder')} autoComplete="name" aria-invalid={!!fieldErrors.name} aria-describedby={fieldErrors.name ? "name-error" : undefined} onChange={() => fieldErrors.name && setFieldErrors((x) => ({ ...x, name: undefined }))} className={`h-12 text-base ${fieldErrors.name ? "border-red-500" : ""}`} />
                 {fieldErrors.name && <p id="name-error" role="alert" className="text-sm font-medium text-red-600">{fieldErrors.name}</p>}
               </div>
               

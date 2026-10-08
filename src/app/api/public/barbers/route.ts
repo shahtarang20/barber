@@ -20,12 +20,12 @@ export async function GET(req: Request) {
     const filter: Record<string, unknown> = { role: "BARBER", isActive: true };
     if (q) {
       const rx = new RegExp(escapeRegex(q), "i");
-      filter.$or = [{ name: rx }, { barberCode: rx }];
+      filter.name = rx; // never match on the login code: it must not be discoverable from the public list
     }
 
     const total = await User.countDocuments(filter);
     const barbers = await User.find(filter)
-      .select("name slug bio profileImage barberCode")
+      .select("name slug bio profileImage") // the login code (barberCode) is private
       .sort({ name: 1 })
       .skip((page - 1) * limit)
       .limit(limit)

@@ -15,10 +15,13 @@ export function normalizeBookingNumber(input: string) {
 }
 
 export async function findOwnBooking(bookingNumber: string, phone: string) {
+  // A phone with no digits normalizes to "", which is exactly what a walk-in customer without a phone number has saved: never a match.
+  const phoneNorm = normalizePhone(phone);
+  if (!phoneNorm) return null;
   const booking = await Booking.findOne({ bookingNumber: normalizeBookingNumber(bookingNumber) });
   if (!booking) return null;
   const customer = await Customer.findById(booking.customerId);
-  if (!customer || customer.phone !== normalizePhone(phone)) return null;
+  if (!customer || customer.phone !== phoneNorm) return null;
   return { booking, customer };
 }
 

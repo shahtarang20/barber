@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import mongoose from "mongoose";
 import { requireAuth } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import { User } from "@/models/User";
@@ -34,6 +35,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     await connectToDatabase();
     const { id: targetId } = await params;
+    if (!mongoose.isValidObjectId(targetId)) {
+      return NextResponse.json({ success: false, error: { message: "Admin not found." } }, { status: 404 });
+    }
 
     if (targetId === payload.userId) {
       return NextResponse.json({ success: false, error: { message: "Use 'Change Password' to update your own password." } }, { status: 400 });

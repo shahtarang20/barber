@@ -54,8 +54,9 @@ export default async function BarberLayout({ children, params }: { children: Rea
   const { slug } = await params;
 
   await connectToDatabase();
-  const barber = await User.findOne({ slug }).select("name").lean<{ _id: unknown; name?: string } | null>();
-  if (!barber) notFound();
+  const barber = await User.findOne({ slug }).select("name isActive role").lean<{ _id: unknown; name?: string; isActive?: boolean; role?: string } | null>();
+  // A suspended barber (or a slug that is not a barber) is a plain "not found", not a page that offers to install a dead app.
+  if (!barber || barber.isActive === false || barber.role !== "BARBER") notFound();
   const style = barber ? await loadPageStyle("BARBER", String(barber._id)) : null;
   const template = style?.template ?? resolveTemplate(undefined, slug);
 

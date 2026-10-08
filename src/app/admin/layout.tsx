@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { verifyToken } from "@/lib/auth";
+import { verifyToken, requireAuth } from "@/lib/auth";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { SWRProvider } from "@/components/SWRProvider";
 import { AdminMobileNav } from "@/components/admin/AdminMobileNav";
@@ -10,6 +10,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const payload = token ? verifyToken(token) : null;
 
   if (!payload || payload.role !== "ADMIN") {
+    redirect("/login");
+  }
+
+  // The cookie can still be well-formed after a logout or a password reset; check the account itself.
+  if (!(await requireAuth(["ADMIN"]))) {
     redirect("/login");
   }
 

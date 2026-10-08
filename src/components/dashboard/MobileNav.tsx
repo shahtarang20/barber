@@ -28,14 +28,14 @@ export function MobileNav() {
               <Link
                 key={item.name}
                 href={item.href}
-                className={`flex flex-col items-center gap-1 min-w-[64px] ${
+                className={`flex flex-col items-center gap-1 min-w-0 flex-1 ${
                   isActive
                     ? "text-zinc-900 dark:text-zinc-50"
                     : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50"
                 }`}
               >
                 <Icon className="w-6 h-6" />
-                <span className="text-xs font-medium">{item.name}</span>
+                <span className="text-xs font-medium max-w-full truncate">{item.name}</span>
               </Link>
             );
           })}

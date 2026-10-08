@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff } from "lucide-react";
-import { useTranslation } from "@/lib/i18n";
+import { useTranslation, type TranslationKey } from "@/lib/i18n";
 
 export default function RegisterPage() {
   const hydrated = useHydrated();
@@ -48,7 +48,14 @@ export default function RegisterPage() {
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        setError(data.error?.message || t('genericError'));
+        // The server's messages are English; the common ones are shown in the chosen language.
+        const known: Record<string, TranslationKey> = {
+          "Name must be at least 2 characters": "authErrName", "Name must be at most 80 characters": "authErrName",
+          "Invalid email address": "authErrEmail", "Email already registered": "authErrEmailTaken",
+          "Password must be at least 6 characters": "authErrPassword",
+        };
+        const key = res.status === 429 ? "err_RATE_LIMITED" : known[data.error?.message as string];
+        setError(key ? t(key) : data.error?.message || t('genericError'));
         setLoading(false);
         return;
       }

@@ -42,7 +42,7 @@ export async function PUT(req: Request) {
     const payload = await requireAuth(["ADMIN"]);
     if (!payload) return NextResponse.json({ success: false, error: { message: "Unauthorized: Admins only" } }, { status: 401 });
 
-    const parsed = schema.safeParse(await req.json());
+    const parsed = schema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
       return NextResponse.json({ success: false, error: { message: parsed.error.issues[0].message } }, { status: 400 });
     }

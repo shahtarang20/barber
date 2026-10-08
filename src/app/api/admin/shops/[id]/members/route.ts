@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import mongoose from "mongoose";
 import { requireAuth } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import { Shop } from "@/models/Shop";
@@ -24,6 +25,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     await connectToDatabase();
     const { id } = await params;
+    if (!mongoose.isValidObjectId(id)) {
+      return NextResponse.json({ success: false, error: { message: "Shop not found" } }, { status: 404 });
+    }
 
     const shop = await Shop.findById(id);
     if (!shop) {

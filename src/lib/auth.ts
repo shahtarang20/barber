@@ -63,7 +63,11 @@ export async function requireAuth(allowedRoles?: string[]): Promise<TokenPayload
 export async function signedInHome(): Promise<string | null> {
   const { cookies } = await import("next/headers");
   if (!(await cookies()).get("auth_token")?.value) return null;
-  const payload = await requireAuth();
-  if (!payload) return null;
-  return payload.role === "ADMIN" ? "/admin" : "/dashboard";
+  try {
+    const payload = await requireAuth();
+    if (!payload) return null;
+    return payload.role === "ADMIN" ? "/admin" : "/dashboard";
+  } catch {
+    return null; // database trouble: show the normal page instead of an error screen
+  }
 }

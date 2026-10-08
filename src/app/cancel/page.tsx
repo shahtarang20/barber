@@ -9,9 +9,16 @@ import { LanguageSelector } from "@/components/LanguageSelector";
 import { useTranslation } from "@/lib/i18n";
 import { getTodayISTString } from "@/lib/istTime";
 import { parseDateOnly } from "@/lib/timeSort";
+import { loadLastBooking, saveLastBooking, clearLastBooking } from "@/lib/lastBooking";
 
 interface Found { date: string; startTime: string; barberSlug: string; barberName?: string }
 interface OpenSlot { _id: string; startTime: string; endTime: string; status: string; capacity: number; bookingsCount: number }
+
+/** "b-0012", "B12" and "12" are the same booking. */
+const sameBookingId = (a: string, b: string) => {
+  const x = parseInt(a.replace(/\D/g, ""), 10), y = parseInt(b.replace(/\D/g, ""), 10);
+  return Number.isFinite(x) && x === y;
+};
 
 export default function ManageBookingPage() {
   const { t } = useTranslation();
@@ -57,7 +64,12 @@ export default function ManageBookingPage() {
   const handleCancel = () => run(async () => {
     const data = await post("/api/public/bookings/cancel", { bookingNumber, phone });
     setResult({ ok: data.success, message: data.success ? t("successCancelled") : errText(data) });
-    if (data.success) setDone(true);
+    if (data.success) {
+      setDone(true);
+      // The "Your booking" banner on the booking pages must not keep offering a booking that is gone.
+      const saved = loadLastBooking();
+      if (saved && sameBookingId(saved.id, bookingNumber)) clearLastBooking();
+    }
   });
 
   const handleFind = () => run(async () => {
@@ -98,6 +110,9 @@ export default function ManageBookingPage() {
     if (data.success) {
       setResult({ ok: true, message: `${t("successMoved")} ${format(parseDateOnly(data.data.date), "d MMM")}, ${data.data.startTime}` });
       setDone(true);
+      // ...and must show the new time, not the old one.
+      const saved = loadLastBooking();
+      if (saved && sameBookingId(saved.id, bookingNumber)) saveLastBooking({ ...saved, date: data.data.date, time: data.data.startTime });
     } else {
       setResult({ ok: false, message: errText(data) });
       if (date) loadSlots(date);

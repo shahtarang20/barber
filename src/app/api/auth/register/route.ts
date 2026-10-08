@@ -10,7 +10,7 @@ import { z } from "zod";
 import { rateLimit, getClientIp } from "@/lib/rateLimit";
 
 const registerSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
+  name: z.string().trim().min(2, "Name must be at least 2 characters").max(80, "Name must be at most 80 characters"),
   // Optional — village barbers often have none; they log in with their Barber Code.
   email: z.string().trim().email("Invalid email address").optional().or(z.literal("")),
   // Required: the admin needs a way to reach every barber. Stored as the plain 10 digits.
@@ -76,6 +76,12 @@ export async function POST(req: Request) {
       } catch (err) {
         // Two people picked the same link at the same instant: find the next free one and try again.
         const dup = (err as { code?: number; keyPattern?: Record<string, unknown> });
+        if (dup.code === 11000 && dup.keyPattern?.email) {
+          return NextResponse.json({ success: false, error: { message: "Email already registered" } }, { status: 400 });
+        }
+        if (dup.code === 11000 && dup.keyPattern?.slug && result.data.slug) {
+          return NextResponse.json({ success: false, error: { message: "Booking URL slug is already taken" } }, { status: 400 });
+        }
         if (dup.code === 11000 && dup.keyPattern?.slug && !result.data.slug && attempt < 8) {
           // First retry takes the next free tidy link; if many people collide at once, fall back to a short random tail.
           slug = attempt === 0 ? await uniqueSlug(slugFromName(name)) : `${slugFromName(name)}-${Math.floor(1000 + Math.random() * 9000)}`;

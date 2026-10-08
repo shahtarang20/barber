@@ -116,8 +116,7 @@ export default function SettingsPage() {
       await forgetPushOnThisDevice();
       await fetch("/api/auth/logout", { method: "POST" });
     } finally {
-      router.push("/login");
-      router.refresh();
+      window.location.assign("/login"); // a full reload: nothing of this session stays in memory
     }
   };
   const fmt = useDateFormat();

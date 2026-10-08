@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import mongoose from "mongoose";
 import { requireAuth } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import { Shop } from "@/models/Shop";
@@ -13,6 +14,9 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
 
     await connectToDatabase();
     const { id, barberId } = await params;
+    if (!mongoose.isValidObjectId(id) || !mongoose.isValidObjectId(barberId)) {
+      return NextResponse.json({ success: false, error: { message: "Shop not found" } }, { status: 404 });
+    }
 
     const shop = await Shop.findById(id);
     if (!shop) {

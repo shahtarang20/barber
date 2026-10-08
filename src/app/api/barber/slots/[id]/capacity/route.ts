@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import mongoose from "mongoose";
 import { requireAuth } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import { Slot } from "@/models/Slot";
@@ -21,6 +22,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     await connectToDatabase();
 
     const resolvedParams = await params;
+    if (!mongoose.isValidObjectId(resolvedParams.id)) {
+      return NextResponse.json({ success: false, error: { message: "Slot not found" } }, { status: 404 });
+    }
 
     // Atomic conditional update: the capacity-vs-bookingsCount check and the
     // write happen as one operation, so a concurrent booking (which bumps

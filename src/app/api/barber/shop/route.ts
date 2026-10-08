@@ -8,7 +8,7 @@ import { z } from "zod";
 import { effectivePlan, staffLevel } from "@/lib/plans";
 
 const createShopSchema = z.object({
-  name: z.string().min(2, "Shop name must be at least 2 characters").max(80, "Shop name is too long"),
+  name: z.string().trim().min(2, "Shop name must be at least 2 characters").max(80, "Shop name is too long"),
   slug: z
     .string()
     .min(3, "Shop URL must be at least 3 characters")
@@ -100,12 +100,21 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: { message: "That shop URL is already taken." } }, { status: 400 });
     }
 
-    const shop = await Shop.create({
-      name,
-      slug,
-      ownerId: user._id,
-      barberIds: [user._id],
-    });
+    let shop;
+    try {
+      shop = await Shop.create({
+        name,
+        slug,
+        ownerId: user._id,
+        barberIds: [user._id],
+      });
+    } catch (err) {
+      // Someone took the same address at the very same moment.
+      if ((err as { code?: number }).code === 11000) {
+        return NextResponse.json({ success: false, error: { message: "That shop URL is already taken." } }, { status: 400 });
+      }
+      throw err;
+    }
 
     user.shopId = shop._id;
     await user.save();

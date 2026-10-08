@@ -27,8 +27,8 @@ const PHONE_LIMIT = 20;
 
 const bookingSchema = z.object({
   slotId: z.string().min(1, "Slot is required"),
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  phone: z.string().min(10, "Valid phone number is required"),
+  name: z.string().min(2, "Name must be at least 2 characters").max(80, "Name must be 80 characters or fewer"),
+  phone: z.string().min(10, "Valid phone number is required").refine((p) => p.replace(/\D/g, "").length >= 10, "Valid phone number is required"),
   notes: z.string().max(500, "Notes must be 500 characters or fewer").optional(),
   // Set by the shop page, so the booking counts against the shop link's monthly limit.
   shopSlug: z.string().max(80).optional(),

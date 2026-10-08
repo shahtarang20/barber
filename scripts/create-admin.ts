@@ -12,7 +12,8 @@ import { requireMongoUri } from "./env";
  * The password is never printed. Change it after the first login (Admin → Settings → Change My Password).
  */
 async function createAdmin() {
-  const adminCode = (process.env.ADMIN_CODE || "").trim();
+  // Login looks the code up in lower case, so store it that way (otherwise "Owner" could never log in).
+  const adminCode = (process.env.ADMIN_CODE || "").trim().toLowerCase();
   const password = process.env.ADMIN_PASSWORD || "";
   const name = (process.env.ADMIN_NAME || "Administrator").trim();
 

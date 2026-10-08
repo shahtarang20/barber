@@ -45,7 +45,7 @@ export function UpdateCard() {
     try {
       const reg = await navigator.serviceWorker?.getRegistration();
       await reg?.update(); // fetch the newest worker (it takes over at once)
-      if ("caches" in window) await Promise.all((await caches.keys()).map((k) => caches.delete(k))); // only app files live here, never personal data
+      if ("caches" in window) await Promise.all((await caches.keys()).filter((k) => k.startsWith("barber-static")).map((k) => caches.delete(k))); // saved app files only (the offline page stays)
     } catch {}
     window.location.reload();
   };

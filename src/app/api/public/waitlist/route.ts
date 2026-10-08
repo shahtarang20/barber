@@ -12,8 +12,8 @@ import { Shop } from "@/models/Shop";
 
 const waitlistSchema = z.object({
   slotId: z.string().min(1, "Slot is required"),
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  phone: z.string().min(10, "Valid phone number is required"),
+  name: z.string().min(2, "Name must be at least 2 characters").max(80, "Name must be 80 characters or fewer"),
+  phone: z.string().min(10, "Valid phone number is required").refine((p) => p.replace(/\D/g, "").length >= 10, "Valid phone number is required"),
   // Set by the shop page's "Any barber" choice: wait for a seat with ANY barber of that shop at this time.
   shopSlug: z.string().max(80).optional(),
   anyBarber: z.boolean().optional(),
@@ -56,7 +56,7 @@ export async function POST(req: Request) {
     const target = await Slot.findById(slotId).select("status bookingsCount capacity holds");
     // Seats being held for other waitlisted customers count as taken.
     if (target && target.status === "AVAILABLE" && target.bookingsCount + activeHoldCount(target) < target.capacity) {
-      return NextResponse.json({ success: false, error: { message: "This time is still open — please book it directly." } }, { status: 409 });
+      return NextResponse.json({ success: false, error: { code: "WAITLIST_STILL_OPEN", message: "This time is still open — please book it directly." } }, { status: 409 });
     }
 
     // Don't let the same person join the same slot's waitlist repeatedly
@@ -65,7 +65,7 @@ export async function POST(req: Request) {
     if (existingSlot) {
       return NextResponse.json({
         success: false,
-        error: { message: "You're already on the waitlist for this slot." },
+        error: { code: "WAITLIST_DUPLICATE", message: "You're already on the waitlist for this slot." },
       }, { status: 409 });
     }
 
@@ -91,7 +91,7 @@ export async function POST(req: Request) {
 
     if (!slot) {
       if (await Slot.exists({ _id: slotId, status: { $ne: "BLOCKED" } })) {
-        return NextResponse.json({ success: false, error: { message: "This waitlist is full. Please pick another time." } }, { status: 409 });
+        return NextResponse.json({ success: false, error: { code: "WAITLIST_FULL", message: "This waitlist is full. Please pick another time." } }, { status: 409 });
       }
       return NextResponse.json({
         success: false,

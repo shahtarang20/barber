@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import mongoose from "mongoose";
 import { requireAuth } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import { Shop } from "@/models/Shop";
@@ -14,6 +15,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
     await connectToDatabase();
     const { id } = await params;
+    if (!mongoose.isValidObjectId(id)) {
+      return NextResponse.json({ success: false, error: { message: "Shop not found" } }, { status: 404 });
+    }
 
     const shop = await Shop.findById(id).lean();
     if (!shop) {
@@ -48,6 +52,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     await connectToDatabase();
     const { id } = await params;
+    if (!mongoose.isValidObjectId(id)) {
+      return NextResponse.json({ success: false, error: { message: "Shop not found" } }, { status: 404 });
+    }
     const body = await req.json();
 
     const updateData: any = {};
@@ -128,6 +135,9 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
 
     await connectToDatabase();
     const { id } = await params;
+    if (!mongoose.isValidObjectId(id)) {
+      return NextResponse.json({ success: false, error: { message: "Shop not found" } }, { status: 404 });
+    }
 
     const shop = await Shop.findById(id);
     if (!shop) {

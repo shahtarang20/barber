@@ -12,7 +12,8 @@ export interface ShopCustomerRow { _id: unknown; name: string; phone: string; vi
  * One function, used by the shop's own barbers AND by the admin, so both always see exactly the same list.
  */
 export async function loadShopCustomers(shopId: unknown, opts: { page: number; limit: number; search: string; repeatOnly: boolean }): Promise<{ data: ShopCustomerRow[]; total: number }> {
-  const { page, limit, search, repeatOnly } = opts;
+  const { limit, search, repeatOnly } = opts;
+  const page = Math.min(Math.max(1, opts.page), 100_000); // a huge page number must not reach the database as an out-of-range skip
     const members = await User.find({ shopId }).select("name");
     const ids = members.map((m) => m._id);
     const nameOf = new Map(members.map((m) => [String(m._id), m.name as string]));

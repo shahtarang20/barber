@@ -7,7 +7,7 @@ import mongoose from "mongoose";
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const page = Math.max(parseInt(searchParams.get("page") || "1") || 1, 1);
+    const page = Math.min(Math.max(parseInt(searchParams.get("page") || "1") || 1, 1), 100000);
     const limit = Math.min(Math.max(parseInt(searchParams.get("limit") || "10") || 10, 1), 100);
     const search = (searchParams.get("search") || "").trim();
     const skip = (page - 1) * limit;

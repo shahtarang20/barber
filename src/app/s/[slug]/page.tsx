@@ -182,6 +182,13 @@ export default function ShopBookingPage() {
         setBookingError(
           data.error?.code === "LINK_LIMIT" ? t("linkClosedMsg")
           : data.error?.code === "SEAT_HELD" ? t("seatHeld")
+          : data.error?.code === "SLOT_ALREADY_BOOKED" ? t("err_SLOT_UNAVAILABLE")
+          : data.error?.code === "VISITOR_LIMIT" ? t("linkClosedMsg")
+          : data.error?.code === "WAITLIST_STILL_OPEN" ? t("errWaitlistOpen")
+          : data.error?.code === "WAITLIST_DUPLICATE" ? t("errWaitlistDup")
+          : data.error?.code === "WAITLIST_FULL" ? t("errWaitlistFull")
+          : res.status === 429 ? t("err_RATE_LIMITED")
+          : res.status === 410 && /passed/i.test(data.error?.message || "") ? t("err_SLOT_PASSED")
           : res.status === 400 && /phone/i.test(data.error?.message || "") ? t("phoneInvalid")
           : res.status === 400 && /name/i.test(data.error?.message || "") ? t("nameRequired")
           : data.error?.message || t("genericError")
@@ -204,8 +211,8 @@ export default function ShopBookingPage() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-zinc-50">
         <div className="text-4xl mb-4">✂️</div>
-        <h1 className="text-2xl font-bold text-zinc-800">Shop not found</h1>
-        <p className="text-zinc-500 mt-2">Please check the URL and try again.</p>
+        <h1 className="text-2xl font-bold text-zinc-800">{t("shopNotFound")}</h1>
+        <p className="text-zinc-500 mt-2">{t("checkUrl")}</p>
       </div>
     );
   }
@@ -236,11 +243,11 @@ export default function ShopBookingPage() {
             )}
           </div>
           <h1 className="text-2xl font-bold text-zinc-900 mb-2">
-            {bookingSuccess.isWaitlist ? "Waitlist Confirmed" : t("appointmentConfirmed")}
+            {bookingSuccess.isWaitlist ? t("waitlistConfirmed") : t("appointmentConfirmed")}
           </h1>
           <p className="text-zinc-500 mb-8">
             {bookingSuccess.isWaitlist
-              ? "You will be notified via WhatsApp if a spot opens up!"
+              ? t("waitlistSuccess")
               : `${t("bookingSuccess")} ${bookedBarber?.name || selectedSlot?.barberName || ""}.`}
           </p>
           {!bookingSuccess.isWaitlist && (
@@ -260,25 +267,25 @@ export default function ShopBookingPage() {
               {!bookingSuccess.isWaitlist && (
                 <>
                   <div className="text-zinc-500">{t("bookingId")}</div>
-                  <div className="font-medium text-right">{bookingSuccess.bookingNumber}</div>
+                  <div className="font-medium text-right min-w-0 break-words">{bookingSuccess.bookingNumber}</div>
                 </>
               )}
               <div className="text-zinc-500">{t("date")}</div>
-              <div className="font-medium text-right">{fmt(new Date(bookingSuccess.date || selectedDate), "d MMMM yyyy")}</div>
+              <div className="font-medium text-right min-w-0 break-words">{fmt(bookingSuccess.date ? parseDateOnly(bookingSuccess.date) : selectedDate, "d MMMM yyyy")}</div>
               <div className="text-zinc-500">{t("time")}</div>
-              <div className="font-medium text-right">{bookingSuccess.startTime || selectedSlot?.startTime}</div>
+              <div className="font-medium text-right min-w-0 break-words">{bookingSuccess.startTime || selectedSlot?.startTime}</div>
               <div className="text-zinc-500">{t("barberLabel")}</div>
-              <div className="font-medium text-right">{bookedBarber?.name || selectedSlot?.barberName}</div>
+              <div className="font-medium text-right min-w-0 break-words">{bookedBarber?.name || selectedSlot?.barberName}</div>
               <div className="text-zinc-500">{t("customer")}</div>
-              <div className="font-medium text-right">{bookingSuccess.customerName || bookingSuccess.name}</div>
+              <div className="font-medium text-right min-w-0 break-words">{bookingSuccess.customerName || bookingSuccess.name}</div>
               {bookingSuccess.serviceName && (
                 <>
                   <div className="text-zinc-500">{t('catSelectedService')}</div>
-                  <div className="font-medium text-right">{bookingSuccess.serviceName}</div>
+                  <div className="font-medium text-right min-w-0 break-words">{bookingSuccess.serviceName}</div>
                   {typeof bookingSuccess.servicePrice === "number" && (
                     <>
                       <div className="text-zinc-500">{t('catYourPrice')}</div>
-                      <div className="font-medium text-right">₹{new Intl.NumberFormat("en-IN").format(bookingSuccess.servicePrice)}</div>
+                      <div className="font-medium text-right min-w-0 break-words">₹{new Intl.NumberFormat("en-IN").format(bookingSuccess.servicePrice)}</div>
                     </>
                   )}
                 </>
@@ -440,7 +447,7 @@ export default function ShopBookingPage() {
               <div>
                 <p className="text-sm text-zinc-500">{t("time")}</p>
                 <p className="font-semibold text-zinc-900 mt-1">
-                  {fmt(selectedDate, "d MMM yyyy")} at {selectedSlot.startTime} with {selectedSlot.barberName}
+                  {fmt(selectedDate, "d MMM yyyy")} · {selectedSlot.startTime} · {selectedSlot.barberName}
                 </p>
               </div>
               <button onClick={() => setSelectedSlot(null)} className="text-blue-600 text-sm font-medium">{t("cancel")}</button>
@@ -455,7 +462,7 @@ export default function ShopBookingPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="name">{t("yourName")}</Label>
-                <Input id="name" name="name" placeholder={t('yourNamePlaceholder')} autoComplete="name" aria-invalid={!!fieldErrors.name} aria-describedby={fieldErrors.name ? "name-error" : undefined} onChange={() => fieldErrors.name && setFieldErrors((x) => ({ ...x, name: undefined }))} className={`h-12 text-base ${fieldErrors.name ? "border-red-500" : ""}`} />
+                <Input id="name" name="name" maxLength={80} placeholder={t('yourNamePlaceholder')} autoComplete="name" aria-invalid={!!fieldErrors.name} aria-describedby={fieldErrors.name ? "name-error" : undefined} onChange={() => fieldErrors.name && setFieldErrors((x) => ({ ...x, name: undefined }))} className={`h-12 text-base ${fieldErrors.name ? "border-red-500" : ""}`} />
                 {fieldErrors.name && <p id="name-error" role="alert" className="text-sm font-medium text-red-600">{fieldErrors.name}</p>}
               </div>
 

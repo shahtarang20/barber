@@ -24,8 +24,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     if (body.premiumAmount !== undefined) {
       const amount = Number(body.premiumAmount);
-      if (!Number.isFinite(amount) || amount < 0) {
-        return NextResponse.json({ success: false, error: { message: "Premium amount must be a non-negative number." } }, { status: 400 });
+      if (!Number.isFinite(amount) || amount < 0 || amount > 10_000_000) {
+        return NextResponse.json({ success: false, error: { message: "Premium amount must be a number between 0 and 10,00,00,000." } }, { status: 400 });
       }
       updateData.premiumAmount = amount;
     }
@@ -103,7 +103,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if ($inc) updateQuery.$inc = $inc;
 
     const before = await User.findById(id).select("premiumAmount premiumDueDay catalogueEnabled isActive linkBookingLimit visitorLimit").lean<Record<string, unknown> | null>();
-    const updatedUser = await User.findByIdAndUpdate(id, updateQuery, { new: true }).select("-passwordHash -tokenVersion");
+    // Only barber accounts: an admin account can never be suspended or edited from this screen (that would lock the admin out).
+    const updatedUser = await User.findOneAndUpdate({ _id: id, role: "BARBER" }, updateQuery, { new: true }).select("-passwordHash -tokenVersion");
 
     if (!updatedUser) {
       return NextResponse.json({ success: false, error: { message: "Barber not found" } }, { status: 404 });

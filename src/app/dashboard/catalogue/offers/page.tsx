@@ -39,6 +39,7 @@ function OfferForm({ scope, offer, services, today, onDone, onCancel }: { scope:
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!endsOn) { toast.add({ title: t("ownCouldNotSave"), description: t("ownOffNeedEnd"), type: "error" }); return; }
     setBusy(true);
     try {
       const body = { title, description, discountType, discountValue: Number(value), startsOn, endsOn, serviceIds: ids, status: offer?.status ?? "ACTIVE" };

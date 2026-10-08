@@ -17,6 +17,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     // We await params since Next.js 15+ dynamic route params are promises
     const resolvedParams = await params;
     const slotId = resolvedParams.id;
+    if (!mongoose.isValidObjectId(slotId)) {
+      return NextResponse.json({ success: false, error: { message: "Slot not found" } }, { status: 404 });
+    }
     
     const slot = await Slot.findById(slotId);
     

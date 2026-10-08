@@ -20,7 +20,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
 
     const manifest = {
       name: `${barber.name} - Booking App`,
-      short_name: barber.name,
+      short_name: barber.name.length > 12 ? barber.name.slice(0, 12).trim() : barber.name,
       description: `Book your next haircut with ${barber.name}.`,
       id: `/b/${slug}`,
       start_url: `/b/${slug}`,

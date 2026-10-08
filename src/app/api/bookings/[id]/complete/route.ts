@@ -35,8 +35,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     }
 
     // Update booking status
+    // Atomic: only a booking that is still CONFIRMED can be completed (a cancel at the same moment must win or lose cleanly).
+    const done = await Booking.findOneAndUpdate({ _id: bookingId, status: "CONFIRMED" }, { $set: { status: "COMPLETED" } }, { new: true });
+    if (!done) {
+      return NextResponse.json({ success: false, error: { message: "This booking was already changed." } }, { status: 409 });
+    }
     booking.status = "COMPLETED";
-    await booking.save();
 
     notifyBarber(booking.barberId.toString(), "BOOKINGS_UPDATED");
 
