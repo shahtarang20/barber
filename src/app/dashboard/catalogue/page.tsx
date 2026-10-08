@@ -110,7 +110,9 @@ export default function CatalogueManagerPage() {
             </div>
             {data.visibility && (
               <p role="status" className={`rounded-lg px-3 py-2 text-sm font-medium ${data.visibility === "LIVE" ? "bg-green-50 text-green-800" : "bg-amber-50 text-amber-900"}`}>
-                {t(data.visibility === "LIVE" ? "ownVisLive" : data.visibility === "SWITCH_OFF" ? "ownVisOff" : data.visibility === "NO_PUBLISHED_SERVICE" ? "ownVisNoSvc" : "ownVisNoCat")}
+                {data.visibility === "PARTIAL"
+                  ? t("ownVisPartial").replace("{shown}", String(data.usage.shownServices ?? 0)).replace("{total}", String(data.usage.publishedServices))
+                  : t(data.visibility === "LIVE" ? "ownVisLive" : data.visibility === "SWITCH_OFF" ? "ownVisOff" : data.visibility === "NO_PUBLISHED_SERVICE" ? "ownVisNoSvc" : data.visibility === "PLAN_LIMIT" ? "ownVisPlan" : "ownVisNoCat")}
               </p>
             )}
             <div className="grid gap-3 sm:grid-cols-2">

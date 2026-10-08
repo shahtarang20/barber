@@ -509,6 +509,8 @@ export const en = {
   ownCatLoading: "Loading your catalogue…",
   ownShowCat: "Show the catalogue to customers",
   ownCatOn: "On. Customers see a Catalogue tab next to Book Appointment once at least one service is published.",
+  ownVisPlan: "Customers cannot see your catalogue yet: your plan's limits hide the categories your services are in.",
+  ownVisPartial: "Customers can see {shown} of your {total} published services. Your plan's limits hide the rest.",
   ownVisLive: "Customers can see your catalogue now.",
   ownVisOff: "Customers cannot see your catalogue yet: the switch above is off.",
   ownVisNoSvc: "Customers cannot see your catalogue yet: no service is published. Add a service and choose Published.",

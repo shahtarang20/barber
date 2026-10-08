@@ -5,6 +5,7 @@ import { BarberService } from "@/models/BarberService";
 import { autoEnableCatalogue, planFor, safeUrl } from "@/lib/catalogue";
 import { fail, ok, ownerRoute } from "@/lib/catalogueApi";
 import { notifyBarber } from "@/lib/realtime";
+import { loadPublicCatalogue } from "@/lib/cataloguePublic";
 
 // A field that is not sent stays undefined (and is left alone); sending "" clears it. Never turn "missing" into "".
 const urlOrEmpty = z.string().max(500).optional().transform((v) => (v === undefined ? undefined : v.trim()));
@@ -32,9 +33,11 @@ export async function GET(req: Request) {
     if (services > 0) await autoEnableCatalogue(scope);
     const settings = await CatalogueSettings.findOne(mine).lean<{ enabled?: boolean } | null>();
     const visibleCategories = publishedCategoryIds.length ? await CatalogueCategory.countDocuments({ ...mine, _id: { $in: publishedCategoryIds }, isPublished: true }) : 0;
-    // Why customers can or cannot see the catalogue right now, in plain words for the owner's screen.
-    const visibility = !settings?.enabled ? "SWITCH_OFF" : services === 0 ? "NO_PUBLISHED_SERVICE" : visibleCategories === 0 ? "NO_PUBLISHED_CATEGORY" : "LIVE";
-    return ok({ settings: settings ? { ...settings } : { enabled: false, accent: "indigo" }, plan, usage: { categories, publishedServices: services }, visibility, scope: scope.ownerType });
+    // Ask the very same loader customers use, so what the owner is told is what customers really get.
+    const live = await loadPublicCatalogue(scope.ownerType, scope.ownerId, "");
+    const shownServices = live.categories.reduce((n, c) => n + c.services.length, 0);
+    const visibility = !settings?.enabled ? "SWITCH_OFF" : services === 0 ? "NO_PUBLISHED_SERVICE" : visibleCategories === 0 ? "NO_PUBLISHED_CATEGORY" : !live.available ? "PLAN_LIMIT" : shownServices < services ? "PARTIAL" : "LIVE";
+    return ok({ settings: settings ? { ...settings } : { enabled: false, accent: "indigo" }, plan, usage: { categories, publishedServices: services, shownServices }, visibility, scope: scope.ownerType });
   });
 }
 

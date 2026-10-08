@@ -17,7 +17,7 @@ export interface SettingsDoc {
   layout?: "grid" | "list"; imageRatio?: "portrait" | "square" | "wide";
 }
 export interface PlanInfo { tier: "FREE" | "PREMIUM" | "BUSINESS"; maxCategories: number; maxServices: number; maxImagesPerService: number; maxVideosPerService: number; maxMediaMB: number; maxActiveOffers: number; maxCampaignsPerWeek: number }
-export interface SettingsPayload { settings: SettingsDoc; plan: PlanInfo; usage: { categories: number; publishedServices: number }; visibility?: "LIVE" | "SWITCH_OFF" | "NO_PUBLISHED_SERVICE" | "NO_PUBLISHED_CATEGORY"; scope: "BARBER" | "SHOP" }
+export interface SettingsPayload { settings: SettingsDoc; plan: PlanInfo; usage: { categories: number; publishedServices: number; shownServices?: number }; visibility?: "LIVE" | "PARTIAL" | "PLAN_LIMIT" | "SWITCH_OFF" | "NO_PUBLISHED_SERVICE" | "NO_PUBLISHED_CATEGORY"; scope: "BARBER" | "SHOP" }
 
 export const withScope = (path: string, scope: CatalogueScope) => `${path}${path.includes("?") ? "&" : "?"}scope=${scope}`;
 
