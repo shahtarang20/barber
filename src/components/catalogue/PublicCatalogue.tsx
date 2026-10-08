@@ -145,8 +145,9 @@ export function PublicCatalogue({ catalogue, loading, error, onBook, allowedBarb
   const b = catalogue?.branding;
   const whatsapp = b?.whatsapp || b?.phone || "";
   const shopName = b?.name || "";
-  const list = b?.layout === "list";
-  const gridStyle = { "--tp-ratio": RATIO[b?.imageRatio || "portrait"] || RATIO.portrait } as CSSProperties;
+  // Every catalogue uses the same card (tall photo grid, as in the demo): the old per-owner "list" / "square" / "wide" choices are no longer applied.
+  const list = false;
+  const gridStyle = { "--tp-ratio": RATIO.portrait } as CSSProperties;
   const chips = useMemo(() => [{ id: "ALL", name: t("catAllCategories") }, ...(savedCount > 0 ? [{ id: "SAVED", name: t("catSavedFilter").replace("{n}", String(savedCount)) }] : []), ...categories.map((c) => ({ id: c.id, name: c.name }))], [t, savedCount, categories]);
 
   return (

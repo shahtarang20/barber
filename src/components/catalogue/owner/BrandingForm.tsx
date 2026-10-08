@@ -91,23 +91,7 @@ export function BrandingForm({ scope, settings, onSaved }: { scope: CatalogueSco
           ))}
         </div>
       </fieldset>
-      <ChoiceGroup legend={t("ownBrandLayout")} value={draft.layout} onChange={(v) => set("layout", v as Draft["layout"])} options={[["grid", t("ownBrandCards")], ["list", t("ownBrandList")]]} />
-      <ChoiceGroup legend={t("ownBrandShape")} value={draft.imageRatio} onChange={(v) => set("imageRatio", v as Draft["imageRatio"])} options={[["portrait", t("ownBrandTall")], ["square", t("ownBrandSquare")], ["wide", t("ownBrandWide")]]} />
       <Button type="submit" disabled={saving} className="h-11">{saving ? t("ownSaving") : t("ownBrandSave")}</Button>
     </form>
-  );
-}
-
-function ChoiceGroup({ legend, value, onChange, options }: { legend: string; value: string; onChange: (v: string) => void; options: [string, string][] }) {
-  return (
-    <fieldset>
-      <legend className="mb-2 text-sm font-medium">{legend}</legend>
-      <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={legend}>
-        {options.map(([id, label]) => (
-          <button key={id} type="button" role="radio" aria-checked={value === id} onClick={() => onChange(id)}
-            className={`min-h-11 rounded-full border px-4 text-sm ${value === id ? "border-zinc-900 ring-2 ring-zinc-900" : "border-zinc-300"}`}>{label}</button>
-        ))}
-      </div>
-    </fieldset>
   );
 }
