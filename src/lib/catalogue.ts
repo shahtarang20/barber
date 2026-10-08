@@ -78,3 +78,20 @@ export function discountLabel(s: PricedService): string | null {
   if (!s.discountType || !s.discountValue || s.priceType === "ASK_SHOP") return null;
   return s.discountType === "PERCENTAGE" ? `${Math.round(Number(s.discountValue))}% off` : `₹${Math.round(Number(s.discountValue))} off`;
 }
+
+/**
+ * The catalogue switch starts OFF, so an owner who adds and publishes services would otherwise see nothing on the customer page.
+ * Publishing a service therefore turns it on, unless the owner has used the switch himself.
+ */
+export async function autoEnableCatalogue(scope: Scope): Promise<void> {
+  const { CatalogueSettings } = await import("@/models/CatalogueSettings");
+  try {
+    await CatalogueSettings.updateOne(
+      { ownerType: scope.ownerType, ownerId: scope.ownerId, enabled: { $ne: true }, enabledByOwner: { $ne: true } },
+      { $set: { enabled: true }, $setOnInsert: { ownerType: scope.ownerType, ownerId: scope.ownerId } },
+      { upsert: true, setDefaultsOnInsert: true }
+    );
+  } catch (err) {
+    if ((err as { code?: number }).code !== 11000) throw err; // a record already exists that the owner switched himself: leave it alone
+  }
+}

@@ -1,7 +1,7 @@
 import { BarberService } from "@/models/BarberService";
 import { fail, isId, ok, ownerRoute } from "@/lib/catalogueApi";
 import { validateServiceInput, type ServiceData } from "@/lib/catalogueService";
-import { planFor } from "@/lib/catalogue";
+import { autoEnableCatalogue, planFor } from "@/lib/catalogue";
 import { notifyBarber } from "@/lib/realtime";
 
 type Params = { params: Promise<{ id: string }> };
@@ -52,6 +52,7 @@ export async function PATCH(req: Request, { params }: Params) {
     for (const key of Object.keys(unset)) delete (set as Record<string, unknown>)[key];
 
     const saved = await BarberService.findOneAndUpdate(mine(scope, id), { $set: set, ...(Object.keys(unset).length ? { $unset: unset } : {}) }, { new: true }).lean();
+    if (checked.data.status === "PUBLISHED") await autoEnableCatalogue(scope);
     notifyBarber(userId, "CATALOGUE_UPDATED");
     return ok(saved);
   }, { write: true });

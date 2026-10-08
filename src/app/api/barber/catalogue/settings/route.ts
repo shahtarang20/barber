@@ -2,7 +2,7 @@ import { z } from "zod";
 import { CatalogueSettings } from "@/models/CatalogueSettings";
 import { CatalogueCategory } from "@/models/CatalogueCategory";
 import { BarberService } from "@/models/BarberService";
-import { planFor, safeUrl } from "@/lib/catalogue";
+import { autoEnableCatalogue, planFor, safeUrl } from "@/lib/catalogue";
 import { fail, ok, ownerRoute } from "@/lib/catalogueApi";
 import { notifyBarber } from "@/lib/realtime";
 
@@ -21,13 +21,20 @@ const schema = z.object({
 /** The catalogue's on/off switch and branding, plus what the plan allows and how much is used. */
 export async function GET(req: Request) {
   return ownerRoute(req, async ({ scope }) => {
-    const [settings, plan, categories, services] = await Promise.all([
-      CatalogueSettings.findOne({ ownerType: scope.ownerType, ownerId: scope.ownerId }).lean(),
+    const mine = { ownerType: scope.ownerType, ownerId: scope.ownerId };
+    const [plan, categories, services, publishedCategoryIds] = await Promise.all([
       planFor(scope),
-      CatalogueCategory.countDocuments({ ownerType: scope.ownerType, ownerId: scope.ownerId }),
-      BarberService.countDocuments({ ownerType: scope.ownerType, ownerId: scope.ownerId, status: "PUBLISHED" }),
+      CatalogueCategory.countDocuments(mine),
+      BarberService.countDocuments({ ...mine, status: "PUBLISHED" }),
+      BarberService.distinct("categoryId", { ...mine, status: "PUBLISHED" }),
     ]);
-    return ok({ settings: settings || { enabled: false, accent: "indigo" }, plan, usage: { categories, publishedServices: services }, scope: scope.ownerType });
+    // An owner who already published services before this switch existed (and never touched it) would see nothing on the customer page: turn it on once.
+    if (services > 0) await autoEnableCatalogue(scope);
+    const settings = await CatalogueSettings.findOne(mine).lean<{ enabled?: boolean } | null>();
+    const visibleCategories = publishedCategoryIds.length ? await CatalogueCategory.countDocuments({ ...mine, _id: { $in: publishedCategoryIds }, isPublished: true }) : 0;
+    // Why customers can or cannot see the catalogue right now, in plain words for the owner's screen.
+    const visibility = !settings?.enabled ? "SWITCH_OFF" : services === 0 ? "NO_PUBLISHED_SERVICE" : visibleCategories === 0 ? "NO_PUBLISHED_CATEGORY" : "LIVE";
+    return ok({ settings: settings ? { ...settings } : { enabled: false, accent: "indigo" }, plan, usage: { categories, publishedServices: services }, visibility, scope: scope.ownerType });
   });
 }
 
@@ -43,7 +50,7 @@ export async function PUT(req: Request) {
       else { const u = safeUrl(d[k]); if (!u) return fail("Pictures and links must be normal web addresses starting with https://"); set[k] = u; }
     }
     for (const k of ["intro", "address", "phone", "whatsapp", "accent", "layout", "imageRatio"] as const) if (d[k] !== undefined) set[k] = typeof d[k] === "string" ? (d[k] as string).trim() : d[k];
-    if (d.enabled !== undefined) set.enabled = d.enabled;
+    if (d.enabled !== undefined) { set.enabled = d.enabled; set.enabledByOwner = true; }
     const saved = await CatalogueSettings.findOneAndUpdate({ ownerType: scope.ownerType, ownerId: scope.ownerId }, { $set: set, $setOnInsert: { ownerType: scope.ownerType, ownerId: scope.ownerId } }, { upsert: true, new: true, setDefaultsOnInsert: true }).lean();
     notifyBarber(userId, "CATALOGUE_UPDATED");
     return ok({ settings: saved });

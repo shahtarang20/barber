@@ -108,6 +108,11 @@ export default function CatalogueManagerPage() {
                 <span className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition-transform ${data.settings.enabled ? "translate-x-7" : "translate-x-1"}`} />
               </button>
             </div>
+            {data.visibility && (
+              <p role="status" className={`rounded-lg px-3 py-2 text-sm font-medium ${data.visibility === "LIVE" ? "bg-green-50 text-green-800" : "bg-amber-50 text-amber-900"}`}>
+                {t(data.visibility === "LIVE" ? "ownVisLive" : data.visibility === "SWITCH_OFF" ? "ownVisOff" : data.visibility === "NO_PUBLISHED_SERVICE" ? "ownVisNoSvc" : "ownVisNoCat")}
+              </p>
+            )}
             <div className="grid gap-3 sm:grid-cols-2">
               <Meter label={t("ownMeterCategories")} used={data.usage.categories} max={data.plan.maxCategories} />
               <Meter label={t("ownMeterPublished")} used={data.usage.publishedServices} max={data.plan.maxServices} />

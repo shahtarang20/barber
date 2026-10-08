@@ -1,7 +1,7 @@
 import { BarberService } from "@/models/BarberService";
 import { fail, isId, ok, ownerRoute } from "@/lib/catalogueApi";
 import { validateServiceInput } from "@/lib/catalogueService";
-import { planFor } from "@/lib/catalogue";
+import { autoEnableCatalogue, planFor } from "@/lib/catalogue";
 import { notifyBarber } from "@/lib/realtime";
 
 export async function GET(req: Request) {
@@ -26,6 +26,7 @@ export async function POST(req: Request) {
     }
     const last = await BarberService.findOne({ ...mine, categoryId: d.categoryId }).sort({ displayOrder: -1 }).select("displayOrder").lean<{ displayOrder: number } | null>();
     const created = await BarberService.create({ ...mine, ...d, displayOrder: (last?.displayOrder ?? -1) + 1 });
+    if (d.status === "PUBLISHED") await autoEnableCatalogue(scope);
     notifyBarber(userId, "CATALOGUE_UPDATED");
     return ok(created, 201);
   }, { write: true });

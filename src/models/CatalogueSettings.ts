@@ -7,6 +7,8 @@ const CatalogueSettingsSchema = new Schema(
     ownerType: { type: String, enum: ["BARBER", "SHOP"], required: true },
     ownerId: { type: Schema.Types.ObjectId, required: true },
     enabled: { type: Boolean, default: false },
+    // True once the owner has flipped the switch himself: from then on publishing a service never changes it.
+    enabledByOwner: { type: Boolean, default: false },
     logoUrl: { type: String, maxlength: 500 },
     coverUrl: { type: String, maxlength: 500 },
     intro: { type: String, trim: true, maxlength: 400 },
