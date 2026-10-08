@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { Slot } from "@/models/Slot";
 import { createConfirmedBooking } from "@/lib/createBooking";
 import { minutesUntilSlotEnd } from "@/lib/istTime";
+import { markSlotFullIfFull, releaseClaimedSeat } from "@/lib/cancelBooking";
 import { normalizePhone } from "@/lib/phone";
 import { heldByOthersExpr, activeHoldCount } from "@/lib/waitlistHold";
 import { notifyBarber } from "@/lib/realtime";
@@ -41,13 +42,13 @@ export async function bookSlotForStaff(input: { slotId: string; barberId: string
     };
   }
 
-  const release = () => Slot.findByIdAndUpdate(slot._id, { $set: { status: "AVAILABLE" }, $inc: { bookingsCount: -1 } });
+  const release = () => releaseClaimedSeat(slot._id);
 
   if (minutesUntilSlotEnd(slot.date, slot.endTime) <= 0) {
     await release();
     return { ok: false, status: 410, message: "That slot has already ended." };
   }
-  if (slot.bookingsCount >= slot.capacity) await Slot.findByIdAndUpdate(slot._id, { $set: { status: "BOOKED" } });
+  if (slot.bookingsCount >= slot.capacity) await markSlotFullIfFull(slot._id);
 
   try {
     const { booking } = await createConfirmedBooking(slot, name, phone, note);

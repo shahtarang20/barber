@@ -42,14 +42,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     }
     booking.status = "NO_SHOW";
 
+    // (The seat of the slot the booking is in NOW: a customer may have just moved it, so the copy loaded above can be out of date.)
     // Also give the seat back and make the slot available again. One atomic step each, so a booking made at the
     // same moment is never lost. Near the end of the slot the capacity shrinks too, so the seat does not reopen.
     const { Slot } = await import("@/models/Slot");
-    const slot = await Slot.findById(booking.slotId).select("date endTime capacity").lean<{ date: string; endTime: string; capacity: number } | null>();
+    const slot = await Slot.findById(claimed.slotId).select("date endTime capacity").lean<{ date: string; endTime: string; capacity: number } | null>();
     if (slot) {
       const shrink = slot.capacity > 1 && minutesUntilSlotEnd(slot.date, slot.endTime) <= 15;
-      await Slot.updateOne({ _id: booking.slotId, bookingsCount: { $gt: 0 } }, { $inc: shrink ? { bookingsCount: -1, capacity: -1 } : { bookingsCount: -1 } });
-      await Slot.updateOne({ _id: booking.slotId, status: "BOOKED", $expr: { $lt: ["$bookingsCount", "$capacity"] } }, { $set: { status: "AVAILABLE" } });
+      await Slot.updateOne({ _id: claimed.slotId, bookingsCount: { $gt: 0 } }, { $inc: shrink ? { bookingsCount: -1, capacity: -1 } : { bookingsCount: -1 } });
+      await Slot.updateOne({ _id: claimed.slotId, status: "BOOKED", $expr: { $lt: ["$bookingsCount", "$capacity"] } }, { $set: { status: "AVAILABLE" } });
     }
 
     notifyBarber(booking.barberId.toString(), "BOOKINGS_UPDATED");

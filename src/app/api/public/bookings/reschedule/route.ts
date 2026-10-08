@@ -11,7 +11,7 @@ import { minutesUntilSlot } from "@/lib/istTime";
 import { notifyBarber } from "@/lib/realtime";
 import { pushToBarberLater } from "@/lib/push";
 import { findOwnBooking, withinDailyOwnBookingLimit } from "@/lib/ownBooking";
-import { freeSlotSeat } from "@/lib/cancelBooking";
+import { freeSlotSeat, markSlotFullIfFull, releaseClaimedSeat } from "@/lib/cancelBooking";
 import { heldByOthersExpr } from "@/lib/waitlistHold";
 
 // Same cutoff as cancelling: too close to the start, contact the barber instead.
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
     if (!(await rateLimit(`public-reschedule:${getClientIp(req)}`, 60, 60_000))) {
       return NextResponse.json({ success: false, error: { code: "RATE_LIMITED", message: "Too many requests. Please try again shortly." } }, { status: 429 });
     }
-    const parsed = schema.safeParse(await req.json());
+    const parsed = schema.safeParse(await req.json().catch(() => ({})));
     if (!parsed.success) {
       return NextResponse.json({ success: false, error: { code: "INVALID_INPUT", message: parsed.error.issues[0].message } }, { status: 400 });
     }
@@ -76,15 +76,14 @@ export async function POST(req: Request) {
     if (!newSlot) {
       return NextResponse.json({ success: false, error: { code: "SLOT_UNAVAILABLE", message: "Sorry, that time is no longer available. Please choose another." } }, { status: 409 });
     }
-    const releaseNew = () =>
-      Slot.findByIdAndUpdate(newSlot._id, { $set: { status: "AVAILABLE" }, $inc: { bookingsCount: -1 } });
+    const releaseNew = () => releaseClaimedSeat(newSlot._id);
 
     if (minutesUntilSlot(newSlot.date, newSlot.startTime) < 0) {
       await releaseNew();
       return NextResponse.json({ success: false, error: { code: "SLOT_PASSED", message: "That time has already passed. Please choose another." } }, { status: 410 });
     }
     if (newSlot.bookingsCount >= newSlot.capacity) {
-      await Slot.findByIdAndUpdate(newSlot._id, { $set: { status: "BOOKED" } });
+      await markSlotFullIfFull(newSlot._id);
     }
 
     // 2. Move the booking — only if it's still CONFIRMED.

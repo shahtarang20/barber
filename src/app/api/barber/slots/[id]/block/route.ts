@@ -44,7 +44,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         status: "CONFIRMED"
       });
       
-      let customersList = [];
+      let customersList: { name: string; phone: string; bookingId: unknown }[] = [];
       for (const b of activeBookings) {
         const customer = await Customer.findById(b.customerId);
         if (customer) {
@@ -60,41 +60,54 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           error: { message: `This slot has existing bookings.` } 
         }, { status: 409 });
       } else {
-        // Force-cancel all bookings and block the slot as one atomic unit —
-        // without a transaction, a failure partway through (e.g. after
-        // cancelling booking 1 of 3) left the slot's bookingsCount out of
-        // sync with which bookings were actually cancelled.
+        // Close the slot first (atomically), so no customer can take another seat while the bookings are being cancelled.
+        await Slot.updateOne({ _id: slot._id }, { $set: { status: "BLOCKED" } });
+        // Then cancel every still-confirmed booking and give back exactly one seat for each one really cancelled, as one unit
+        // (a failure partway through must not leave the slot's bookingsCount out of sync with the bookings).
+        // Seats of visits already COMPLETED stay counted, as everywhere else. A booking that was changed by someone else in the
+        // meantime is simply skipped, never counted twice.
+        const cancelledNow: { _id: unknown; customerId: unknown }[] = [];
         const session = await mongoose.startSession();
         try {
           await session.withTransaction(async () => {
-            for (const b of activeBookings) {
-              b.status = "CANCELLED";
-              await b.save({ session });
+            cancelledNow.length = 0;
+            const current = await Booking.find({ slotId: slot._id, status: "CONFIRMED" }).select("customerId").session(session).lean();
+            for (const b of current) {
+              const done = await Booking.findOneAndUpdate({ _id: b._id, status: "CONFIRMED", slotId: slot._id }, { $set: { status: "CANCELLED" } }, { session });
+              if (!done) continue;
+              await Slot.updateOne({ _id: slot._id, bookingsCount: { $gt: 0 } }, { $inc: { bookingsCount: -1 } }, { session });
+              cancelledNow.push({ _id: b._id, customerId: b.customerId });
             }
-            slot.status = "BLOCKED";
-            slot.bookingsCount = 0;
-            await slot.save({ session });
           });
         } finally {
           await session.endSession();
         }
+        customersList = [];
+        for (const b of cancelledNow) {
+          const customer = await Customer.findById(b.customerId);
+          if (customer) customersList.push({ name: customer.name, phone: customer.phone, bookingId: b._id });
+        }
+        const fresh = (await Slot.findById(slot._id)) ?? slot;
 
         notifyBarber(payload.userId, "SLOTS_UPDATED");
 
         return NextResponse.json({
           success: true,
-          data: slot,
+          data: fresh,
           cancelledCustomers: customersList
         });
       }
     }
 
-    slot.status = "BLOCKED";
-    await slot.save();
+    // Atomic: only a slot that still has no bookings is blocked (a customer booking at the same moment must never end up in a blocked slot).
+    const blocked = await Slot.findOneAndUpdate({ _id: slot._id, bookingsCount: 0 }, { $set: { status: "BLOCKED" } }, { new: true });
+    if (!blocked) {
+      return NextResponse.json({ success: false, error: { message: "A booking has just come in for this slot. Please check it and try again." } }, { status: 409 });
+    }
 
     notifyBarber(payload.userId, "SLOTS_UPDATED");
 
-    return NextResponse.json({ success: true, data: slot });
+    return NextResponse.json({ success: true, data: blocked });
   } catch (error) {
     console.error("Block slot error:", error);
     return NextResponse.json({ success: false, error: { message: "Internal server error" } }, { status: 500 });

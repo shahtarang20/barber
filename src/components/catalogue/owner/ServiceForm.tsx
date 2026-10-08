@@ -72,8 +72,9 @@ export function ServiceForm({ scope, categories, plan, members = [], existing, b
     const askShop = priceType === "ASK_SHOP";
     const body = {
       name: name.trim(), categoryId, description: description.trim(), durationMinutes: num(duration),
-      priceType, ...(askShop ? {} : { price: num(price), originalPrice: num(originalPrice) }),
-      ...(!askShop && discountType ? { discountType, discountValue: num(discountValue) } : {}),
+      priceType, ...(askShop ? {} : { price: num(price), originalPrice: num(originalPrice) ?? null }),
+      // null = "emptied": without it an edit would keep the old discount / original price.
+      ...(!askShop ? (discountType ? { discountType, discountValue: num(discountValue) } : { discountType: null, discountValue: null }) : {}),
       images: images.map((i) => i.trim()).filter(Boolean), videos: videos.map((v) => v.trim()).filter(Boolean),
       barberIds: scope === "shop" ? barberIds : [], ...badges, status,
     };

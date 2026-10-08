@@ -127,9 +127,11 @@ export function PublicCatalogue({ catalogue, loading, error, onBook, allowedBarb
       .filter((c) => c.services.length > 0);
   }, [catalogue, allowedBarberIds]);
   const savedCount = useMemo(() => categories.reduce((n, c) => n + c.services.filter((s) => saved.has(s.id)).length, 0), [categories, saved]);
-  const shown = useMemo(() => activeCategory === "SAVED"
+  // The chosen filter can vanish under the customer (the last saved service was un-saved, or the owner hid that category): fall back to "All" instead of an empty page.
+  const active = activeCategory === "SAVED" ? (savedCount > 0 ? "SAVED" : "ALL") : activeCategory === "ALL" || categories.some((c) => c.id === activeCategory) ? activeCategory : "ALL";
+  const shown = useMemo(() => active === "SAVED"
     ? categories.map((c) => ({ ...c, services: c.services.filter((s) => saved.has(s.id)) })).filter((c) => c.services.length > 0)
-    : activeCategory === "ALL" ? categories : categories.filter((c) => c.id === activeCategory), [activeCategory, categories, saved]);
+    : active === "ALL" ? categories : categories.filter((c) => c.id === active), [active, categories, saved]);
   // Only the first `limit` services (across categories, in order) are mounted.
   const total = useMemo(() => shown.reduce((n, c) => n + c.services.length, 0), [shown]);
   // Browsers without IntersectionObserver (very old) simply get everything at once.
@@ -188,7 +190,7 @@ export function PublicCatalogue({ catalogue, loading, error, onBook, allowedBarb
           {(categories.length > 1 || savedCount > 0) && (
             <div className="tp-chips" role="group" aria-label={t("catAllCategories")}>
               {chips.map((c) => (
-                <button key={c.id} type="button" className="tp-chip" aria-pressed={activeCategory === c.id} onClick={() => { setActiveCategory(c.id); setLimit(CHUNK); }}>{c.name}</button>
+                <button key={c.id} type="button" className="tp-chip" aria-pressed={active === c.id} onClick={() => { setActiveCategory(c.id); setLimit(CHUNK); }}>{c.name}</button>
               ))}
             </div>
           )}

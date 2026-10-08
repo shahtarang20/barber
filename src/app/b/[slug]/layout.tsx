@@ -1,8 +1,16 @@
+import { cache } from "react";
 import { Metadata, Viewport } from "next";
 import { notFound } from "next/navigation";
 import connectToDatabase from "@/lib/mongodb";
 import { User } from "@/models/User";
 import { loadShareInfo } from "@/lib/shareCard";
+import { memo } from "@/lib/memo";
+
+/** The barber behind a page address: read once per request (metadata + layout share it) and kept a few seconds across requests. */
+const getBarberHead = cache((slug: string) => memo(`b-head:${slug}`, 8_000, async () => {
+  await connectToDatabase();
+  return User.findOne({ slug }).select("name bio isActive role").lean<{ _id: unknown; name?: string; bio?: string; isActive?: boolean; role?: string } | null>();
+}));
 
 /** The browser bar colour belongs in the viewport export (Next.js 16 warns when it is in the metadata). */
 export const viewport: Viewport = { themeColor: "#09090b" };
@@ -10,8 +18,7 @@ export const viewport: Viewport = { themeColor: "#09090b" };
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   
-  await connectToDatabase();
-  const barber = await User.findOne({ slug });
+  const barber = await getBarberHead(slug);
 
   const storeName = barber?.name || "Barber Shop";
   const title = `Book ${storeName}`;
@@ -53,8 +60,7 @@ import { resolveTemplate } from "@/lib/catalogueTemplate";
 export default async function BarberLayout({ children, params }: { children: React.ReactNode; params: Promise<{ slug: string }> }) {
   const { slug } = await params;
 
-  await connectToDatabase();
-  const barber = await User.findOne({ slug }).select("name isActive role").lean<{ _id: unknown; name?: string; isActive?: boolean; role?: string } | null>();
+  const barber = await getBarberHead(slug);
   // A suspended barber (or a slug that is not a barber) is a plain "not found", not a page that offers to install a dead app.
   if (!barber || barber.isActive === false || barber.role !== "BARBER") notFound();
   const style = barber ? await loadPageStyle("BARBER", String(barber._id)) : null;

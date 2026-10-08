@@ -162,11 +162,13 @@ export default function BarberBookingPage() {
   };
 
   if (barberError) {
+    // Only a real "not found" is told as one; a busy server or a dropped connection must not make a customer think the link is wrong.
+    const missing = !barberLoadError && /not found/i.test(barberData?.error?.message || "");
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-zinc-50">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-zinc-50 px-4 text-center">
         <div className="text-4xl mb-4">✂️</div>
-        <h1 className="text-2xl font-bold text-zinc-800">{t('barberNotFound' as any)}</h1>
-        <p className="text-zinc-500 mt-2">{t('checkUrl' as any)}</p>
+        <h1 className="text-2xl font-bold text-zinc-800">{missing ? t('barberNotFound' as any) : t("genericError")}</h1>
+        {missing && <p className="text-zinc-500 mt-2">{t('checkUrl' as any)}</p>}
       </div>
     );
   }

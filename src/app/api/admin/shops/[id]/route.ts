@@ -59,14 +59,15 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     const updateData: any = {};
     if (body.name !== undefined) {
-      const name = String(body.name).trim();
+      const name = typeof body.name === "string" ? body.name.trim() : "";
       if (name.length < 2 || name.length > 80) {
         return NextResponse.json({ success: false, error: { message: "Shop name must be between 2 and 80 characters." } }, { status: 400 });
       }
       updateData.name = name;
     }
     if (body.isActive !== undefined) {
-      updateData.isActive = Boolean(body.isActive);
+      if (typeof body.isActive !== "boolean") return NextResponse.json({ success: false, error: { message: "isActive must be true or false." } }, { status: 400 });
+      updateData.isActive = body.isActive;
     }
 
     if (body.catalogueEnabled !== undefined) {

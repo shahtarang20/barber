@@ -130,6 +130,10 @@ export default function CustomersPage() {
                   {/* Row Header */}
                   <div 
                     onClick={() => setExpandedId(isExpanded ? null : c._id)}
+                    role="button"
+                    tabIndex={0}
+                    aria-expanded={isExpanded}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setExpandedId(isExpanded ? null : c._id); } }}
                     className="p-4 sm:p-6 flex items-center justify-between cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-950/50"
                   >
                     <div className="flex items-center gap-4">

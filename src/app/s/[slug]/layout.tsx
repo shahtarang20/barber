@@ -1,8 +1,16 @@
+import { cache } from "react";
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import connectToDatabase from "@/lib/mongodb";
 import { Shop } from "@/models/Shop";
 import { loadShareInfo } from "@/lib/shareCard";
+import { memo } from "@/lib/memo";
+
+/** The shop behind a page address: read once per request and kept a few seconds across requests. */
+const getShopHead = cache((slug: string) => memo(`s-head:${slug}`, 8_000, async () => {
+  await connectToDatabase();
+  return Shop.findOne({ slug, isActive: true }).select("name").lean<{ _id: unknown; name: string } | null>();
+}));
 import { MyBookingBanner } from "@/components/MyBookingBanner";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { TemplateScope } from "@/components/catalogue/templates/TemplateScope";
@@ -13,8 +21,7 @@ import { resolveTemplate } from "@/lib/catalogueTemplate";
 /** The preview a customer sees when a shop link is shared on WhatsApp: the shop's own name. */
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
-  await connectToDatabase();
-  const shop = await Shop.findOne({ slug, isActive: true }).select("name").lean<{ name: string } | null>();
+  const shop = await getShopHead(slug);
   const name = shop?.name || "Barber Shop";
   const title = `Book at ${name}`;
   const share = await loadShareInfo("SHOP", slug).catch(() => null);
@@ -34,8 +41,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 export default async function ShopLayout({ children, params }: { children: React.ReactNode; params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  await connectToDatabase();
-  const shop = await Shop.findOne({ slug, isActive: true }).select("name").lean<{ _id: unknown; name: string } | null>();
+  const shop = await getShopHead(slug);
   if (!shop) notFound();
   const style = shop ? await loadPageStyle("SHOP", String(shop._id)) : null;
   const template = style?.template ?? resolveTemplate(undefined, slug);

@@ -47,6 +47,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       return NextResponse.json({ success: false, error: { message: "Only blocked slots can be unblocked" } }, { status: 400 });
     }
 
+    // A slot whose seats are all taken (visits already completed) reopens as full, not as bookable.
+    if (opened.bookingsCount >= opened.capacity) await Slot.updateOne({ _id: slot._id, status: "AVAILABLE", $expr: { $gte: ["$bookingsCount", "$capacity"] } }, { $set: { status: "BOOKED" } });
+
     let waitlistCustomer = null;
     let autoBooking = null;
 

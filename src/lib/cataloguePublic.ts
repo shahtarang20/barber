@@ -1,3 +1,4 @@
+import { memo } from "@/lib/memo";
 import mongoose from "mongoose";
 import { CatalogueCategory } from "@/models/CatalogueCategory";
 import { BarberService } from "@/models/BarberService";
@@ -101,8 +102,8 @@ async function governingUserId(ownerType: OwnerType, ownerId: mongoose.Types.Obj
   return shop && shop.isActive !== false ? String(shop.ownerId) : null;
 }
 
-/** The published catalogue of one barber or one shop, as customers see it. */
-export async function loadPublicCatalogue(ownerType: OwnerType, ownerId: mongoose.Types.ObjectId, displayName: string): Promise<PublicCatalogue> {
+/** The published catalogue of one barber or one shop, as customers see it, read straight from the database. */
+export async function loadPublicCatalogueFresh(ownerType: OwnerType, ownerId: mongoose.Types.ObjectId, displayName: string): Promise<PublicCatalogue> {
   const unavailable: PublicCatalogue = { available: false, template: resolveTemplate(undefined, ownerId), branding: { name: displayName, ...EMPTY_BRANDING }, categories: [], offers: [] };
   const governing = await governingUserId(ownerType, ownerId);
   if (!governing) return unavailable;
@@ -147,6 +148,16 @@ export async function loadPublicCatalogue(ownerType: OwnerType, ownerId: mongoos
   return { available: shown.length > 0, template, branding, categories: shown, offers };
 }
 
+/**
+ * The same catalogue for every customer, so under load it is built once every few seconds per owner instead of once per request
+ * (a page view used to cost about 25 database reads). A change by the owner is visible within `CATALOGUE_TTL_MS`.
+ * Bookings and the owner's own screens read the fresh version.
+ */
+const CATALOGUE_TTL_MS = 4_000;
+export function loadPublicCatalogue(ownerType: OwnerType, ownerId: mongoose.Types.ObjectId, displayName: string): Promise<PublicCatalogue> {
+  return memo(`catalogue:${ownerType}:${String(ownerId)}:${displayName}`, CATALOGUE_TTL_MS, () => loadPublicCatalogueFresh(ownerType, ownerId, displayName));
+}
+
 export interface ServiceSnapshot { serviceId: mongoose.Types.ObjectId; name: string; durationMinutes: number; price: number | null }
 
 /**
@@ -169,7 +180,7 @@ export async function loadServiceForBooking(serviceId: string, barberId: unknown
   }
 
   // Same rules as the public page (published category, catalogue on, admin switch, plan limits), so a hidden service cannot be booked by id.
-  const shown = (await loadPublicCatalogue(ownerType, ownerId, "")).categories.flatMap((c) => c.services).find((x) => x.id === String(service._id));
+  const shown = (await loadPublicCatalogueFresh(ownerType, ownerId, "")).categories.flatMap((c) => c.services).find((x) => x.id === String(service._id));
   if (!shown) return null;
 
   return { serviceId: service._id, name: String(service.name), durationMinutes: Number(service.durationMinutes), price: shown.finalPrice };

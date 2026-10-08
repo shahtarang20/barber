@@ -23,7 +23,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const updateData: any = {};
 
     if (body.premiumAmount !== undefined) {
-      const amount = Number(body.premiumAmount);
+      const amount = typeof body.premiumAmount === "number" || (typeof body.premiumAmount === "string" && body.premiumAmount.trim() !== "") ? Number(body.premiumAmount) : NaN;
       if (!Number.isFinite(amount) || amount < 0 || amount > 10_000_000) {
         return NextResponse.json({ success: false, error: { message: "Premium amount must be a number between 0 and 10,00,00,000." } }, { status: 400 });
       }
@@ -86,7 +86,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     }
 
     if (body.isActive !== undefined) {
-      updateData.isActive = Boolean(body.isActive);
+      if (typeof body.isActive !== "boolean") return NextResponse.json({ success: false, error: { message: "isActive must be true or false." } }, { status: 400 });
+      updateData.isActive = body.isActive;
       suspending = updateData.isActive === false;
     }
 

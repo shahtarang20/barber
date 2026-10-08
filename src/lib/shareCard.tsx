@@ -2,6 +2,7 @@ import { ImageResponse } from "next/og";
 import connectToDatabase from "@/lib/mongodb";
 import { User } from "@/models/User";
 import { Shop } from "@/models/Shop";
+import { memo } from "@/lib/memo";
 import { r2Config } from "@/lib/mediaConfig";
 import { loadPublicCatalogue } from "@/lib/cataloguePublic";
 import type { OwnerType } from "@/lib/catalogue";
@@ -12,7 +13,11 @@ const ACCENT: Record<string, string> = { indigo: "#4f46e5", emerald: "#059669", 
 export interface ShareInfo { name: string; accent: string; cover: string; services: number; fromPrice: number | null; examples: string[] }
 
 /** What the WhatsApp preview shows: the name and, when the premium catalogue is on, a summary of what is offered. */
-export async function loadShareInfo(ownerType: OwnerType, slug: string): Promise<ShareInfo | null> {
+export function loadShareInfo(ownerType: OwnerType, slug: string): Promise<ShareInfo | null> {
+  return memo(`share:${ownerType}:${slug}`, 15_000, () => loadShareInfoFresh(ownerType, slug));
+}
+
+async function loadShareInfoFresh(ownerType: OwnerType, slug: string): Promise<ShareInfo | null> {
   await connectToDatabase();
   const owner = ownerType === "SHOP"
     ? await Shop.findOne({ slug, isActive: true }).select("name").lean<{ _id: unknown; name: string } | null>()

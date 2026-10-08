@@ -41,3 +41,17 @@ export async function freeSlotSeat(slotId: unknown, fallbackTime = "") {
 
   return { waitlist, slotTime: slot?.startTime ?? fallbackTime, holdMinutes: HOLD_MINUTES };
 }
+
+/**
+ * Undoes a seat that was claimed a moment ago but not used (the booking could not be completed). One atomic step each, and the slot is
+ * only reopened if it is still full-and-BOOKED with a free seat now, so it never un-blocks a slot the barber blocked meanwhile.
+ */
+export async function releaseClaimedSeat(slotId: unknown) {
+  await Slot.updateOne({ _id: slotId, bookingsCount: { $gt: 0 } }, { $inc: { bookingsCount: -1 } });
+  await Slot.updateOne({ _id: slotId, status: "BOOKED", $expr: { $lt: ["$bookingsCount", "$capacity"] } }, { $set: { status: "AVAILABLE" } });
+}
+
+/** Marks a slot BOOKED only if it is still open and really full right now (a cancel or a block at the same moment wins). */
+export async function markSlotFullIfFull(slotId: unknown) {
+  await Slot.updateOne({ _id: slotId, status: "AVAILABLE", $expr: { $gte: ["$bookingsCount", "$capacity"] } }, { $set: { status: "BOOKED" } });
+}

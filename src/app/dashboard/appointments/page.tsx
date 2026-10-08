@@ -75,6 +75,10 @@ export default function AppointmentsPage() {
 
   const bookings: BookingView[] = bookingsData?.success ? bookingsData.data : [];
   const pagination = bookingsData?.success ? bookingsData.pagination : null;
+  // The last booking on the last page was just cancelled / completed: step back instead of showing an empty page with no way back.
+  useEffect(() => {
+    if (pagination && page > Math.max(1, pagination.pages)) setPage(Math.max(1, pagination.pages));
+  }, [pagination, page]);
 
   const handleAction = async (id: string, action: "cancel" | "complete" | "no-show") => {
     if (action === "cancel") {

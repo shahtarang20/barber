@@ -4,6 +4,7 @@ import { Slot } from "@/models/Slot";
 import { loadServiceForBooking } from "@/lib/cataloguePublic";
 import { createConfirmedBooking } from "@/lib/createBooking";
 import { Booking } from "@/models/Booking";
+import { markSlotFullIfFull, releaseClaimedSeat } from "@/lib/cancelBooking";
 import { z } from "zod";
 import mongoose from "mongoose";
 import { rateLimit, getClientIp } from "@/lib/rateLimit";
@@ -45,7 +46,7 @@ export async function POST(req: Request) {
 
     await connectToDatabase();
 
-    const body = await req.json();
+    const body = await req.json().catch(() => ({}));
     const result = bookingSchema.safeParse(body);
 
     if (!result.success) {
@@ -127,7 +128,7 @@ export async function POST(req: Request) {
     // generated — don't let a booking complete against a suspended barber.
     const barber = await User.findById(slot.barberId).select("isActive").lean();
     if (!barber || barber.isActive === false) {
-      await Slot.findByIdAndUpdate(slot._id, { $set: { status: "AVAILABLE" }, $inc: { bookingsCount: -1 } });
+      await releaseClaimedSeat(slot._id);
       return NextResponse.json({
         success: false,
         error: { message: "This barber is no longer accepting bookings." },
@@ -139,7 +140,7 @@ export async function POST(req: Request) {
     // so a customer whose browser timezone disagrees with India can't book
     // (or appear to book) a slot that's actually already in the past.
     if (minutesUntilSlot(slot.date, slot.startTime) < 0) {
-      await Slot.findByIdAndUpdate(slot._id, { $set: { status: "AVAILABLE" }, $inc: { bookingsCount: -1 } });
+      await releaseClaimedSeat(slot._id);
       return NextResponse.json({
         success: false,
         error: { message: "This slot has already passed. Please choose another time." },
@@ -148,7 +149,7 @@ export async function POST(req: Request) {
 
     // If we just hit capacity, mark it as BOOKED so it doesn't show in UI
     if (slot.bookingsCount >= slot.capacity) {
-      await Slot.findByIdAndUpdate(slot._id, { $set: { status: "BOOKED" } });
+      await markSlotFullIfFull(slot._id);
     }
 
     try {
@@ -157,7 +158,7 @@ export async function POST(req: Request) {
       // Customers booking at the very same moment can slip past the check above; settle it by order.
       if (await isOverLinkLimit(newBooking._id, slot.barberId, viaShopId)) {
         await Booking.findByIdAndUpdate(newBooking._id, { $set: { status: "CANCELLED" } });
-        await Slot.findByIdAndUpdate(slot._id, { $set: { status: "AVAILABLE" }, $inc: { bookingsCount: -1 } });
+        await releaseClaimedSeat(slot._id);
         return NextResponse.json({
           success: false,
           error: { code: "LINK_LIMIT", message: "Online booking is closed for now. Please contact the barber directly." },
@@ -191,7 +192,7 @@ export async function POST(req: Request) {
 
     } catch (bookingError) {
       // ROLLBACK: If creating the booking fails, we MUST release the slot back to AVAILABLE
-      await Slot.findByIdAndUpdate(slot._id, { $set: { status: "AVAILABLE" }, $inc: { bookingsCount: -1 } });
+      await releaseClaimedSeat(slot._id);
       console.error("Booking creation failed, rolled back slot:", bookingError);
       return NextResponse.json({ success: false, error: { message: "Failed to create booking. Slot has been released." } }, { status: 500 });
     }

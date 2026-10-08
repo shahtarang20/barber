@@ -347,7 +347,7 @@ export default function SettingsPage() {
                 ) : (
                   <>
                     <TimeSelect label={t('setOpening')} value={wh.startTime} onChange={(v) => handleWorkingHourChange(index, "startTime", v)} />
-                    <span className="text-zinc-500 text-sm">to</span>
+                    <span className="text-zinc-500 text-sm" aria-hidden="true">–</span>
                     <TimeSelect label={t('setClosing')} value={wh.endTime} onChange={(v) => handleWorkingHourChange(index, "endTime", v)} />
                   </>
                 )}

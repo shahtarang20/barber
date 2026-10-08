@@ -31,11 +31,20 @@ type Checked = { ok: true; data: ServiceData & { barberIds: string[]; images: st
 
 /** Checks a service coming from the owner: shape, prices and discount, picture/video limits of the plan, category ownership, who performs it. */
 export async function validateServiceInput(raw: unknown, scope: Scope, partialOf?: Partial<ServiceData>): Promise<Checked> {
+  // An explicit null means "the owner emptied this field" (a missing key keeps the stored value, so it cannot say that).
+  const cleared: string[] = [];
+  if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+    raw = { ...(raw as Record<string, unknown>) };
+    for (const k of ["originalPrice", "discountType", "discountValue"]) {
+      if ((raw as Record<string, unknown>)[k] === null) { cleared.push(k); delete (raw as Record<string, unknown>)[k]; }
+    }
+  }
   const parsed = (partialOf ? servicePatchSchema : serviceCreateSchema).safeParse(raw);
   if (!parsed.success) return { ok: false, message: parsed.error.issues[0].message, status: 400 };
   // A field that was not sent keeps its stored value (a missing key must never wipe it).
   const sent = Object.fromEntries(Object.entries(parsed.data).filter(([, v]) => v !== undefined));
   const d = { ...(partialOf || {}), ...sent } as ServiceData;
+  for (const k of cleared) delete (d as Record<string, unknown>)[k];
   if (!d.name || !d.categoryId || d.durationMinutes === undefined) return { ok: false, message: "Name, category and duration are required.", status: 400 };
 
   const plan = await planFor(scope);
@@ -43,8 +52,9 @@ export async function validateServiceInput(raw: unknown, scope: Scope, partialOf
   for (const i of d.images || []) { const u = safeUrl(i); if (!u) return { ok: false, message: "Pictures must be normal web addresses starting with https://", status: 400 }; images.push(u); }
   const videos: string[] = [];
   for (const v of d.videos || []) { const u = safeUrl(v); if (!u) return { ok: false, message: "Videos must be normal web addresses starting with https://", status: 400 }; videos.push(u); }
-  if (images.length > plan.maxImagesPerService) return { ok: false, message: `Your ${plan.tier.toLowerCase()} plan allows ${plan.maxImagesPerService} pictures per service.`, status: 403 };
-  if (videos.length > plan.maxVideosPerService) return { ok: false, message: plan.maxVideosPerService === 0 ? "Videos are not included in your plan. Upgrade to add one." : `Your ${plan.tier.toLowerCase()} plan allows ${plan.maxVideosPerService} video per service.`, status: 403 };
+  // Only ADDING beyond the plan is refused: a service saved under a bigger plan (now lapsed) can still be renamed, repriced or unpublished.
+  if (images.length > plan.maxImagesPerService && images.length > (partialOf?.images?.length ?? 0)) return { ok: false, message: `Your ${plan.tier.toLowerCase()} plan allows ${plan.maxImagesPerService} pictures per service.`, status: 403 };
+  if (videos.length > plan.maxVideosPerService && videos.length > (partialOf?.videos?.length ?? 0)) return { ok: false, message: plan.maxVideosPerService === 0 ? "Videos are not included in your plan. Upgrade to add one." : `Your ${plan.tier.toLowerCase()} plan allows ${plan.maxVideosPerService} video per service.`, status: 403 };
 
   if (d.priceType === "ASK_SHOP") { d.price = undefined; d.originalPrice = undefined; d.discountType = undefined; d.discountValue = undefined; }
   else if (d.price === undefined) return { ok: false, message: "Enter a price (or choose 'Ask shop').", status: 400 };

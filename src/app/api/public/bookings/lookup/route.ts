@@ -17,7 +17,7 @@ export async function POST(req: Request) {
     if (!(await rateLimit(`public-lookup:${getClientIp(req)}`, 60, 60_000))) {
       return NextResponse.json({ success: false, error: { code: "RATE_LIMITED", message: "Too many requests. Please try again shortly." } }, { status: 429 });
     }
-    const parsed = schema.safeParse(await req.json());
+    const parsed = schema.safeParse(await req.json().catch(() => ({})));
     if (!parsed.success) {
       return NextResponse.json({ success: false, error: { code: "INVALID_INPUT", message: parsed.error.issues[0].message } }, { status: 400 });
     }
