@@ -1,3 +1,4 @@
+import { UpdateCard } from "@/components/UpdateCard";
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
@@ -72,6 +73,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className="min-h-full flex flex-col">
         <LanguageProvider initial={language} hadCookie={!!cookieLang}>
           <PWARegister />
+          <UpdateCard />
           {children}
           <Toaster />
         </LanguageProvider>

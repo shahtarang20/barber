@@ -54,3 +54,16 @@ export async function requireAuth(allowedRoles?: string[]): Promise<TokenPayload
 
   return payload;
 }
+
+/**
+ * Where a visitor who is ALREADY signed in should go instead of seeing the home / login / register page
+ * (so reopening the installed app never asks a signed-in owner to log in again), or null.
+ * Uses the full check: a leftover cookie of a suspended or logged-out account must not bounce back and forth.
+ */
+export async function signedInHome(): Promise<string | null> {
+  const { cookies } = await import("next/headers");
+  if (!(await cookies()).get("auth_token")?.value) return null;
+  const payload = await requireAuth();
+  if (!payload) return null;
+  return payload.role === "ADMIN" ? "/admin" : "/dashboard";
+}

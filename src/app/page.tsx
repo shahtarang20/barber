@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { signedInHome } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import { loadDict, lookup, type Language, type TranslationKey } from "@/lib/i18n-load";
@@ -7,6 +9,8 @@ import { loadDict, lookup, type Language, type TranslationKey } from "@/lib/i18n
 // A server page: the home page is words and links only, so it needs no script of its own on the phone
 // (only the language picker is interactive).
 export default async function Home() {
+  const home = await signedInHome();
+  if (home) redirect(home);
   const cookieLang = (await cookies()).get("lang")?.value;
   const language: Language = cookieLang === "hi" || cookieLang === "gu" || cookieLang === "mr" ? cookieLang : "en";
   await loadDict(language);

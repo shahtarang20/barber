@@ -2,6 +2,10 @@ import type { NextConfig } from "next";
 
 const isProd = process.env.NODE_ENV === "production";
 
+// One id per release: the pages carry it, /api/version reports it, and a page that was loaded earlier sees the difference and offers the update.
+// (The environment variable makes every build process, including workers, agree on the same value.)
+process.env.NEXT_PUBLIC_BUILD_ID ??= process.env.VERCEL_GIT_COMMIT_SHA || process.env.VERCEL_DEPLOYMENT_ID || `local-${Date.now()}`;
+
 /** Origin (https://host) of a URL from an env var, or null when unset / malformed. */
 function originOf(value: string | undefined): string | null {
   if (!value) return null;
@@ -56,6 +60,7 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  env: { NEXT_PUBLIC_BUILD_ID: process.env.NEXT_PUBLIC_BUILD_ID },
   poweredByHeader: false,
   compress: true,
   productionBrowserSourceMaps: false,
