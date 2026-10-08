@@ -159,18 +159,24 @@ export default function CatalogueManagerPage() {
                     {items.length === 0 ? <p className="text-sm text-zinc-400">{t("ownNoServicesInCat")}</p> : (
                       <ul className="divide-y divide-zinc-100 rounded-xl border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
                         {items.map((s, i) => (
-                          <li key={s._id} className="flex flex-wrap items-center gap-3 p-3">
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate font-medium">{s.name}</p>
-                              <p className="text-xs text-zinc-500">{s.priceType === "ASK_SHOP" ? t("ownAskShop") : `${s.priceType === "STARTING_FROM" ? t("ownFromPrice") : ""}₹${s.price ?? 0}`} · {t("catMinutes").replace("{n}", String(s.durationMinutes))} {s.discountType && s.discountValue ? `· ${t("ownOffSuffix").replace("{v}", s.discountType === "PERCENTAGE" ? `${s.discountValue}%` : `₹${s.discountValue}`)}` : ""}</p>
+                          <li key={s._id} className="space-y-3 p-3 sm:p-4">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0 flex-1">
+                                <p className="break-words font-medium leading-snug">{s.name}</p>
+                                <p className="mt-0.5 text-xs text-zinc-500">{s.priceType === "ASK_SHOP" ? t("ownAskShop") : `${s.priceType === "STARTING_FROM" ? t("ownFromPrice") : ""}₹${s.price ?? 0}`} · {t("catMinutes").replace("{n}", String(s.durationMinutes))} {s.discountType && s.discountValue ? `· ${t("ownOffSuffix").replace("{v}", s.discountType === "PERCENTAGE" ? `${s.discountValue}%` : `₹${s.discountValue}`)}` : ""}</p>
+                              </div>
+                              <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${s.status === "PUBLISHED" ? "bg-green-100 text-green-800" : "bg-zinc-200 text-zinc-700"}`}>{s.status === "PUBLISHED" ? t("ownPublished") : t("ownDraft")}</span>
                             </div>
-                            <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${s.status === "PUBLISHED" ? "bg-green-100 text-green-800" : "bg-zinc-200 text-zinc-700"}`}>{s.status === "PUBLISHED" ? t("ownPublished") : t("ownDraft")}</span>
-                            <div className="flex items-center gap-1">
-                              <Button variant="ghost" size="icon" aria-label={t("ownMoveUp").replace("{name}", s.name)} disabled={i === 0 || busyId !== null} onClick={() => move(items, i, -1)}><ArrowUp /></Button>
-                              <Button variant="ghost" size="icon" aria-label={t("ownMoveDown").replace("{name}", s.name)} disabled={i === items.length - 1 || busyId !== null} onClick={() => move(items, i, 1)}><ArrowDown /></Button>
-                              <Button variant="outline" size="sm" disabled={busyId === s._id} onClick={() => run(s._id, () => catalogueApi("PATCH", `/api/barber/catalogue/services/${s._id}`, scope, { status: s.status === "PUBLISHED" ? "DRAFT" : "PUBLISHED" }), s.status === "PUBLISHED" ? t("ownMovedDrafts") : t("ownNowLive"))}>{s.status === "PUBLISHED" ? t("ownUnpublish") : t("ownPublish")}</Button>
-                              <Link href={`/dashboard/catalogue/services/${s._id}/edit${scopeQuery}`} aria-label={t("ownEditX").replace("{name}", s.name)} className="inline-flex size-11 items-center justify-center rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 lg:size-8"><Pencil className="h-4 w-4" /></Link>
-                              <Button variant="ghost" size="icon" aria-label={t("ownDeleteX").replace("{name}", s.name)} className="text-red-600" onClick={() => setToDelete(s)}><Trash2 /></Button>
+                            <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-2 border-t border-zinc-100 pt-3 dark:border-zinc-800">
+                              <div className="flex items-center gap-1">
+                                <Button variant="outline" size="icon" className="size-9" aria-label={t("ownMoveUp").replace("{name}", s.name)} disabled={i === 0 || busyId !== null} onClick={() => move(items, i, -1)}><ArrowUp /></Button>
+                                <Button variant="outline" size="icon" className="size-9" aria-label={t("ownMoveDown").replace("{name}", s.name)} disabled={i === items.length - 1 || busyId !== null} onClick={() => move(items, i, 1)}><ArrowDown /></Button>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <Button variant="outline" className="h-10 px-2.5 text-sm lg:h-9" disabled={busyId === s._id} onClick={() => run(s._id, () => catalogueApi("PATCH", `/api/barber/catalogue/services/${s._id}`, scope, { status: s.status === "PUBLISHED" ? "DRAFT" : "PUBLISHED" }), s.status === "PUBLISHED" ? t("ownMovedDrafts") : t("ownNowLive"))}>{s.status === "PUBLISHED" ? t("ownUnpublish") : t("ownPublish")}</Button>
+                                <Link href={`/dashboard/catalogue/services/${s._id}/edit${scopeQuery}`} aria-label={t("ownEditX").replace("{name}", s.name)} className="inline-flex size-11 items-center justify-center rounded-lg border border-zinc-200 hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800 lg:size-9"><Pencil className="h-4 w-4" /></Link>
+                                <Button variant="outline" size="icon" aria-label={t("ownDeleteX").replace("{name}", s.name)} className="size-11 border-red-200 text-red-600 hover:bg-red-50 lg:size-9" onClick={() => setToDelete(s)}><Trash2 /></Button>
+                              </div>
                             </div>
                           </li>
                         ))}

@@ -22,6 +22,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
       name: `${barber.name} - Booking App`,
       short_name: barber.name,
       description: `Book your next haircut with ${barber.name}.`,
+      id: `/b/${slug}`,
       start_url: `/b/${slug}`,
       display: "standalone",
       // Lets Chrome on Android answer "is this app already installed?", so we keep asking until it is and stop once it is.

@@ -87,7 +87,7 @@ export function InstallPrompt({ isCustomer = false, appName = "BarberSaaS" }: { 
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-col gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-12 h-12 bg-black dark:bg-white rounded-xl flex items-center justify-center shrink-0">
                <span className="text-white dark:text-black font-serif font-bold text-2xl">{appName.charAt(0).toUpperCase()}</span>
@@ -99,7 +99,7 @@ export function InstallPrompt({ isCustomer = false, appName = "BarberSaaS" }: { 
               </p>
             </div>
           </div>
-          <Button onClick={handleInstallClick} disabled={busy} size="sm" className="shrink-0 bg-zinc-900 text-white rounded-full px-4 font-semibold">
+          <Button onClick={handleInstallClick} disabled={busy} className="h-11 w-full bg-zinc-900 text-white rounded-full px-4 text-sm font-semibold">
             {signal === "ready" ? t("installButton") : t("installHow")}
           </Button>
         </div>
