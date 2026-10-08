@@ -1,12 +1,14 @@
 "use client";
 
+import { createPortal } from "react-dom";
 import { memo, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { Clock, Heart, MessageCircle, Tag } from "lucide-react";
+import { Clock, Heart, MessageCircle, Play, Tag } from "lucide-react";
 import { useTranslation, type Language } from "@/lib/i18n";
 import { formatInLanguage } from "@/lib/dateLocale";
 import { getWhatsAppNumber } from "@/lib/phone";
 import { useFavourites } from "@/lib/useFavourites";
 import { OfferNotify } from "@/components/catalogue/OfferNotify";
+import { MediaViewer } from "@/components/catalogue/MediaViewer";
 import type { PublicCatalogue as Catalogue, PublicService } from "@/lib/cataloguePublic";
 
 const fmtDate = (d: string, language: Language) => formatInLanguage(new Date(`${d}T00:00:00`), "d MMM", language);
@@ -26,6 +28,9 @@ interface CardProps { service: PublicService; whatsapp: string; shopName: string
  */
 const ServiceCard = memo(function ServiceCard({ service, whatsapp, shopName, onBook, saved, onToggleSave, first }: CardProps) {
   const { t, language } = useTranslation();
+  const [viewer, setViewer] = useState<"video" | "photos" | null>(null);
+  const hasVideo = service.videos.length > 0;
+  const morePhotos = service.images.length > 1;
   const badges = [
     service.badges.featured && t("catFeatured"),
     service.badges.popular && t("catPopular"),
@@ -46,6 +51,12 @@ const ServiceCard = memo(function ServiceCard({ service, whatsapp, shopName, onB
         {pic && (
           // eslint-disable-next-line @next/next/no-img-element -- owner-supplied addresses; the box reserves the space (aspect-ratio)
           <img className="tp-img" src={pic} alt="" width={480} height={600} loading={first ? "eager" : "lazy"} decoding="async" onError={hide} />
+        )}
+        {(hasVideo || morePhotos) && (
+          <button type="button" className="tp-open" aria-label={`${hasVideo ? t("catWatchVideo") : t("catMorePhotos")}: ${service.name}`} onClick={() => setViewer(hasVideo ? "video" : "photos")}>
+            {hasVideo && <span className="tp-play"><Play size={16} aria-hidden="true" fill="currentColor" /> {t("catWatchVideo")}</span>}
+            {!hasVideo && morePhotos && <span className="tp-play">{t("catMorePhotos")} · {service.images.length}</span>}
+          </button>
         )}
         {badges.length > 0 && <div className="tp-badges">{badges.map((b) => <span key={b} className="tp-badge">{b}</span>)}</div>}
         {discount && <span className="tp-disc">{discount}</span>}
@@ -81,6 +92,7 @@ const ServiceCard = memo(function ServiceCard({ service, whatsapp, shopName, onB
           </a>
         )}
       </div>
+      {viewer && createPortal(<MediaViewer name={service.name} images={service.images} videos={service.videos} startAtVideo={viewer === "video"} onClose={() => setViewer(null)} />, document.body)}
     </article>
   );
 });

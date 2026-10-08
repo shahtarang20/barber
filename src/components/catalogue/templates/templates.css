@@ -323,3 +323,14 @@
 .tp-skel i { display: block; background: var(--t-surface2); }
 @media (prefers-reduced-motion: no-preference) { .tp-skel i { animation: tp-pulse 1.4s ease-in-out infinite; } @keyframes tp-pulse { 50% { opacity: .55; } } }
 .tp-center { min-height: 60vh; display: grid; place-items: center; text-align: center; color: var(--t-muted); }
+
+/* play / more-photos button on a card, and the full-screen viewer */
+.tp-open { position: absolute; right: 10px; bottom: 10px; z-index: 2; min-height: 44px; min-width: 44px; padding: 0; border: 0; background: none; cursor: pointer; display: flex; align-items: flex-end; justify-content: flex-end; }
+.tp-play { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 14px; border-radius: 999px; font-size: 13px; font-weight: 700; color: #fff; background: rgba(10,10,11,.72); border: 1px solid rgba(255,255,255,.35); }
+.tp-viewer { position: fixed; inset: 0; z-index: 100; display: flex; flex-direction: column; background: rgba(0,0,0,.94); }
+.tp-viewer__close { position: absolute; top: 10px; right: 10px; z-index: 2; width: 48px; height: 48px; display: grid; place-items: center; border-radius: 50%; border: 1px solid rgba(255,255,255,.35); background: rgba(20,20,22,.8); color: #fff; cursor: pointer; }
+.tp-viewer__row { flex: 1; display: flex; overflow-x: auto; scroll-snap-type: x mandatory; overscroll-behavior: contain; scrollbar-width: none; }
+.tp-viewer__row::-webkit-scrollbar { display: none; }
+.tp-viewer__slide { flex: 0 0 100%; scroll-snap-align: center; display: grid; place-items: center; padding: 64px 0 8px; }
+.tp-viewer__slide video, .tp-viewer__slide img { max-width: 100%; max-height: 100%; object-fit: contain; background: #000; }
+.tp-viewer__name { margin: 0; padding: 10px 16px 18px; text-align: center; color: #eee; font-size: 14px; }
