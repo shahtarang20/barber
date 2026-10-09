@@ -71,7 +71,7 @@ export default function DashboardPage() {
   const busyRef = useRef<Set<string>>(new Set());
   const [busyIds, setBusyIds] = useState<string[]>([]);
 
-  const handleBookingAction = async (id: string, action: "complete" | "no-show") => {
+  const handleBookingAction = async (id: string, action: "complete" | "no-show" | "undo-no-show") => {
     if (busyRef.current.has(id)) return;
     busyRef.current.add(id);
     setBusyIds([...busyRef.current]);
@@ -303,7 +303,7 @@ export default function DashboardPage() {
   const onBlock = useCallback((id: string) => { latest.current.handleBlockSlot(id); }, []);
   const onUnblock = useCallback((id: string) => { latest.current.handleUnblockSlot(id); }, []);
   const onCapacity = useCallback((id: string, value: number) => { latest.current.handleInlineCapacityChange(id, value); }, []);
-  const onBookingAction = useCallback((id: string, action: "complete" | "no-show") => { latest.current.handleBookingAction(id, action); }, []);
+  const onBookingAction = useCallback((id: string, action: "complete" | "no-show" | "undo-no-show") => { latest.current.handleBookingAction(id, action); }, []);
 
   if (profile && profile.isActive === false) {
     return (
@@ -334,7 +334,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-3 gap-2 sm:gap-4 md:gap-6">
         <div className="bg-white dark:bg-zinc-900 p-3 sm:p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
           <p className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">{t('appointments')}</p>
-          <p className="text-xl sm:text-3xl font-bold mt-1 sm:mt-2 text-zinc-900 dark:text-zinc-50">{slots.length}</p>
+          <p className="text-xl sm:text-3xl font-bold mt-1 sm:mt-2 text-zinc-900 dark:text-zinc-50">{dayBookings.filter((b) => b.status === "CONFIRMED" || b.status === "COMPLETED").length}</p>
         </div>
         <div className="bg-green-50 dark:bg-green-950/20 p-3 sm:p-6 rounded-2xl border border-green-100 dark:border-green-900/30 shadow-sm">
           <p className="text-xs sm:text-sm font-medium text-green-600 dark:text-green-500">{t('available')}</p>
@@ -608,12 +608,12 @@ type SlotRowProps = {
   onBlock: (id: string) => void;
   onUnblock: (id: string) => void;
   onCapacity: (id: string, value: number) => void;
-  onBookingAction: (id: string, action: "complete" | "no-show") => void;
+  onBookingAction: (id: string, action: "complete" | "no-show" | "undo-no-show") => void;
 };
 
 const SlotRow = memo(function SlotRow({ slot, bookings: slotBookings, expanded, busyKey, t, onToggle, onBlock, onUnblock, onCapacity, onBookingAction }: SlotRowProps) {
   const busy = new Set(busyKey ? busyKey.split(",") : []);
-  const finished = slotBookings.length > 0 && slotBookings.every((b) => b.status === "COMPLETED");
+  const finished = slotBookings.length > 0 && slotBookings.every((b) => b.status === "COMPLETED" || b.status === "NO_SHOW");
   if (finished && !expanded) {
     return (
       <button
@@ -676,10 +676,16 @@ const SlotRow = memo(function SlotRow({ slot, bookings: slotBookings, expanded, 
               <div className="font-medium text-zinc-900 dark:text-zinc-100 break-words">{b.customerId?.name || "—"}</div>
               {b.customerId?.phone && <a href={`tel:${b.customerId.phone}`} className="text-sm text-zinc-500 inline-block py-3">{b.customerId.phone}</a>}
             </div>
-            {b.status !== "CONFIRMED" && (
+            {b.status === "COMPLETED" && (
               <span className="text-sm font-medium text-green-600 dark:text-green-400 shrink-0">✓ {t('apptCompleted')}</span>
             )}
+            {b.status === "NO_SHOW" && (
+              <span className="text-sm font-medium text-amber-700 dark:text-amber-400 shrink-0">{t('apptNoShow')}</span>
+            )}
           </div>
+          {b.status === "NO_SHOW" && (
+            <Button variant="outline" className="h-11 w-full" disabled={busy.has(b._id)} onClick={() => onBookingAction(b._id, "undo-no-show")}>↩ {t('apptUndoNoShow')}</Button>
+          )}
           {b.status === "CONFIRMED" && (
             <div className="grid grid-cols-2 gap-2">
               <Button className="h-11 bg-green-600 hover:bg-green-700 text-white" disabled={busy.has(b._id)} onClick={() => onBookingAction(b._id, "complete")}>✓ {t('done')}</Button>

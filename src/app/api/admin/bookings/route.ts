@@ -47,7 +47,7 @@ export async function GET(req: Request) {
     const bookings = await Booking.find(filter)
       .populate("barberId", "name email slug barberCode shopId")
       .populate("customerId", "name phone email")
-      .sort({ createdAt: -1 })
+      .sort({ _id: -1 }) // newest first; _id is in creation order and always indexed (createdAt is not)
       .skip(skip)
       .limit(limit)
       .lean();

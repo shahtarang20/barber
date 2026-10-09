@@ -32,7 +32,7 @@ export function ShopCustomersPanel({ shopId, shopName }: { shopId: string; shopN
       </div>
       {error ? <p role="alert" className="text-sm text-red-600">{(error as Error).message}</p> : isLoading ? <p className="text-sm text-zinc-500">Loading…</p> : rows.length === 0 ? <p className="text-sm text-zinc-500">{query ? "No customer matches." : "This shop has no customers yet."}</p> : (
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <table className="w-full whitespace-nowrap text-left text-sm">
             <thead className="text-zinc-500"><tr><th className="py-1 pr-3 font-medium">Customer</th><th className="py-1 pr-3 font-medium">Phone</th><th className="py-1 pr-3 font-medium">Visits</th><th className="py-1 pr-3 font-medium">Upcoming</th><th className="py-1 pr-3 font-medium">Last visit</th><th className="py-1 font-medium">Barbers</th></tr></thead>
             <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
               {rows.map((r) => (

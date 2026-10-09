@@ -168,6 +168,7 @@ const hi: Record<string, string> = {
   apptAll: "सभी",
   apptCompleted: "पूर्ण",
   apptCancelled: "रद्द",
+  apptUndoNoShow: "नो-शो वापस लें",
   apptNoShow: "नहीं आए",
   apptConfirmed: "पुष्टि हुई",
   apptNextCustomer: "अगला ग्राहक",

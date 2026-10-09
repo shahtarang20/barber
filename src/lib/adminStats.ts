@@ -7,6 +7,7 @@ import { getTodayISTString } from "@/lib/istTime";
 import { parseDateOnly } from "@/lib/timeSort";
 
 const KEY = "admin-dashboard";
+const ALL_STATUSES = ["CONFIRMED", "COMPLETED", "CANCELLED", "NO_SHOW"];
 export const ADMIN_STATS_TTL_MS = 5 * 60 * 1000;
 
 /** Computes the admin numbers from scratch. Totals use the collection's own metadata count (instant at any size). */
@@ -18,10 +19,13 @@ export async function computeAdminStats() {
     User.countDocuments({ role: "BARBER" }),
     Booking.estimatedDocumentCount(),
     Customer.estimatedDocumentCount(),
-    Booking.countDocuments({ date: today }),
-    Booking.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }]),
+    // The only index that starts with "date" is { status, date }, so every status is listed to let it be used
+    // (without it these two scanned the whole bookings collection each time the snapshot was rebuilt).
+    Booking.countDocuments({ date: today, status: { $in: ALL_STATUSES } }),
+    // Hinted so the count is answered from the { status, date } index alone, without reading any booking.
+    Booking.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }]).hint("status_1_date_1"),
     Booking.aggregate([
-      { $match: { date: { $gte: from, $lte: today } } },
+      { $match: { date: { $gte: from, $lte: today }, status: { $in: ALL_STATUSES } } },
       { $group: { _id: "$date", count: { $sum: 1 } } },
     ]),
   ]);

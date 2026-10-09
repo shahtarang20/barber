@@ -207,9 +207,9 @@ export default function AdminShopsPage() {
                 <div key={shop._id}>
                   <div
                     onClick={() => toggleExpand(shop._id)}
-                    className="p-4 sm:p-6 flex items-center justify-between cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-950/50"
+                    className="p-4 sm:p-6 flex flex-wrap sm:flex-nowrap items-center justify-between gap-y-3 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-950/50"
                   >
-                    <div>
+                    <div className="min-w-0 basis-full sm:basis-auto">
                       <div className="flex items-center gap-2">
                         <h3 className={`font-semibold ${shop.isActive ? "text-zinc-900 dark:text-zinc-100" : "text-zinc-400 line-through"}`}>{shop.name}</h3>
                         {!shop.isActive && (
@@ -226,12 +226,13 @@ export default function AdminShopsPage() {
                         <span className={`rounded-full px-2 py-0.5 font-semibold ${shop.catalogueEnabled === false ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-800"}`}>Catalogue {shop.catalogueEnabled === false ? "off" : "on"}</span>
                       </p>
                     </div>
-                    <div className="ml-auto mr-4 text-right" onClick={(e) => e.stopPropagation()}>
+                    <div className="sm:ml-auto mr-4 text-right" onClick={(e) => e.stopPropagation()}>
                       <input
                         type="number" min="0"
                         key={`${shop._id}-${(shop as any).linkBookingLimit ?? "d"}`}
                         defaultValue={(shop as any).linkBookingLimit ?? ""}
                         placeholder="Default"
+                        aria-label={`Link booking limit for ${shop.name}`}
                         title="Bookings per month through the shop link (empty = platform default, 0 = unlimited)"
                         onBlur={async (e) => {
                           const v = e.target.value.trim();
@@ -269,7 +270,7 @@ export default function AdminShopsPage() {
                         {(shop.visitorUsed ?? 0)} visitors{(shop.visitorLimitEffective ?? 0) > 0 ? ` / ${(shop.visitorLimitEffective ?? 0)}` : ""}
                       </div>
                     </div>
-                    <svg className={`w-5 h-5 text-zinc-400 transform transition-transform ${isExpanded ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className={`w-5 h-5 shrink-0 ml-auto sm:ml-0 text-zinc-400 transform transition-transform ${isExpanded ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
                   </div>

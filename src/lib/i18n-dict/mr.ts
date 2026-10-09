@@ -168,6 +168,7 @@ const mr: Record<string, string> = {
   apptAll: "सर्व",
   apptCompleted: "पूर्ण",
   apptCancelled: "रद्द",
+  apptUndoNoShow: "नो-शो मागे घ्या",
   apptNoShow: "आले नाहीत",
   apptConfirmed: "निश्चित",
   apptNextCustomer: "पुढील ग्राहक",

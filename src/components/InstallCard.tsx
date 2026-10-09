@@ -38,23 +38,23 @@ export function InstallCard({ appName }: { appName: string }) {
   };
 
   return (
-    <div className="mb-6 rounded-2xl border border-indigo-200 bg-indigo-50 p-4 text-left">
+    <div className="mb-6 rounded-2xl border p-4 text-left" style={{ background: "var(--t-surface, #eef2ff)", borderColor: "var(--t-line2, #c7d2fe)", color: "var(--t-ink, #1e1b4b)" }}>
       <div className="flex items-start gap-3">
-        <div className="w-11 h-11 shrink-0 rounded-xl bg-indigo-600 text-white flex items-center justify-center text-xl font-bold">{appName.charAt(0).toUpperCase()}</div>
+        <div className="w-11 h-11 shrink-0 rounded-xl flex items-center justify-center text-xl font-bold" style={{ background: "var(--t-btn-bg, #4f46e5)", color: "var(--t-btn-ink, #fff)" }}>{appName.charAt(0).toUpperCase()}</div>
         <div className="min-w-0">
-          <p className="font-semibold text-indigo-950">{t("installTitle").replace("{name}", appName)}</p>
-          <p className="text-sm text-indigo-900/80 mt-0.5">{t("installBenefit")}</p>
+          <p className="font-semibold" style={{ color: "var(--t-ink, #1e1b4b)" }}>{t("installTitle").replace("{name}", appName)}</p>
+          <p className="text-sm mt-0.5" style={{ color: "var(--t-muted, #3730a3)" }}>{t("installBenefit")}</p>
         </div>
       </div>
       {!manualOnly && (
-        <Button onClick={onClick} disabled={busy || signal === "waiting"} className="w-full h-12 mt-3 bg-indigo-600 hover:bg-indigo-700 text-white">
+        <Button onClick={onClick} disabled={busy || signal === "waiting"} className="w-full h-12 mt-3 border-0 hover:opacity-90" style={{ background: "var(--t-btn-bg, #4f46e5)", color: "var(--t-btn-ink, #fff)" }}>
           {signal === "waiting"
             ? <span className="inline-block w-4 h-4 mr-2 rounded-full border-2 border-white/40 border-t-white animate-spin" aria-hidden="true" />
             : <Download className="w-4 h-4 mr-2" />}
           {signal === "waiting" ? t("installPreparing") : t("installButton")}
         </Button>
       )}
-      {(manualOnly || steps) && <InstallHelp help={help} className="mt-3 text-indigo-950 bg-white rounded-lg p-3 border border-indigo-100" />}
+      {(manualOnly || steps) && <InstallHelp help={help} className="mt-3 rounded-lg p-3 border" />}
     </div>
   );
 }

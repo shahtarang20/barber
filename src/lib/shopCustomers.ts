@@ -75,11 +75,11 @@ export async function loadShopCustomers(shopId: unknown, opts: { page: number; l
         },
       },
       { $match: { $or: [{ active: { $gt: 0 } }, { archivedVisits: { $gt: 0 } }] } },
-      ...(search ? [{ $match: { $or: [{ "c.name": { $regex: esc(search), $options: "i" } }, { "c.phone": { $regex: esc(search), $options: "i" } }] } }] : []),
+      ...(search ? [{ $match: { $or: [{ "c.name": { $regex: esc(search), $options: "i" } }, { "c.phone": { $regex: esc(/^[\d\s+()-]+$/.test(search) && search.replace(/\D/g, "").length >= 3 ? search.replace(/\D/g, "").replace(/^(91|0)(?=\d{10}$)/, "") : search), $options: "i" } }] } }] : []),
       { $addFields: { barberCount: { $size: "$allBarbers" } } },
       ...(repeatOnly ? [{ $match: { barberCount: { $gte: 2 } } }] : []),
       { $project: { name: "$c.name", phone: "$c.phone", visits: 1, upcoming: 1, lastVisit: 1, allBarbers: 1, barberCount: 1 } },
-      { $sort: { barberCount: -1, visits: -1, name: 1 } },
+      { $sort: { barberCount: -1, visits: -1, name: 1, _id: 1 } },
       { $facet: { meta: [{ $count: "total" }], data: [{ $skip: (page - 1) * limit }, { $limit: limit }] } },
     ]);
 

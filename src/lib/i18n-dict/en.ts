@@ -173,6 +173,7 @@ export const en = {
   apptAll: "All",
   apptCompleted: "Completed",
   apptCancelled: "Cancelled",
+  apptUndoNoShow: "Undo no-show",
   apptNoShow: "No Show",
   apptConfirmed: "Confirmed",
   apptNextCustomer: "Next customer",

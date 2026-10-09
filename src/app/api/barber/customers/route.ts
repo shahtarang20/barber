@@ -101,7 +101,7 @@ export async function GET(req: Request) {
           }
         }
       },
-      { $sort: { lastVisit: -1, name: 1 } },
+      { $sort: { lastVisit: -1, name: 1, _id: 1 } },
       {
         $facet: {
           metadata: [{ $count: "total" }],

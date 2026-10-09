@@ -168,6 +168,7 @@ const gu: Record<string, string> = {
   apptAll: "બધા",
   apptCompleted: "પૂર્ણ",
   apptCancelled: "રદ",
+  apptUndoNoShow: "નો-શો પાછો લો",
   apptNoShow: "આવ્યા નહીં",
   apptConfirmed: "કન્ફર્મ",
   apptNextCustomer: "આગામી ગ્રાહક",

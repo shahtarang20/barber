@@ -66,19 +66,29 @@ export async function runRetention(maxBookings = 20000) {
     const session = await mongoose.startSession();
     try {
       await session.withTransaction(async () => {
+        // One read and one bulk write for the whole batch (not two sequential updates per customer, which on a remote
+        // database took minutes per batch and could outlast both the transaction limit and the function's time limit).
+        const custIds = [...new Set([...tally.values()].map((t) => String(t.customerId)))];
+        const existing = custIds.length
+          ? await Customer.find({ _id: { $in: custIds } }).select("barberStats").session(session).lean<{ _id: unknown; barberStats?: { barberId: unknown; visits?: number; lastVisit?: string }[] }[]>()
+          : [];
+        const statsOf = new Map(existing.map((c) => [String(c._id), (c.barberStats || []).map((x) => ({ barberId: x.barberId, visits: x.visits || 0, lastVisit: x.lastVisit }))]));
+        const touched = new Set<string>();
         for (const t of tally.values()) {
-          const updated = await Customer.updateOne(
-            { _id: t.customerId, "barberStats.barberId": t.barberId },
-            { $inc: { "barberStats.$[s].visits": t.visits }, $max: { "barberStats.$[s].lastVisit": t.last } },
-            { arrayFilters: [{ "s.barberId": t.barberId }], session }
-          );
-          if (updated.matchedCount === 0) {
-            await Customer.updateOne(
-              { _id: t.customerId },
-              { $push: { barberStats: { barberId: t.barberId, visits: t.visits, lastVisit: t.last } } },
-              { session }
-            );
+          const cid = String(t.customerId);
+          const list = statsOf.get(cid);
+          if (!list) continue; // customer record is gone: nothing to credit
+          const row = list.find((x) => String(x.barberId) === String(t.barberId));
+          if (row) {
+            row.visits += t.visits;
+            if (!row.lastVisit || t.last > row.lastVisit) row.lastVisit = t.last;
+          } else {
+            list.push({ barberId: t.barberId, visits: t.visits, lastVisit: t.last });
           }
+          touched.add(cid);
+        }
+        if (touched.size) {
+          await Customer.bulkWrite([...touched].map((cid) => ({ updateOne: { filter: { _id: cid }, update: { $set: { barberStats: statsOf.get(cid) } } } })), { session, ordered: false });
         }
         await Booking.deleteMany({ _id: { $in: batch.map((b) => b._id) } }, { session });
       });

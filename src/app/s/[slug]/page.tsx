@@ -318,7 +318,7 @@ export default function ShopBookingPage() {
         <div id="view-panel-booking" role={cat.available ? "tabpanel" : undefined} aria-labelledby={cat.available ? "view-tab-booking" : undefined}>
         {cat.selectedService && <SelectedServiceChip service={cat.selectedService} onChange={() => cat.setView("catalogue")} onRemove={cat.clearService} restrictedToSomeBarbers={performers.length > 0} />}
         {(shop?.linkClosed) ? (
-          <div className="rounded-2xl border border-orange-200 bg-orange-50 p-6 text-center text-orange-800">{t("linkClosedMsg")}</div>
+          <div className="mt-6 rounded-2xl border border-orange-200 bg-orange-50 p-6 text-center text-orange-800">{t("linkClosedMsg")}</div>
         ) : !selectedSlot ? (
           <>
             {/* Barber Selection */}
