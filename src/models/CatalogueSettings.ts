@@ -22,6 +22,8 @@ const CatalogueSettingsSchema = new Schema(
     imageRatio: { type: String, enum: ["portrait", "square", "wide"], default: "portrait" },
     // Customer page style 1-5: random when the record is first created; older records have none and use a hash of the owner id.
     template: { type: Number, min: 1, max: 5, default: () => randomTemplate() },
+    // Owner-chosen brand colour ("#rrggbb"): the installed app's colour and icon, and the buttons on the public page. Absent = style default.
+    brandColor: { type: String, match: /^#[0-9a-f]{6}$/ },
     accent: { type: String, enum: ["indigo", "emerald", "rose", "amber", "sky", "zinc"], default: "indigo" },
   },
   { timestamps: true }

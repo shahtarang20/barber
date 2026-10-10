@@ -19,8 +19,12 @@ if (redisUrl && redisToken) {
   }
 }
 
-export async function rateLimit(key: string, limit: number, windowMs: number): Promise<boolean> {
-  if (redis) {
+/**
+ * `local: true` counts in this server's own memory only (no Redis command). Use it for cheap, cacheable GET routes where a few
+ * extra requests across servers do not matter; keep Redis for writes and logins where the limit must hold across servers.
+ */
+export async function rateLimit(key: string, limit: number, windowMs: number, opts: { local?: boolean } = {}): Promise<boolean> {
+  if (redis && !opts.local) {
     try {
       // Use Redis INCR and EXPIRE to implement rate limiting
       // A more robust algorithm is sliding window, but fixed window is sufficient for our current scale.

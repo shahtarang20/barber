@@ -7,7 +7,7 @@ const escapeRegex = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"
 
 export async function GET(req: Request) {
   try {
-    if (!(await rateLimit(`public-barber-list:${getClientIp(req)}`, 120, 60_000))) {
+    if (!(await rateLimit(`public-barber-list:${getClientIp(req)}`, 120, 60_000, { local: true }))) {
       return NextResponse.json({ success: false, error: { message: "Too many requests. Please try again shortly." } }, { status: 429 });
     }
     const { searchParams } = new URL(req.url);

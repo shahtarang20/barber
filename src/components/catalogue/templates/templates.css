@@ -334,3 +334,6 @@
 .tp-viewer__slide { flex: 0 0 100%; scroll-snap-align: center; display: grid; place-items: center; padding: 64px 0 8px; }
 .tp-viewer__slide video, .tp-viewer__slide img { max-width: 100%; max-height: 100%; object-fit: contain; background: #000; }
 .tp-viewer__name { margin: 0; padding: 10px 16px 18px; text-align: center; color: #eee; font-size: 14px; }
+
+/* owner-chosen brand colour: a thin line in the colour at the very top of the page (buttons take it through --t-btn-bg / --t-btn-ink) */
+.tpl[data-brand] { border-top: 4px solid var(--t-brand); }

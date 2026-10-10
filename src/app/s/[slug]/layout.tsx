@@ -1,9 +1,10 @@
 import { cache } from "react";
-import { Metadata } from "next";
+import { Metadata, Viewport } from "next";
 import { notFound } from "next/navigation";
 import connectToDatabase from "@/lib/mongodb";
 import { Shop } from "@/models/Shop";
 import { loadShareInfo } from "@/lib/shareCard";
+import { appIconUrl, normalizeHex } from "@/lib/brandColor";
 import { memo } from "@/lib/memo";
 
 /** The shop behind a page address: read once per request and kept a few seconds across requests. */
@@ -18,11 +19,20 @@ import { TEMPLATE_FONT_CLASS } from "@/components/catalogue/templates/fonts";
 import { loadPageStyle } from "@/lib/catalogueTemplateServer";
 import { resolveTemplate } from "@/lib/catalogueTemplate";
 
+export async function generateViewport({ params }: { params: Promise<{ slug: string }> }): Promise<Viewport> {
+  const { slug } = await params;
+  const head = await getShopHead(slug);
+  // The owner's brand colour (if set) colours the browser bar and the installed app's title bar.
+  const brand = head ? normalizeHex((await loadPageStyle("SHOP", String(head._id))).branding.brandColor) : null;
+  return { themeColor: brand ?? "#09090b" };
+}
+
 /** The preview a customer sees when a shop link is shared on WhatsApp: the shop's own name. */
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const shop = await getShopHead(slug);
   const name = shop?.name || "Barber Shop";
+  const brand = shop ? normalizeHex((await loadPageStyle("SHOP", String(shop._id))).branding.brandColor) : null;
   const title = `Book at ${name}`;
   const share = await loadShareInfo("SHOP", slug).catch(() => null);
   const menu = share && share.services > 0 ? `${share.services} service${share.services === 1 ? "" : "s"}${share.fromPrice !== null ? ` from ₹${share.fromPrice}` : ""}. ` : "";
@@ -34,7 +44,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     twitter: { card: "summary_large_image", title, description },
     // Installing this page gives the customer an app named after the shop that opens the shop page.
     manifest: `/api/public/shops/${slug}/manifest`,
-    icons: { apple: "/apple-touch-icon.png" },
+    icons: { apple: brand ? appIconUrl({ color: brand, name, size: 180 }) : "/apple-touch-icon.png" },
     appleWebApp: { capable: true, title: name, statusBarStyle: "default" },
   };
 }

@@ -11,19 +11,34 @@ async function readJson(res: Response) {
   return json.data;
 }
 
-/** Shrinks a big phone photo in the browser (longest side 2000 px, JPEG) so it fits in one upload; the server then optimises it again. */
+const SMALL_WEBP_BYTES = 400 * 1024;
+const LONGEST_SIDE = 1600;
+
+/**
+ * Prepares every picture on the phone before it is sent: longest side at most 1600 px, WebP at quality 0.8 (a typical 4 MB phone
+ * photo becomes 150-300 KB, so uploads are quick on mobile data and always fit in one request). A picture that is already a small
+ * WebP is sent as it is. Browsers that cannot make WebP get a JPEG instead. The server still optimises and makes the thumbnail.
+ */
 async function shrinkIfNeeded(file: File): Promise<Blob> {
-  if (file.size <= MAX_BODY) return file;
+  if (file.type === "image/webp" && file.size <= SMALL_WEBP_BYTES) return file;
   const bitmap = await createImageBitmap(file).catch(() => null);
-  if (!bitmap) throw new Error("That picture could not be read. Try another one.");
-  let edge = 2000;
-  for (let attempt = 0; attempt < 4; attempt++) {
+  if (!bitmap) { // the browser cannot read it (the server will say so in plain words), or it is small enough to send as it is
+    if (file.size <= MAX_BODY) return file;
+    throw new Error("That picture could not be read. Try another one.");
+  }
+  let edge = LONGEST_SIDE;
+  for (let attempt = 0; attempt < 5; attempt++) {
     const scale = Math.min(1, edge / Math.max(bitmap.width, bitmap.height));
     const canvas = document.createElement("canvas");
     canvas.width = Math.round(bitmap.width * scale); canvas.height = Math.round(bitmap.height * scale);
     canvas.getContext("2d")?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-    const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/jpeg", 0.85));
-    if (blob && blob.size <= MAX_BODY) { bitmap.close(); return blob; }
+    let blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/webp", 0.8));
+    if (blob && blob.type !== "image/webp") blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/jpeg", 0.85)); // no WebP encoder in this browser
+    if (blob && blob.size <= MAX_BODY) {
+      bitmap.close();
+      // Never make a small original bigger (a tiny already-compressed JPEG can grow when re-encoded).
+      return blob.size < file.size || file.size > MAX_BODY ? blob : file;
+    }
     edge = Math.round(edge * 0.75);
   }
   bitmap.close();

@@ -9,7 +9,7 @@ export const PUBLIC_CACHE = "public, max-age=0, must-revalidate";
 export const PUBLIC_EDGE_CACHE = "s-maxage=10";
 
 export async function publicLimit(req: Request): Promise<NextResponse | null> {
-  if (await rateLimit(`public-catalogue:${getClientIp(req)}`, 240, 60_000)) return null;
+  if (await rateLimit(`public-catalogue:${getClientIp(req)}`, 240, 60_000, { local: true })) return null;
   return NextResponse.json({ success: false, error: { message: "Too many requests. Please try again shortly." } }, { status: 429 });
 }
 

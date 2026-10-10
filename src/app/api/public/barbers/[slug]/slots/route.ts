@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request, { params }: { params: Promise<{ slug: string }> }) {
   try {
-    if (!(await rateLimit(`public-barber-slots:${getClientIp(req)}`, 600, 60_000))) {
+    if (!(await rateLimit(`public-barber-slots:${getClientIp(req)}`, 600, 60_000, { local: true }))) {
       return NextResponse.json({ success: false, error: { message: "Too many requests. Please try again shortly." } }, { status: 429 });
     }
     await connectToDatabase();

@@ -14,7 +14,7 @@ export interface ServiceDoc {
 export interface SettingsDoc {
   enabled: boolean; logoUrl?: string; coverUrl?: string; intro?: string; address?: string; mapUrl?: string; phone?: string; whatsapp?: string;
   instagram?: string; facebook?: string; accent: "indigo" | "emerald" | "rose" | "amber" | "sky" | "zinc";
-  layout?: "grid" | "list"; imageRatio?: "portrait" | "square" | "wide";
+  layout?: "grid" | "list"; imageRatio?: "portrait" | "square" | "wide"; brandColor?: string;
 }
 export interface PlanInfo { tier: "FREE" | "PREMIUM" | "BUSINESS"; maxCategories: number; maxServices: number; maxImagesPerService: number; maxVideosPerService: number; maxMediaMB: number; maxActiveOffers: number; maxCampaignsPerWeek: number }
 export interface SettingsPayload { settings: SettingsDoc; plan: PlanInfo; usage: { categories: number; publishedServices: number; shownServices?: number }; visibility?: "LIVE" | "PARTIAL" | "PLAN_LIMIT" | "SWITCH_OFF" | "NO_PUBLISHED_SERVICE" | "NO_PUBLISHED_CATEGORY"; scope: "BARBER" | "SHOP" }

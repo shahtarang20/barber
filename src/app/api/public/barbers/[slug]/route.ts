@@ -8,7 +8,7 @@ import { rateLimit, getClientIp } from "@/lib/rateLimit";
 
 export async function GET(req: Request, { params }: { params: Promise<{ slug: string }> }) {
   try {
-    if (!(await rateLimit(`public-barber:${getClientIp(req)}`, 300, 60_000))) {
+    if (!(await rateLimit(`public-barber:${getClientIp(req)}`, 300, 60_000, { local: true }))) {
       return NextResponse.json({ success: false, error: { message: "Too many requests. Please try again shortly." } }, { status: 429 });
     }
     await connectToDatabase();

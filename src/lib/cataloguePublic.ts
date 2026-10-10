@@ -47,13 +47,13 @@ export interface PublicCatalogue {
   available: boolean;
   /** Customer page style 1-5 (stored, else a stable hash of the owner id). Always present, even when the catalogue is off. */
   template: TemplateId;
-  branding: { name: string; logoUrl: string; coverUrl: string; intro: string; address: string; mapUrl: string; phone: string; whatsapp: string; instagram: string; facebook: string; accent: string; layout: string; imageRatio: string };
+  branding: { name: string; logoUrl: string; coverUrl: string; intro: string; address: string; mapUrl: string; phone: string; whatsapp: string; instagram: string; facebook: string; accent: string; layout: string; imageRatio: string; brandColor: string };
   categories: PublicCategory[];
   /** Offers that are on today (shown as a strip above the services). */
   offers: PublicOffer[];
 }
 
-const EMPTY_BRANDING = { logoUrl: "", coverUrl: "", intro: "", address: "", mapUrl: "", phone: "", whatsapp: "", instagram: "", facebook: "", accent: "indigo", layout: "grid", imageRatio: "portrait" };
+const EMPTY_BRANDING = { logoUrl: "", coverUrl: "", intro: "", address: "", mapUrl: "", phone: "", whatsapp: "", instagram: "", facebook: "", accent: "indigo", layout: "grid", imageRatio: "portrait", brandColor: "" };
 
 type Lean = Record<string, unknown> & { _id: mongoose.Types.ObjectId };
 

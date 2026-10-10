@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import connectToDatabase from "@/lib/mongodb";
 import { User } from "@/models/User";
 import { loadShareInfo } from "@/lib/shareCard";
+import { appIconUrl, normalizeHex } from "@/lib/brandColor";
 import { memo } from "@/lib/memo";
 
 /** The barber behind a page address: read once per request (metadata + layout share it) and kept a few seconds across requests. */
@@ -13,7 +14,13 @@ const getBarberHead = cache((slug: string) => memo(`b-head:${slug}`, 8_000, asyn
 }));
 
 /** The browser bar colour belongs in the viewport export (Next.js 16 warns when it is in the metadata). */
-export const viewport: Viewport = { themeColor: "#09090b" };
+export async function generateViewport({ params }: { params: Promise<{ slug: string }> }): Promise<Viewport> {
+  const { slug } = await params;
+  const head = await getBarberHead(slug);
+  // The owner's brand colour (if set) colours the browser bar and the installed app's title bar.
+  const brand = head ? normalizeHex((await loadPageStyle("BARBER", String(head._id))).branding.brandColor) : null;
+  return { themeColor: brand ?? "#09090b" };
+}
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
@@ -21,6 +28,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const barber = await getBarberHead(slug);
 
   const storeName = barber?.name || "Barber Shop";
+  const brand = barber ? normalizeHex((await loadPageStyle("BARBER", String(barber._id))).branding.brandColor) : null;
   const title = `Book ${storeName}`;
   const share = await loadShareInfo("BARBER", slug).catch(() => null);
   const menu = share && share.services > 0 ? `${share.services} service${share.services === 1 ? "" : "s"}${share.fromPrice !== null ? ` from ₹${share.fromPrice}` : ""}. ` : "";
@@ -41,7 +49,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       description,
     },
     manifest: `/api/public/barbers/${slug}/manifest`,
-    icons: { apple: "/apple-touch-icon.png" },
+    icons: { apple: brand ? appIconUrl({ color: brand, name: storeName, size: 180 }) : "/apple-touch-icon.png" },
     appleWebApp: {
       capable: true,
       title: storeName,

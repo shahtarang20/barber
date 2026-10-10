@@ -197,7 +197,7 @@ export default function CatalogueManagerPage() {
 
           <section className={card} aria-labelledby="brand-heading">
             <h2 id="brand-heading" className="mb-4 text-lg font-semibold">{t("ownBranding")}</h2>
-            <BrandingForm key={`${scope}-${data.settings.accent}-${data.settings.logoUrl ?? ""}-${data.settings.coverUrl ?? ""}`} scope={scope} settings={data.settings} onSaved={() => settings.mutate()} />
+            <BrandingForm shopName={scope === "shop" && shop ? shop.name : mine?.name || ""} key={`${scope}-${data.settings.accent}-${data.settings.logoUrl ?? ""}-${data.settings.coverUrl ?? ""}`} scope={scope} settings={data.settings} onSaved={() => settings.mutate()} />
           </section>
         </>
       )}

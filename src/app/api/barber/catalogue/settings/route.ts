@@ -4,6 +4,7 @@ import { CatalogueCategory } from "@/models/CatalogueCategory";
 import { BarberService } from "@/models/BarberService";
 import { autoEnableCatalogue, planFor, safeUrl } from "@/lib/catalogue";
 import { fail, ok, ownerRoute } from "@/lib/catalogueApi";
+import { normalizeHex } from "@/lib/brandColor";
 import { notifyBarber } from "@/lib/realtime";
 import { loadPublicCatalogueFresh } from "@/lib/cataloguePublic";
 
@@ -17,6 +18,8 @@ const schema = z.object({
   accent: z.enum(["indigo", "emerald", "rose", "amber", "sky", "zinc"]).optional(),
   layout: z.enum(["grid", "list"]).optional(),
   imageRatio: z.enum(["portrait", "square", "wide"]).optional(),
+  // "" removes the colour; anything else must be a plain #rrggbb colour.
+  brandColor: z.string().max(20).optional(),
 });
 
 /** The catalogue's on/off switch and branding, plus what the plan allows and how much is used. */
@@ -54,7 +57,12 @@ export async function PUT(req: Request) {
     }
     for (const k of ["intro", "address", "phone", "whatsapp", "accent", "layout", "imageRatio"] as const) if (d[k] !== undefined) set[k] = typeof d[k] === "string" ? (d[k] as string).trim() : d[k];
     if (d.enabled !== undefined) { set.enabled = d.enabled; set.enabledByOwner = true; }
-    const saved = await CatalogueSettings.findOneAndUpdate({ ownerType: scope.ownerType, ownerId: scope.ownerId }, { $set: set, $setOnInsert: { ownerType: scope.ownerType, ownerId: scope.ownerId } }, { upsert: true, new: true, setDefaultsOnInsert: true }).lean();
+    const unset: Record<string, 1> = {};
+    if (d.brandColor !== undefined) {
+      if (d.brandColor.trim() === "") unset.brandColor = 1;
+      else { const c = normalizeHex(d.brandColor); if (!c) return fail("Choose a colour like #7a1632 (six hexadecimal digits)."); set.brandColor = c; }
+    }
+    const saved = await CatalogueSettings.findOneAndUpdate({ ownerType: scope.ownerType, ownerId: scope.ownerId }, { $set: set, ...(Object.keys(unset).length ? { $unset: unset } : {}), $setOnInsert: { ownerType: scope.ownerType, ownerId: scope.ownerId } }, { upsert: true, new: true, setDefaultsOnInsert: true }).lean();
     notifyBarber(userId, "CATALOGUE_UPDATED");
     return ok({ settings: saved });
   }, { write: true, ownerOrFullOnly: true });

@@ -5,10 +5,10 @@ import { resolveTemplate, type TemplateId } from "@/lib/catalogueTemplate";
 import type { OwnerType } from "@/lib/catalogue";
 
 /** The owner's picture / contact branding as the page header needs it on the very first paint. */
-export interface PageBranding { logoUrl: string; coverUrl: string; intro: string; address: string; mapUrl: string; phone: string; whatsapp: string; instagram: string; facebook: string }
+export interface PageBranding { logoUrl: string; coverUrl: string; intro: string; address: string; mapUrl: string; phone: string; whatsapp: string; instagram: string; facebook: string; /** owner-chosen brand colour, "" = the style's own */ brandColor: string }
 export interface PageStyle { template: TemplateId; /** the owner switched the catalogue on (the public API still has the last word) */ enabled: boolean; branding: PageBranding }
 
-const FIELDS = ["logoUrl", "coverUrl", "intro", "address", "mapUrl", "phone", "whatsapp", "instagram", "facebook"] as const;
+const FIELDS = ["logoUrl", "coverUrl", "intro", "address", "mapUrl", "phone", "whatsapp", "instagram", "facebook", "brandColor"] as const;
 
 /**
  * Style number and header branding of one owner, for a server layout: one small read of the settings record (indexed),
