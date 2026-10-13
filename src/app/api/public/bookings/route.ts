@@ -13,10 +13,15 @@ import { pushToBarberLater } from "@/lib/push";
 import { heldByOthersExpr, activeHoldCount } from "@/lib/waitlistHold";
 import { normalizePhone } from "@/lib/phone";
 import { User } from "@/models/User";
-import { minutesUntilSlot } from "@/lib/istTime";
+import { minutesUntilSlot, getTodayISTString } from "@/lib/istTime";
 import { barberLinkUsage, shopLinkUsage, isOverLinkLimit } from "@/lib/linkLimit";
 import { admitVisitor } from "@/lib/visitorLimit";
 import { Shop } from "@/models/Shop";
+import { loyaltyForCustomer } from "@/lib/loyalty";
+import { wheelForBooking } from "@/lib/wheel";
+import { coverBookingWithMembership } from "@/lib/membership";
+import { isBirthdayToday } from "@/lib/autoOffers";
+import type { OwnerType } from "@/lib/catalogue";
 
 // Two layers: a generous per-IP ceiling that only stops an actual scripted
 // flood (Indian mobile carriers commonly put hundreds of real customers
@@ -35,6 +40,8 @@ const bookingSchema = z.object({
   shopSlug: z.string().max(80).optional(),
   // A catalogue service the customer chose ("Book this service"). Checked again here and saved with the booking.
   serviceId: z.string().max(40).optional(),
+  // Optional birthday ("MM-DD" or "YYYY-MM-DD" from a date input), for the birthday greeting.
+  birthday: z.string().max(10).optional(),
 });
 
 export async function POST(req: Request) {
@@ -53,7 +60,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: { message: result.error.issues[0].message } }, { status: 400 });
     }
 
-    const { slotId, name, phone, notes, shopSlug, serviceId } = result.data;
+    const { slotId, name, phone, notes, shopSlug, serviceId, birthday } = result.data;
     if (!mongoose.isValidObjectId(slotId)) {
       return NextResponse.json({ success: false, error: { code: "SLOT_ALREADY_BOOKED", message: "Sorry, this slot is fully booked or unavailable. Please choose another time." } }, { status: 409 });
     }
@@ -153,7 +160,7 @@ export async function POST(req: Request) {
     }
 
     try {
-      const { booking: newBooking, customer } = await createConfirmedBooking(slot, name, phone, notes, { viaLink: true, viaShopId }, service ?? undefined);
+      const { booking: newBooking, customer } = await createConfirmedBooking(slot, name, phone, notes, { viaLink: true, viaShopId }, service ?? undefined, birthday);
 
       // Customers booking at the very same moment can slip past the check above; settle it by order.
       if (await isOverLinkLimit(newBooking._id, slot.barberId, viaShopId)) {
@@ -178,16 +185,46 @@ export async function POST(req: Request) {
         createdAt: { $lte: newBooking.createdAt },
       });
 
+      // The customer's loyalty punch-card for this booking's owner scope (shop card if booked via a shop, else the barber's),
+      // so the confirmed screen can show their stamps. Wrapped so a loyalty hiccup can never fail an otherwise-good booking.
+      let loyalty: Awaited<ReturnType<typeof loyaltyForCustomer>> = null;
+      // The spin-to-win result (decided and persisted server-side; the phone only animates to it). null = no spin this time.
+      let wheel: Awaited<ReturnType<typeof wheelForBooking>> = null;
+      // When the customer's membership covers this visit: shown as "free with your membership"; the visit is deducted on completion.
+      let membership: { planName: string; remaining: number } | null = null;
+      try {
+        const ownerType: OwnerType = viaShopId ? "SHOP" : "BARBER";
+        const ownerId = new mongoose.Types.ObjectId(String(viaShopId || slot.barberId));
+        const customerId = new mongoose.Types.ObjectId(String(customer._id));
+        loyalty = await loyaltyForCustomer(ownerType, ownerId, customerId).catch(() => null);
+        wheel = await wheelForBooking({ barberId: slot.barberId, customerId, viaShopId: viaShopId ? String(viaShopId) : null }).catch(() => null);
+        const cover = await coverBookingWithMembership(ownerType, ownerId, customerId, service?.serviceId ?? null, getTodayISTString()).catch(() => ({ covered: false }) as Awaited<ReturnType<typeof coverBookingWithMembership>>);
+        if (cover.covered && cover.membershipId) {
+          // Remember the membership on the booking so the visit is deducted when (and only when) it completes.
+          await Booking.updateOne({ _id: newBooking._id }, { $set: { coveredByMembershipId: new mongoose.Types.ObjectId(cover.membershipId) } }).catch(() => {});
+          membership = { planName: cover.planName || "", remaining: cover.remaining ?? -1 };
+        }
+      } catch {
+        loyalty = null;
+        wheel = null;
+        membership = null;
+      }
+
       return NextResponse.json({
-        success: true, 
-        data: { 
+        success: true,
+        data: {
           queueNumber,
           bookingNumber: newBooking.bookingNumber,
           date: newBooking.date,
           startTime: newBooking.startTime,
           customerName: customer.name,
+          loyalty,
+          wheel,
+          membership,
+          // Their birthday is today → the confirmed screen shows a celebratory greeting.
+          birthday: isBirthdayToday(customer.birthday, getTodayISTString()),
           ...(service ? { serviceName: service.name, servicePrice: service.price } : {}),
-        } 
+        }
       }, { status: 201 });
 
     } catch (bookingError) {

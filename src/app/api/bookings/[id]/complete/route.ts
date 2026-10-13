@@ -4,6 +4,8 @@ import { requireAuth } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import { Booking } from "@/models/Booking";
 import { notifyBarber } from "@/lib/realtime";
+import { awardStampForBooking } from "@/lib/loyalty";
+import { consumeMembershipVisit } from "@/lib/membership";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -41,6 +43,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       return NextResponse.json({ success: false, error: { message: "This booking was already changed." } }, { status: 409 });
     }
     booking.status = "COMPLETED";
+
+    // Loyalty: a completed visit earns a stamp (no-op when the owner runs no card; never throws).
+    await awardStampForBooking(done);
+    // Membership: deduct one visit if this booking was covered by one (atomic; unlimited plans untouched; never throws).
+    if (done.coveredByMembershipId) await consumeMembershipVisit(String(done.coveredByMembershipId)).catch(() => {});
 
     notifyBarber(booking.barberId.toString(), "BOOKINGS_UPDATED");
 

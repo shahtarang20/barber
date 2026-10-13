@@ -8,7 +8,7 @@ import { toast } from "@/components/ui/toast";
 
 type Tier = "FREE" | "PREMIUM" | "BUSINESS";
 const FIELDS = [
-  ["maxCategories", "Categories"], ["maxServices", "Published services"], ["maxImagesPerService", "Pictures / service"], ["maxVideosPerService", "Videos / service"], ["maxMediaMB", "Storage (MB)"], ["maxActiveOffers", "Live offers"], ["maxCampaignsPerWeek", "Customer notifications / week"],
+  ["maxCategories", "Categories"], ["maxServices", "Published services"], ["maxImagesPerService", "Pictures / service"], ["maxVideosPerService", "Videos / service"], ["maxMediaMB", "Storage (MB)"], ["maxActiveOffers", "Live offers"], ["maxCampaignsPerWeek", "Customer notifications / week"], ["loyaltyEnabled", "Loyalty card (1 = on)"], ["wheelEnabled", "Spin-to-win wheel (1 = on)"], ["membershipEnabled", "Memberships (1 = on)"], ["autoOffersPerWeek", "Auto offers / week"],
 ] as const;
 type Limits = Record<(typeof FIELDS)[number][0], number>;
 interface Config { businessFromAmount: number; graceDays: number; tiers: Record<Tier, Limits> }

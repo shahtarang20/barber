@@ -20,9 +20,11 @@ interface ClaimedSlot {
  * Optionally saves a snapshot of the catalogue service the customer picked.
  * On failure it throws; the caller is responsible for releasing the slot.
  */
-export async function createConfirmedBooking(slot: ClaimedSlot, name: string, phone: string, notes?: string, via?: { viaLink?: boolean; viaShopId?: unknown }, service?: { serviceId: unknown; name: string; durationMinutes: number; price: number | null }) {
+export async function createConfirmedBooking(slot: ClaimedSlot, name: string, phone: string, notes?: string, via?: { viaLink?: boolean; viaShopId?: unknown }, service?: { serviceId: unknown; name: string; durationMinutes: number; price: number | null }, birthday?: string) {
   const normalizedPhone = normalizePhone(phone);
   const cleanName = name.trim();
+  // Accept "MM-DD" or a full "YYYY-MM-DD" from a date input; keep only the month-day. Anything else is ignored.
+  const bday = birthday && /^\d{2}-\d{2}$/.test(birthday.slice(-5)) ? birthday.slice(-5) : "";
 
   // Exact, case-insensitive match via collation — never build a RegExp from
   // user input. Phone + name lets a family share one number.
@@ -31,7 +33,8 @@ export async function createConfirmedBooking(slot: ClaimedSlot, name: string, ph
   const scope = noPhone ? { ownerBarberId: slot.barberId } : {};
   let customer = await Customer.findOne({ phone: normalizedPhone, name: cleanName, ...scope })
     .collation({ locale: "en", strength: 2 });
-  if (!customer) customer = await new Customer({ name: cleanName, phone: normalizedPhone, ...scope }).save();
+  if (!customer) customer = await new Customer({ name: cleanName, phone: normalizedPhone, ...scope, ...(bday ? { birthday: bday } : {}) }).save();
+  else if (bday && !customer.birthday) { customer.birthday = bday; await customer.save(); } // fill a missing birthday, never overwrite one they set
 
   const counter = await Counter.findByIdAndUpdate(
     { _id: "bookingNumber" },

@@ -5,6 +5,8 @@ export interface ICustomer extends Document {
   phone: string;
   ownerBarberId?: mongoose.Types.ObjectId;
   email?: string;
+  /** The customer's birthday as "MM-DD" (no year needed), for the birthday greeting. Optional. */
+  birthday?: string;
   barberNotes?: { barberId: mongoose.Types.ObjectId; note: string }[];
   // Visits that were completed with a barber but whose booking records have since been cleaned up.
   barberStats?: { barberId: mongoose.Types.ObjectId; visits: number; lastVisit?: string }[];
@@ -19,6 +21,8 @@ const CustomerSchema: Schema = new Schema(
     phone: { type: String, default: "", index: true },
     ownerBarberId: { type: Schema.Types.ObjectId, ref: "User", index: true },
     email: { type: String },
+    // "MM-DD" (birthday greeting). Stored without a year; empty / absent = not given.
+    birthday: { type: String, default: "", match: /^(\d{2}-\d{2})?$/ },
     barberStats: [
       {
         barberId: { type: Schema.Types.ObjectId, ref: "User", required: true },

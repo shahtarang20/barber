@@ -1,6 +1,10 @@
 "use client";
 
 import { InstallCard } from "@/components/InstallCard";
+import { LoyaltyCardPublic } from "@/components/catalogue/LoyaltyCardPublic";
+import { WheelPublic } from "@/components/catalogue/WheelPublic";
+import { BirthdayGreeting } from "@/components/catalogue/BirthdayGreeting";
+import { MembershipCovered } from "@/components/catalogue/MembershipCovered";
 import { ViewSwitch } from "@/components/catalogue/ViewSwitch";
 import { PublicCatalogue } from "@/components/catalogue/PublicCatalogue";
 import { SelectedServiceChip } from "@/components/catalogue/SelectedServiceChip";
@@ -44,6 +48,10 @@ interface BookingSuccessView {
   serviceName?: string;
   servicePrice?: number | null;
   isWaitlist?: boolean;
+  loyalty?: { stamps: number; stampsNeeded: number; rewardName: string; activeRewards: { id: string; label: string; expiresOn: string }[] } | null;
+  wheel?: { segments: { label: string; win: boolean }[]; winningIndex: number; won: boolean; rewardLabel: string | null } | null;
+  birthday?: boolean;
+  membership?: { planName: string; remaining: number } | null;
 }
 
 export default function BarberBookingPage() {
@@ -99,6 +107,7 @@ export default function BarberBookingPage() {
     const formData = new FormData(e.currentTarget);
     const name = (formData.get("name") as string) || "";
     const phone = (formData.get("phone") as string) || "";
+    const birthday = (formData.get("birthday") as string) || "";
 
     // Say exactly what is missing, next to the field, in the customer's language (not the browser's pop-up).
     const digits = phone.replace(/\D/g, "");
@@ -120,8 +129,9 @@ export default function BarberBookingPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           slotId: selectedSlot._id,
-          name, 
+          name,
           phone,
+          ...(birthday ? { birthday } : {}),
           ...(cat.selectedService && !selectedSlot.isWaitlist ? { serviceId: cat.selectedService.id } : {}),
         }),
       });
@@ -263,6 +273,10 @@ export default function BarberBookingPage() {
             </div>
           </div>
           
+          {bookingSuccess.membership && <MembershipCovered planName={bookingSuccess.membership.planName} remaining={bookingSuccess.membership.remaining} />}
+          {bookingSuccess.birthday && <BirthdayGreeting name={bookingSuccess.customerName || bookingSuccess.name || ""} />}
+          {bookingSuccess.wheel && <WheelPublic wheel={bookingSuccess.wheel} />}
+          {bookingSuccess.loyalty && <LoyaltyCardPublic loyalty={bookingSuccess.loyalty} />}
           <InstallCard appName={barber?.name || "BarberSaaS"} />
           <Button className="w-full h-12" onClick={() => window.location.reload()}>{t('done')}</Button>
         </div>
@@ -407,6 +421,11 @@ export default function BarberBookingPage() {
                 <Label htmlFor="phone">{t('yourPhone')}</Label>
                 <Input id="phone" name="phone" type="tel" inputMode="numeric" autoComplete="tel" placeholder="98XXXXXXXX" aria-invalid={!!fieldErrors.phone} aria-describedby={fieldErrors.phone ? "phone-error" : undefined} onChange={() => fieldErrors.phone && setFieldErrors((x) => ({ ...x, phone: undefined }))} className={`h-12 text-base ${fieldErrors.phone ? "border-red-500" : ""}`} />
                 {fieldErrors.phone && <p id="phone-error" role="alert" className="text-sm font-medium text-red-600">{fieldErrors.phone}</p>}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="birthday">{t('catBirthdayField')}</Label>
+                <Input id="birthday" name="birthday" type="date" autoComplete="bday" className="h-12 text-base" />
               </div>
 
               <Button type="submit" className="w-full h-12 text-base mt-4" disabled={bookingLoading || !hydrated}>

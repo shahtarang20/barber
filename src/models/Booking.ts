@@ -18,6 +18,8 @@ export interface IBooking extends Document {
   serviceNameSnapshot?: string;
   serviceDurationSnapshot?: number;
   servicePriceSnapshot?: number;
+  // Set when the customer's membership covered this visit: the visit is deducted from it when the booking COMPLETES, not now.
+  coveredByMembershipId?: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -46,6 +48,7 @@ const BookingSchema: Schema = new Schema(
     serviceNameSnapshot: { type: String, maxlength: 80 },
     serviceDurationSnapshot: { type: Number },
     servicePriceSnapshot: { type: Number },
+    coveredByMembershipId: { type: Schema.Types.ObjectId },
   },
   { timestamps: true }
 );

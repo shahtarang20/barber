@@ -8,7 +8,7 @@ import { DEFAULT_PLANS_CONFIG, LIMIT_BOUNDS, getPlansConfig, savePlansConfig, ty
 
 const fail = (message: string, status = 400) => NextResponse.json({ success: false, error: { message } }, { status });
 const limitField = (k: keyof TierLimits) => z.number().int("Use whole numbers.").min(0, "Limits cannot be negative.").max(LIMIT_BOUNDS[k], `Too large (most is ${LIMIT_BOUNDS[k]}).`);
-const tier = z.object({ maxCategories: limitField("maxCategories"), maxServices: limitField("maxServices"), maxImagesPerService: limitField("maxImagesPerService"), maxVideosPerService: limitField("maxVideosPerService"), maxMediaMB: limitField("maxMediaMB"), maxActiveOffers: limitField("maxActiveOffers"), maxCampaignsPerWeek: limitField("maxCampaignsPerWeek") });
+const tier = z.object({ maxCategories: limitField("maxCategories"), maxServices: limitField("maxServices"), maxImagesPerService: limitField("maxImagesPerService"), maxVideosPerService: limitField("maxVideosPerService"), maxMediaMB: limitField("maxMediaMB"), maxActiveOffers: limitField("maxActiveOffers"), maxCampaignsPerWeek: limitField("maxCampaignsPerWeek"), loyaltyEnabled: limitField("loyaltyEnabled"), wheelEnabled: limitField("wheelEnabled"), membershipEnabled: limitField("membershipEnabled"), autoOffersPerWeek: limitField("autoOffersPerWeek") });
 const schema = z.object({
   businessFromAmount: z.number().int().min(1, "Business starts at ₹1 or more.").max(1_000_000).optional(),
   graceDays: z.number().int("Use whole days.").min(0).max(60, "Grace can be at most 60 days.").optional(),

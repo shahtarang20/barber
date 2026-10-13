@@ -13,15 +13,23 @@ export interface PlanLimits {
   maxActiveOffers: number;
   /** Notifications an owner may send to opted-in customers in any 7 days (0 = none). */
   maxCampaignsPerWeek: number;
+  /** The loyalty punch card is available to this tier. */
+  loyaltyEnabled: number;
+  /** The spin-to-win wheel is available to this tier. */
+  wheelEnabled: number;
+  /** Paid memberships / packages are available to this tier. */
+  membershipEnabled: number;
+  /** Automatic birthday / win-back offers this tier may send in any 7 days (0 = none), separate from manual campaigns. */
+  autoOffersPerWeek: number;
 }
 export type TierLimits = Omit<PlanLimits, "tier">;
 
 export const DEFAULT_TIER_LIMITS: Record<Tier, TierLimits> = {
-  FREE: { maxCategories: 3, maxServices: 10, maxImagesPerService: 2, maxVideosPerService: 0, maxMediaMB: 25, maxActiveOffers: 1, maxCampaignsPerWeek: 0 },
-  PREMIUM: { maxCategories: 15, maxServices: 100, maxImagesPerService: 6, maxVideosPerService: 1, maxMediaMB: 500, maxActiveOffers: 10, maxCampaignsPerWeek: 2 },
-  BUSINESS: { maxCategories: 100, maxServices: 500, maxImagesPerService: 10, maxVideosPerService: 3, maxMediaMB: 2000, maxActiveOffers: 50, maxCampaignsPerWeek: 5 },
+  FREE: { maxCategories: 3, maxServices: 10, maxImagesPerService: 2, maxVideosPerService: 0, maxMediaMB: 25, maxActiveOffers: 1, maxCampaignsPerWeek: 0, loyaltyEnabled: 0, wheelEnabled: 0, membershipEnabled: 0, autoOffersPerWeek: 0 },
+  PREMIUM: { maxCategories: 15, maxServices: 100, maxImagesPerService: 6, maxVideosPerService: 1, maxMediaMB: 500, maxActiveOffers: 10, maxCampaignsPerWeek: 2, loyaltyEnabled: 1, wheelEnabled: 1, membershipEnabled: 0, autoOffersPerWeek: 2 },
+  BUSINESS: { maxCategories: 100, maxServices: 500, maxImagesPerService: 10, maxVideosPerService: 3, maxMediaMB: 2000, maxActiveOffers: 50, maxCampaignsPerWeek: 5, loyaltyEnabled: 1, wheelEnabled: 1, membershipEnabled: 1, autoOffersPerWeek: 5 },
 };
-export const LIMIT_BOUNDS: Record<keyof TierLimits, number> = { maxCategories: 1000, maxServices: 5000, maxImagesPerService: 30, maxVideosPerService: 10, maxMediaMB: 100_000, maxActiveOffers: 500, maxCampaignsPerWeek: 21 };
+export const LIMIT_BOUNDS: Record<keyof TierLimits, number> = { maxCategories: 1000, maxServices: 5000, maxImagesPerService: 30, maxVideosPerService: 10, maxMediaMB: 100_000, maxActiveOffers: 500, maxCampaignsPerWeek: 21, loyaltyEnabled: 1, wheelEnabled: 1, membershipEnabled: 1, autoOffersPerWeek: 21 };
 
 /** Everything the admin can tune about plans, stored as one setting. */
 export interface PlansConfig {

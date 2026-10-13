@@ -6,6 +6,12 @@ import { ArrowDown, ArrowLeft, ArrowUp, Copy, ExternalLink, Pencil, Plus, Share2
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
 import { BrandingForm } from "@/components/catalogue/owner/BrandingForm";
+import { LoyaltyForm } from "@/components/catalogue/owner/LoyaltyForm";
+import { LoyaltyRewards } from "@/components/catalogue/owner/LoyaltyRewards";
+import { WheelForm } from "@/components/catalogue/owner/WheelForm";
+import { BirthdayForm } from "@/components/catalogue/owner/BirthdayForm";
+import { MembershipPlans } from "@/components/catalogue/owner/MembershipPlans";
+import { MembershipMembers } from "@/components/catalogue/owner/MembershipMembers";
 import { ConfirmDialog } from "@/components/catalogue/owner/ConfirmDialog";
 import { ScopeSwitch } from "@/components/catalogue/owner/ScopeSwitch";
 import { catalogueApi, useMySlug, useOwnerCatalogue, useShopOwnership, type ServiceDoc } from "@/lib/catalogueClient";
@@ -198,6 +204,48 @@ export default function CatalogueManagerPage() {
           <section className={card} aria-labelledby="brand-heading">
             <h2 id="brand-heading" className="mb-4 text-lg font-semibold">{t("ownBranding")}</h2>
             <BrandingForm shopName={scope === "shop" && shop ? shop.name : mine?.name || ""} key={`${scope}-${data.settings.accent}-${data.settings.logoUrl ?? ""}-${data.settings.coverUrl ?? ""}`} scope={scope} settings={data.settings} onSaved={() => settings.mutate()} />
+          </section>
+
+          <section className={`${card} space-y-4`} aria-labelledby="loyalty-heading">
+            <h2 id="loyalty-heading" className="text-lg font-semibold">{t("ownLoyalty")}</h2>
+            {data.plan.tier === "FREE" ? (
+              <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900">{t("ownLoyaltyUpgrade")}</p>
+            ) : (
+              <>
+                <LoyaltyForm scope={scope} />
+                <LoyaltyRewards scope={scope} />
+              </>
+            )}
+          </section>
+
+          <section className={`${card} space-y-4`} aria-labelledby="wheel-heading">
+            <h2 id="wheel-heading" className="text-lg font-semibold">{t("ownWheel")}</h2>
+            {data.plan.tier === "FREE" ? (
+              <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900">{t("ownWheelUpgrade")}</p>
+            ) : (
+              <WheelForm scope={scope} />
+            )}
+          </section>
+
+          <section className={`${card} space-y-4`} aria-labelledby="birthday-heading">
+            <h2 id="birthday-heading" className="text-lg font-semibold">{t("ownBirthday")}</h2>
+            {data.plan.tier === "FREE" ? (
+              <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900">{t("ownBirthdayUpgrade")}</p>
+            ) : (
+              <BirthdayForm scope={scope} />
+            )}
+          </section>
+
+          <section className={`${card} space-y-4`} aria-labelledby="membership-heading">
+            <h2 id="membership-heading" className="text-lg font-semibold">{t("ownMembership")}</h2>
+            {data.plan.tier !== "BUSINESS" ? (
+              <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900">{t("ownMemberBusinessOnly")}</p>
+            ) : (
+              <>
+                <MembershipPlans scope={scope} />
+                <MembershipMembers scope={scope} />
+              </>
+            )}
           </section>
         </>
       )}
