@@ -91,9 +91,15 @@ self.addEventListener('fetch', (event) => {
 
   if (request.mode === 'navigate') {
     event.respondWith((async () => {
+      // 1) Try the navigation preload, but a failed preload must NEVER mean "offline":
+      // old Chrome and proxy/data-saver browsers (UC, Opera, some Xiaomi/Vivo) reject it even when online.
       try {
         const preload = await event.preloadResponse;
-        return preload || (await fetch(request));
+        if (preload) return preload;
+      } catch (e) { /* preload unavailable — fall through to a real network fetch */ }
+      // 2) The real network. Only if THIS fails do we show the friendly offline page.
+      try {
+        return await fetch(request);
       } catch (e) {
         const offline = await caches.match(OFFLINE_URL);
         return offline || Response.error();
