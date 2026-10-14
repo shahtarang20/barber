@@ -6,7 +6,7 @@ import { getTodayISTString } from "@/lib/istTime";
 import type { OwnerType } from "@/lib/catalogue";
 
 export interface WheelSegment { label: string; weight: number; rewardType: "NONE" | "FREE_SERVICE" | "PERCENTAGE" | "FIXED"; rewardValue: number }
-export interface WheelConfigShape { enabled: boolean; segments: WheelSegment[]; cooldownDays: number; rewardValidDays: number }
+export interface WheelConfigShape { enabled: boolean; segments: WheelSegment[]; cooldownDays: number; maxSpinsTotal: number; maxSpinsPerCustomer: number; rewardValidDays: number }
 
 /** A sensible starter wheel, used as the default when the owner has not built one yet. */
 const DEFAULT_SEGMENTS: WheelSegment[] = [
@@ -16,7 +16,7 @@ const DEFAULT_SEGMENTS: WheelSegment[] = [
   { label: "Free beard trim", weight: 6, rewardType: "FREE_SERVICE", rewardValue: 0 },
   { label: "15% off", weight: 10, rewardType: "PERCENTAGE", rewardValue: 15 },
 ];
-const DEFAULT_CONFIG: WheelConfigShape = { enabled: false, segments: DEFAULT_SEGMENTS, cooldownDays: 30, rewardValidDays: 30 };
+const DEFAULT_CONFIG: WheelConfigShape = { enabled: false, segments: DEFAULT_SEGMENTS, cooldownDays: 30, maxSpinsTotal: 0, maxSpinsPerCustomer: 1, rewardValidDays: 30 };
 
 function clampSegments(input: unknown): WheelSegment[] {
   if (!Array.isArray(input)) return [];
@@ -33,13 +33,15 @@ function clampSegments(input: unknown): WheelSegment[] {
   }).filter((s) => s.weight > 0 || s.rewardType === "NONE");
 }
 
-export function clampWheelConfig(input: { enabled?: unknown; segments?: unknown; cooldownDays?: unknown; rewardValidDays?: unknown }): WheelConfigShape {
+export function clampWheelConfig(input: { enabled?: unknown; segments?: unknown; cooldownDays?: unknown; maxSpinsTotal?: unknown; maxSpinsPerCustomer?: unknown; rewardValidDays?: unknown }): WheelConfigShape {
   const n = (v: unknown, lo: number, hi: number, d: number) => { const x = Math.round(Number(v)); return Number.isFinite(x) ? Math.max(lo, Math.min(hi, x)) : d; };
   const segments = clampSegments(input.segments);
   return {
     enabled: !!input.enabled,
     segments: segments.length ? segments : DEFAULT_SEGMENTS,
     cooldownDays: n(input.cooldownDays, 0, 365, 30),
+    maxSpinsTotal: n(input.maxSpinsTotal, 0, 1_000_000, 0),
+    maxSpinsPerCustomer: n(input.maxSpinsPerCustomer, 0, 1000, 1),
     rewardValidDays: n(input.rewardValidDays, 0, 365, 30),
   };
 }
@@ -49,7 +51,7 @@ export async function getWheelConfig(ownerType: OwnerType, ownerId: mongoose.Typ
   return doc ? clampWheelConfig(doc) : { ...DEFAULT_CONFIG };
 }
 
-export async function saveWheelConfig(ownerType: OwnerType, ownerId: mongoose.Types.ObjectId, input: { enabled?: unknown; segments?: unknown; cooldownDays?: unknown; rewardValidDays?: unknown }): Promise<WheelConfigShape> {
+export async function saveWheelConfig(ownerType: OwnerType, ownerId: mongoose.Types.ObjectId, input: { enabled?: unknown; segments?: unknown; cooldownDays?: unknown; maxSpinsTotal?: unknown; maxSpinsPerCustomer?: unknown; rewardValidDays?: unknown }): Promise<WheelConfigShape> {
   const cfg = clampWheelConfig(input);
   await WheelConfig.findOneAndUpdate({ ownerType, ownerId }, { $set: { ...cfg, ownerType, ownerId } }, { upsert: true, setDefaultsOnInsert: true });
   return cfg;
@@ -82,14 +84,17 @@ export interface WheelDraw {
   winningIndex: number;
   won: boolean;
   rewardLabel: string | null;
+  /** The label of the slice the customer landed on (win or lose) — recorded on the booking entry. */
+  prizeLabel: string;
 }
 
 /**
- * Decides this booking's spin ON THE SERVER: enforces the cooldown, picks a weighted segment, records the spin, and
+ * Decides this booking's spin ON THE SERVER: enforces the owner's caps and cooldown, picks a weighted segment, records the
+ * spin (linked to the booking), and
  * (on a win) issues the Reward coupon. The returned shape lets the phone animate the wheel to the already-decided result.
  * Returns null when the wheel is off, empty, or the customer is still inside the cooldown. Never throws into the caller.
  */
-export async function wheelForBooking(booking: { barberId: mongoose.Types.ObjectId | string; customerId: mongoose.Types.ObjectId | string; viaShopId?: mongoose.Types.ObjectId | string | null }): Promise<WheelDraw | null> {
+export async function wheelForBooking(booking: { barberId: mongoose.Types.ObjectId | string; customerId: mongoose.Types.ObjectId | string; viaShopId?: mongoose.Types.ObjectId | string | null; bookingId?: mongoose.Types.ObjectId | string }): Promise<WheelDraw | null> {
   try {
     const ownerType: OwnerType = booking.viaShopId ? "SHOP" : "BARBER";
     const ownerId = new mongoose.Types.ObjectId(String(booking.viaShopId || booking.barberId));
@@ -99,6 +104,17 @@ export async function wheelForBooking(booking: { barberId: mongoose.Types.Object
     if (!cfg.enabled || cfg.segments.length === 0) return null;
 
     const today = getTodayISTString();
+
+    // The owner's total giveaway budget: once this many spins have gone out across all customers, the wheel stops.
+    if (cfg.maxSpinsTotal > 0) {
+      const total = await WheelSpin.countDocuments({ ownerType, ownerId });
+      if (total >= cfg.maxSpinsTotal) return null;
+    }
+    // How many times this one customer may ever spin (0 = unlimited), independent of the time-based cooldown below.
+    if (cfg.maxSpinsPerCustomer > 0) {
+      const mine = await WheelSpin.countDocuments({ ownerType, ownerId, customerId });
+      if (mine >= cfg.maxSpinsPerCustomer) return null;
+    }
     if (cfg.cooldownDays > 0) {
       const last = await WheelSpin.findOne({ ownerType, ownerId, customerId }).sort({ createdAt: -1 }).select("date").lean<{ date: string } | null>();
       // Still inside the cooldown window: no spin this time.
@@ -117,13 +133,14 @@ export async function wheelForBooking(booking: { barberId: mongoose.Types.Object
       const reward = await Reward.create({ ownerType, ownerId, customerId, source: "WHEEL", rewardType: seg.rewardType, value: seg.rewardValue, label: rewardLabel, expiresOn });
       rewardId = reward._id as mongoose.Types.ObjectId;
     }
-    await WheelSpin.create({ ownerType, ownerId, customerId, date: today, segmentLabel: seg.label, won, rewardId });
+    await WheelSpin.create({ ownerType, ownerId, customerId, date: today, segmentLabel: seg.label, won, rewardId, bookingId: booking.bookingId ? new mongoose.Types.ObjectId(String(booking.bookingId)) : undefined });
 
     return {
       segments: cfg.segments.map((s) => ({ label: s.label, win: s.rewardType !== "NONE" })),
       winningIndex,
       won,
       rewardLabel,
+      prizeLabel: seg.label,
     };
   } catch (e) {
     console.error("wheelForBooking failed", e);

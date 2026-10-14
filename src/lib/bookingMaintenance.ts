@@ -17,14 +17,19 @@ export async function autoCompleteStaleBookings(barberId?: string): Promise<numb
 
   const stale = pastConfirmed.filter((b) => minutesUntilSlotEnd(b.date, b.endTime) <= -AUTO_COMPLETE_AFTER_MINUTES);
 
-  if (stale.length > 0) {
-    await Booking.updateMany({ _id: { $in: stale.map((b) => b._id) } }, { $set: { status: "COMPLETED" } });
+  let completed = 0;
+  for (const b of stale) {
+    // Transition each booking atomically: only a booking that is STILL "CONFIRMED" is completed here. This is what makes
+    // the side effects idempotent — if the barber's manual "complete" (or an earlier run) already closed it, this skips it,
+    // so a membership visit is never deducted twice for the same booking.
+    const done = await Booking.findOneAndUpdate({ _id: b._id, status: "CONFIRMED" }, { $set: { status: "COMPLETED" } }).lean();
+    if (!done) continue;
+    completed++;
     // Loyalty: each auto-completed visit earns its stamp too (no-op when the owner runs no card; never throws).
-    for (const b of stale) {
-      await awardStampForBooking(b);
-      // Membership: deduct the covered visit on auto-completion as well.
-      if ((b as { coveredByMembershipId?: unknown }).coveredByMembershipId) await consumeMembershipVisit(String((b as { coveredByMembershipId?: unknown }).coveredByMembershipId)).catch(() => {});
-    }
+    await awardStampForBooking(b);
+    // Membership: deduct the covered visit on auto-completion as well.
+    const covered = (b as { coveredByMembershipId?: unknown }).coveredByMembershipId;
+    if (covered) await consumeMembershipVisit(String(covered)).catch(() => {});
   }
-  return stale.length;
+  return completed;
 }

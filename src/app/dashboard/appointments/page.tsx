@@ -29,6 +29,9 @@ interface BookingView {
   serviceNameSnapshot?: string;
   servicePriceSnapshot?: number;
   serviceDurationSnapshot?: number;
+  // What the customer landed on when they spun the wheel for this booking (empty = no spin).
+  wheelPrize?: string;
+  wheelWon?: boolean;
 }
 
 // The dialogs (and the dialog library) are downloaded only when one is first opened.
@@ -174,6 +177,7 @@ export default function AppointmentsPage() {
             <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">{b.startTime}</div>
             <div className="text-lg text-zinc-900 dark:text-zinc-100 truncate">{b.customerId?.name || "Unknown"}</div>
             {b.serviceNameSnapshot && <div className="text-sm font-medium text-indigo-700 dark:text-indigo-300 truncate">{b.serviceNameSnapshot}{b.servicePriceSnapshot !== undefined ? ` · ₹${b.servicePriceSnapshot}` : ""}{b.serviceDurationSnapshot ? ` · ${b.serviceDurationSnapshot} min` : ""}</div>}
+            {b.wheelPrize && <div className={`text-xs font-medium ${b.wheelWon ? "text-emerald-700 dark:text-emerald-300" : "text-zinc-500"}`}>🎡 {b.wheelPrize}</div>}
             <div className="text-sm text-zinc-500">
               {b.date !== getTodayISTString() && <>{fmt(parseDateOnly(b.date), "d MMM")} · </>}{phone || t('custNoPhone')}
             </div>
@@ -287,7 +291,7 @@ export default function AppointmentsPage() {
               <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
                 {filteredBookings.map((b) => (
                   <tr key={b._id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
-                    <td className="px-4 py-3 text-zinc-900 dark:text-zinc-100">{b.customerId?.name || "Unknown"}{b.serviceNameSnapshot && <div className="text-xs font-medium text-indigo-700 dark:text-indigo-300">{b.serviceNameSnapshot}{b.servicePriceSnapshot !== undefined ? ` · ₹${b.servicePriceSnapshot}` : ""}</div>}</td>
+                    <td className="px-4 py-3 text-zinc-900 dark:text-zinc-100">{b.customerId?.name || "Unknown"}{b.serviceNameSnapshot && <div className="text-xs font-medium text-indigo-700 dark:text-indigo-300">{b.serviceNameSnapshot}{b.servicePriceSnapshot !== undefined ? ` · ₹${b.servicePriceSnapshot}` : ""}</div>}{b.wheelPrize && <div className={`text-xs ${b.wheelWon ? "text-emerald-700 dark:text-emerald-300" : "text-zinc-500"}`}>🎡 {b.wheelPrize}</div>}</td>
                     <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">{b.customerId?.phone || "N/A"}</td>
                     <td className="px-4 py-3 text-zinc-900 dark:text-zinc-100">
                       {fmt(parseDateOnly(b.date), "d MMM yyyy")} <span className="text-zinc-500 ml-2">{b.startTime}</span>

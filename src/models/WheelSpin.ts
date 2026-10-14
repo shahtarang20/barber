@@ -13,6 +13,8 @@ const WheelSpinSchema = new Schema(
     segmentLabel: { type: String, default: "" },
     won: { type: Boolean, default: false },
     rewardId: { type: Schema.Types.ObjectId, ref: "Reward" },
+    // The booking this spin belongs to, so the owner can see per-booking what was won.
+    bookingId: { type: Schema.Types.ObjectId, ref: "Booking" },
   },
   { timestamps: true }
 );

@@ -20,6 +20,9 @@ export interface IBooking extends Document {
   servicePriceSnapshot?: number;
   // Set when the customer's membership covered this visit: the visit is deducted from it when the booking COMPLETES, not now.
   coveredByMembershipId?: mongoose.Types.ObjectId;
+  // What the customer landed on when they spun the wheel for this booking (the prize label, or the "try again" slice). Empty = no spin.
+  wheelPrize?: string;
+  wheelWon?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -49,6 +52,8 @@ const BookingSchema: Schema = new Schema(
     serviceDurationSnapshot: { type: Number },
     servicePriceSnapshot: { type: Number },
     coveredByMembershipId: { type: Schema.Types.ObjectId },
+    wheelPrize: { type: String, maxlength: 40 },
+    wheelWon: { type: Boolean },
   },
   { timestamps: true }
 );

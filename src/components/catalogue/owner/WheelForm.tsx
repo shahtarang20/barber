@@ -92,14 +92,24 @@ function WheelFields({ scope, config, onSaved }: { scope: CatalogueScope; config
         )}
       </fieldset>
 
-      <div className="flex flex-wrap gap-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="wheel-per-customer">{t("ownWheelPerCustomer")}</Label>
+          <Input id="wheel-per-customer" type="number" min={0} max={1000} value={draft.maxSpinsPerCustomer} onChange={(e) => setDraft((d) => ({ ...d, maxSpinsPerCustomer: Number(e.target.value) }))} />
+          <p className="text-xs text-zinc-400">{t("ownWheelZeroUnlimited")}</p>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="wheel-total">{t("ownWheelTotal")}</Label>
+          <Input id="wheel-total" type="number" min={0} max={1000000} value={draft.maxSpinsTotal} onChange={(e) => setDraft((d) => ({ ...d, maxSpinsTotal: Number(e.target.value) }))} />
+          <p className="text-xs text-zinc-400">{t("ownWheelZeroUnlimited")}</p>
+        </div>
         <div className="space-y-1.5">
           <Label htmlFor="wheel-cooldown">{t("ownWheelCooldown")}</Label>
-          <Input id="wheel-cooldown" type="number" min={0} max={365} value={draft.cooldownDays} onChange={(e) => setDraft((d) => ({ ...d, cooldownDays: Number(e.target.value) }))} className="max-w-32" />
+          <Input id="wheel-cooldown" type="number" min={0} max={365} value={draft.cooldownDays} onChange={(e) => setDraft((d) => ({ ...d, cooldownDays: Number(e.target.value) }))} />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="wheel-valid">{t("ownLoyaltyValidDays")}</Label>
-          <Input id="wheel-valid" type="number" min={0} max={365} value={draft.rewardValidDays} onChange={(e) => setDraft((d) => ({ ...d, rewardValidDays: Number(e.target.value) }))} className="max-w-32" />
+          <Input id="wheel-valid" type="number" min={0} max={365} value={draft.rewardValidDays} onChange={(e) => setDraft((d) => ({ ...d, rewardValidDays: Number(e.target.value) }))} />
         </div>
       </div>
 

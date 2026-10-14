@@ -197,7 +197,9 @@ export async function POST(req: Request) {
         const ownerId = new mongoose.Types.ObjectId(String(viaShopId || slot.barberId));
         const customerId = new mongoose.Types.ObjectId(String(customer._id));
         loyalty = await loyaltyForCustomer(ownerType, ownerId, customerId).catch(() => null);
-        wheel = await wheelForBooking({ barberId: slot.barberId, customerId, viaShopId: viaShopId ? String(viaShopId) : null }).catch(() => null);
+        wheel = await wheelForBooking({ barberId: slot.barberId, customerId, viaShopId: viaShopId ? String(viaShopId) : null, bookingId: newBooking._id }).catch(() => null);
+        // Record what this customer landed on, right on the booking entry, so the owner sees it with the booking.
+        if (wheel) await Booking.updateOne({ _id: newBooking._id }, { $set: { wheelPrize: wheel.prizeLabel, wheelWon: wheel.won } }).catch(() => {});
         const cover = await coverBookingWithMembership(ownerType, ownerId, customerId, service?.serviceId ?? null, getTodayISTString()).catch(() => ({ covered: false }) as Awaited<ReturnType<typeof coverBookingWithMembership>>);
         if (cover.covered && cover.membershipId) {
           // Remember the membership on the booking so the visit is deducted when (and only when) it completes.
