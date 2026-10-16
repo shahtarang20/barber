@@ -55,7 +55,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (!mongoose.isValidObjectId(id)) {
       return NextResponse.json({ success: false, error: { message: "Shop not found" } }, { status: 404 });
     }
-    const body = await req.json();
+    const body = await req.json().catch(() => null);
+    if (!body || typeof body !== "object") return NextResponse.json({ success: false, error: { message: "Invalid request." } }, { status: 400 });
 
     const updateData: any = {};
     if (body.name !== undefined) {
@@ -147,8 +148,13 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
 
     // Every member (including the owner) reverts to being a solo barber —
     // their own bookings, slots, and public link are completely unaffected.
+    const memberCount = shop.barberIds?.length ?? 0;
     await User.updateMany({ shopId: shop._id }, { $set: { shopId: null } });
     await Shop.findByIdAndDelete(id);
+
+    // Audit trail: a shop delete is the only data-losing admin action — record who did it.
+    const admin = await User.findById(payload.userId).select("name").lean<{ name: string } | null>();
+    await audit({ id: payload.userId, name: admin?.name || "Admin" }, "SHOP_DELETED", { _id: shop._id, name: shop.name }, { slug: shop.slug, memberCount });
 
     return NextResponse.json({ success: true, data: { message: "Shop deleted." } });
   } catch (error) {

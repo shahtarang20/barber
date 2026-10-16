@@ -27,7 +27,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       return NextResponse.json({ success: false, error: { message: "Unauthorized: Admins only" } }, { status: 401 });
     }
 
-    const body = await req.json();
+    const body = await req.json().catch(() => ({}));
     const result = resetSchema.safeParse(body);
     if (!result.success) {
       return NextResponse.json({ success: false, error: { message: result.error.issues[0].message } }, { status: 400 });

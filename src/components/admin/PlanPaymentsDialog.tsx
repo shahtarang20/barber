@@ -32,6 +32,7 @@ function Panel({ barber, onClose, onChanged }: { barber: Barber; onClose: () => 
   const history = useSWR<{ plan: Plan; payments: Row[] }>(`/api/admin/barbers/${barber._id}/payments`, (url: string) => api(url, "GET"), { revalidateOnFocus: false });
   const plan = history.data?.plan ?? null;
   const rows = history.data?.payments ?? [];
+  const [premium, setPremium] = useState(String(barber.premiumAmount || ""));
   const [amount, setAmount] = useState(String(barber.premiumAmount || ""));
   const [months, setMonths] = useState("1");
   const [method, setMethod] = useState("UPI");
@@ -44,8 +45,19 @@ function Panel({ barber, onClose, onChanged }: { barber: Barber; onClose: () => 
   const load = () => history.mutate();
 
   const record = async () => {
+    // The monthly Premium (₹) must be on record before any payment can be logged (the API enforces this too).
+    // Capture it here so the admin never has to leave the dialog to set it first.
+    const premiumValue = Number(premium);
+    if (!(premiumValue > 0)) {
+      toast.add({ title: "Set the monthly Premium first", description: "Enter this barber's monthly Premium (₹) above, then record the payment.", type: "error" });
+      return;
+    }
     setBusy(true);
     try {
+      // Persist the monthly price only when it's new or changed, so a payment never fails for a missing premium.
+      if (premiumValue !== barber.premiumAmount) {
+        await api(`/api/admin/barbers/${barber._id}`, "PATCH", { premiumAmount: premiumValue });
+      }
       await api(`/api/admin/barbers/${barber._id}/payments`, "POST", { amount: Number(amount), months: Number(months), method, reference: reference || undefined, note: note || undefined });
       toast.add({ title: "Payment recorded", description: "The plan has been extended.", type: "success" });
       setReference(""); setNote("");
@@ -78,6 +90,11 @@ function Panel({ barber, onClose, onChanged }: { barber: Barber; onClose: () => 
         <PlanGrantPanel endpoint={`/api/admin/barbers/${barber._id}/grant`} plan={plan} onChanged={() => { load(); onChanged(); }} label={barber.name} />
 
         <h3 className="text-sm font-semibold">Record a payment</h3>
+        <div className="space-y-1">
+          <Label htmlFor="pay-premium">Monthly Premium (₹)</Label>
+          <Input id="pay-premium" type="number" min="0" value={premium} onChange={(e) => setPremium(e.target.value)} placeholder="This barber's monthly price" />
+          <p className="text-xs text-zinc-500">The recurring monthly price. Set this once; it drives renewal reminders. Required before recording a payment.</p>
+        </div>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1"><Label htmlFor="pay-amount">Amount paid (₹)</Label><Input id="pay-amount" type="number" min="0" value={amount} onChange={(e) => setAmount(e.target.value)} /></div>
           <div className="space-y-1"><Label htmlFor="pay-months">Months covered</Label><Input id="pay-months" type="number" min="1" max="24" value={months} onChange={(e) => setMonths(e.target.value)} /></div>
@@ -88,7 +105,7 @@ function Panel({ barber, onClose, onChanged }: { barber: Barber; onClose: () => 
           <div className="space-y-1"><Label htmlFor="pay-ref">Reference (optional)</Label><Input id="pay-ref" maxLength={80} value={reference} onChange={(e) => setReference(e.target.value)} placeholder="UPI ref / receipt no." /></div>
           <div className="col-span-2 space-y-1"><Label htmlFor="pay-note">Note (optional)</Label><Input id="pay-note" maxLength={200} value={note} onChange={(e) => setNote(e.target.value)} /></div>
         </div>
-        <Button onClick={record} disabled={busy || !amount || !months} className="h-11">{busy ? "Working…" : "Record payment and extend plan"}</Button>
+        <Button onClick={record} disabled={busy || !premium || !amount || !months} className="h-11">{busy ? "Working…" : "Record payment and extend plan"}</Button>
 
         <h3 className="mt-2 text-sm font-semibold">History</h3>
         {rows.length === 0 ? <p className="text-sm text-zinc-500">No payments recorded yet.</p> : (
